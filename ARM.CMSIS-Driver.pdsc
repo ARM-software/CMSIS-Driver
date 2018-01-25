@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+  <name>CMSIS-Driver</name>
+  <description>CMSIS Drivers for external devices</description>
+  <vendor>ARM</vendor>
+  <url>http://www.keil.com/pack/</url>
+
+  <releases>
+    <release version="2.0.0">
+      Initial release
+    </release>
+  </releases>
+
+  <requirements>
+    <packages>
+      <package vendor="ARM" name="CMSIS" version="5.1.0-0"/>
+    </packages>
+  </requirements>
+
+  <conditions>
+    <condition id="Cortex-M Device">
+      <description>Cortex-M processor based device: Cortex-M0, Cortex-M0+, Cortex-M3, Cortex-M4, Cortex-M7, Cortex-M23, Cortex-M33, SC000 or SC3000</description>
+      <accept Dcore="Cortex-M0"/>
+      <accept Dcore="Cortex-M0+"/>
+      <accept Dcore="Cortex-M3"/>
+      <accept Dcore="Cortex-M4"/>
+      <accept Dcore="Cortex-M7"/>
+      <accept Dcore="Cortex-M23"/>
+      <accept Dcore="Cortex-M33"/>
+      <accept Dcore="ARMV8MBL"/>
+      <accept Dcore="ARMV8MML"/>
+      <accept Dcore="SC000"/>
+      <accept Dcore="SC300"/>
+    </condition>
+    <condition id="CMSIS RTOS">
+      <description>CMSIS RTOS (API1 or API2)</description>
+      <accept Cclass="CMSIS" Cgroup="RTOS"/>
+      <accept Cclass="CMSIS" Cgroup="RTOS2"/>
+    </condition>
+    <condition id="CMSIS RTOS2">
+      <description>CMSIS RTOS (API2 only)</description>
+      <require Cclass="CMSIS" Cgroup="RTOS2"/>
+    </condition>
+    <condition id="CMSIS Core">
+      <description>CMSIS Core for Cortex-M</description>
+      <require condition="Cortex-M Device"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+    </condition>
+    <condition id="CMSIS Core and SPI Driver">
+      <description>CMSIS Core for Cortex-M and SPI Driver</description>
+      <require condition="CMSIS Core"/>
+      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
+    </condition>
+    <condition id="CMSIS Core with RTOS and SPI Driver">
+      <description>CMSIS Core with RTOS for Cortex-M and SPI Driver</description>
+      <require condition="CMSIS Core"/>
+      <require condition="CMSIS RTOS"/>
+      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
+    </condition>
+    <condition id="CMSIS Core with RTOS2 and SPI Driver">
+      <description>CMSIS Core with RTOS2 for Cortex-M and SPI Driver</description>
+      <require condition="CMSIS Core"/>
+      <require condition="CMSIS RTOS2"/>
+      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
+    </condition>
+    <condition id="CMSIS Core with RTOS2 and I2C Driver">
+      <description>CMSIS Core with RTOS2 for Cortex-M and I2C Driver</description>
+      <require condition="CMSIS Core"/>
+      <require condition="CMSIS RTOS2"/>
+      <require Cclass="CMSIS Driver" Cgroup="I2C"/>
+    </condition>
+  </conditions>
+
+  <components>
+
+    <!-- CMSIS-Driver Ethernet -->
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.1.0" Cversion="6.6.0" condition="CMSIS Core with RTOS and SPI Driver">
+      <description>Ethernet MAC + PHY KSZ8851SNL/SNLI Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_ETH_KSZ8851SNL      /* Driver ETH KSZ8851SNL */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/ETH_KSZ8851SNL.c"/>
+      </files>
+    </component>
+
+    <!-- CMSIS-Driver Ethernet PHY -->
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="DP83848C" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+      <description>Ethernet PHY DP83848C Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_DP83848C        /* Driver PHY DP83848C */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_DP83848C.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8061RNB" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+      <description>Ethernet PHY KSZ8061RNB Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_KSZ8061RNB      /* Driver PHY KSZ8061RNB */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_KSZ8061RNB.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+      <description>Ethernet PHY KSZ8081RNA Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_KSZ8081RNA      /* Driver PHY KSZ8081RNA/RND */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_KSZ8081RNA.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>Ethernet PHY LAN8710A Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8710A        /* Driver PHY LAN8710A */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_LAN8710A.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+      <description>Ethernet PHY LAN8720 Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8720         /* Driver PHY LAN8720 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_LAN8720.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.2.0" condition="CMSIS Core">
+      <description>Ethernet PHY LAN8742A Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8742A        /* Driver PHY LAN8742A */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_LAN8742A.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+      <description>Ethernet PHY ST802RT1 Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_ST802RT1        /* Driver PHY ST802RT1 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/PHY_ST802RT1.c"/>
+      </files>
+    </component>
+
+    <!-- CMSIS-Driver Flash -->
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="AM29x800BB" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+      <description>AM29x800BB Flash (16-bit Bus)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Driver_Flash_AM29x800BB     /* Driver Flash AM29x800BB */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/AM29x800BB/AM29x800BB.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB641E" Capiversion="2.0.0" Cversion="1.2.0" condition="CMSIS Core and SPI Driver">
+      <description>AT45DB641E Flash (SPI)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_AT45DB641E    /* Driver Flash AT45DB641E */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/AT45DB641E/AT45DB641E.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB642D" Capiversion="2.0.0" Cversion="1.2.0" condition="CMSIS Core and SPI Driver">
+      <description>AT45DB642D Flash (SPI)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_AT45DB642D    /* Driver Flash AT45DB642D */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/AT45DB642D/AT45DB642D.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29EW28F128" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+      <description>M29EW 128Mb Flash (16-bit Bus): JS28F128M29EW, PC28F128M29EW, RC28F128M29EW</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_M29EW28F128   /* Driver Flash M29EW28F128 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/M29EW28F128/M29EW28F128.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29W640FB" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+      <description>M29W640FB Flash (16-bit Bus)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_M29W640FB     /* Driver Flash M29W640FB */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/M29W640FB/M29W640FB.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="N25Q032A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core and SPI Driver">
+      <description>N25Q032A Flash (SPI)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_N25Q032A      /* Driver Flash N25Q032A */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/N25Q032A/N25Q032A.c"/>
+      </files>
+    </component>
+    <component Cclass="CMSIS Driver" Cgroup="Flash" Csub="S29GL064Nx2" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+      <description>S29GL064N Dual Flash (32-bit Bus)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_Flash_S29GL064Nx2   /* Driver Flash S29GL064Nx2 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="Flash/S29GL064Nx2/S29GL064Nx2.c"/>
+      </files>
+    </component>
+
+    <!-- CMSIS-Driver NAND -->
+    <component Cclass="CMSIS Driver" Cgroup="NAND" Csub="Memory Bus" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>NAND Flash connected to Memory Bus</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Driver_NAND_MemoryBus       /* Driver NAND Flash on Memory Bus */
+      </RTE_Components_h>
+      <files>
+        <file category="header" name="Config/NAND_MemBus_Config.h" attr="config" version="1.0.0"/>
+        <file category="source" name="NAND/NAND_MemBus.c"/>
+      </files>
+    </component>
+
+    <!-- CMSIS-Driver I2C -->
+    <component Cclass="CMSIS Driver" Cgroup="I2C" Csub="Multi-Slave" Capiversion="2.3.0" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and I2C Driver">
+      <description>I2C Master to Multi-Slave Driver Wrapper</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="I2C/I2C_MultiSlave.c" attr="config"/>
+      </files>
+    </component>
+
+    <!-- CMSIS-Driver SPI -->
+    <component Cclass="CMSIS Driver" Cgroup="SPI" Csub="Multi-Slave" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+      <description>SPI Master to Multi-Slave Driver Wrapper</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
+      </RTE_Components_h>
+      <files>
+        <file category="header" name="SPI/SPI_MultiSlave.h"/>
+        <file category="source" name="SPI/SPI_MultiSlave.c" attr="config"/>
+      </files>
+    </component>
+
+  </components>
+
+</package>

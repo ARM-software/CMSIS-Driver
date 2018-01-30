@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="Utilities/PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
   <url>http://www.keil.com/pack/</url>
+  <license>LICENSE.txt</license>
 
   <releases>
     <release version="2.0.0">
       Initial release
+      - the drivers were previously included in pack: Keil::MDK-Middleware.
     </release>
   </releases>
 

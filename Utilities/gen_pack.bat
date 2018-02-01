@@ -2,7 +2,7 @@
 :: This batch file uses:
 ::    7-Zip for packaging
 :: The generated pack and pdsc file are placed in folder %RELEASE_PATH% (../Local_Release)
-@ECHO on
+@ECHO off
 
 SETLOCAL
 

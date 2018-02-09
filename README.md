@@ -30,3 +30,5 @@ Repository of MCU independent device driver implementations and template files o
 ## SPI
 - SPI_MultiSlave
 
+## License
+Licensed under Apache 2.0 License.

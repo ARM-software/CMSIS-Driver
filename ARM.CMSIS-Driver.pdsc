@@ -7,6 +7,9 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.0.1-dev0">
+       Added LAN9220 Ethernet MAC+PHY driver
+    </release>
     <release version="2.0.0" date="2018-02-09">
       Initial release
       - the drivers were previously included in pack: Keil::MDK-Middleware.
@@ -84,6 +87,17 @@
       </RTE_Components_h>
       <files>
         <file category="source" name="ETH/ETH_KSZ8851SNL.c"/>
+      </files>
+    </component>
+
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>Ethernet MAC + PHY LAN9220 Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_ETH_LAN9220         /* Driver ETH LAN9220 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="ETH/ETH_LAN9220.c"/>
       </files>
     </component>
 

@@ -89,6 +89,4 @@ FOR %%A IN (%PACK_FOLDER_LIST%) DO (
 
 DEL ..\zip.log
 
-POPD
-
 ECHO gen_pack.bat completed successfully

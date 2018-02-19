@@ -4,6 +4,7 @@ Repository of MCU independent device driver implementations and template files o
 
 ## ETH 
 - ETH_KSZ8851SNL
+- ETH_LAN9220
 - PHY_DP83848
 - PHY_KSZ8061RNB
 - PHY_KSZ8081RNA

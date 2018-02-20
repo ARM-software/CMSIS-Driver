@@ -17,11 +17,11 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        10. January 2018
- * $Revision:    V1.0.0
+ * $Date:        20. February 2018
+ * $Revision:    V1.0.1
  *
  * Driver:       Driver_SPI# (default: Driver_SPI0)
- * Project:      SPI Master to Multi-Slave Configuration Wrapper
+ * Project:      SPI Master to Multi-Slave Wrapper
  * -----------------------------------------------------------------------
  * Use the following configuration settings in the middleware component
  * to connect to this driver.
@@ -31,58 +31,11 @@
  *   Connect to hardware via Driver_SPI# = n (default: 0)
  * -------------------------------------------------------------------- */
 
-//-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
-
-// <h>SPI Multi-Slave Driver Configuration
-
-//   <o>Connect to hardware via Driver_SPI# <0-255>
-//   <i>Select driver control block for hardware interface
-#define SPI_DRIVER              0
-
-//   <e0>Slave Device 0
-//   <i>Enable or disable slave device
-//   <i>SPI_Control_SlaveSelect function must be implemented to assert or deassert Slave Select pin.
-//     <o1>Export control block Driver_SPI# <0-255>
-//     <i>Define exported driver control block number
-//   </e>
-#define SPI_ENABLE_SLAVE_0      1
-#define SPI_DRIVER_SLAVE_0      10
-
-//   <e0>Slave Device 1
-//   <i>Enable or disable slave device
-//   <i>SPI_Control_SlaveSelect function must be implemented to assert or deassert Slave Select pin.
-//     <o1>Export control block Driver_SPI# <0-255>
-//     <i>Define exported driver control block number
-//   </e>
-#define SPI_ENABLE_SLAVE_1      1
-#define SPI_DRIVER_SLAVE_1      11
-
-//   <e0>Slave Device 2
-//   <i>Enable or disable slave device
-//   <i>SPI_Control_SlaveSelect function must be implemented to assert or deassert Slave Select pin.
-//     <o1>Export control block Driver_SPI# <0-255>
-//     <i>Define exported driver control block number
-//   </e>
-#define SPI_ENABLE_SLAVE_2      0
-#define SPI_DRIVER_SLAVE_2      12
-
-//   <e0>Slave Device 3
-//   <i>Enable or disable slave device
-//   <i>SPI_Control_SlaveSelect function must be implemented to assert or deassert Slave Select pin.
-//     <o1>Export control block Driver_SPI# <0-255>
-//     <i>Define exported driver control block number
-//   </e>
-#define SPI_ENABLE_SLAVE_3      0
-#define SPI_DRIVER_SLAVE_3      13
-
-// </h>
-
-//------------- <<< end of configuration section >>> -------------------------
-
 #include <string.h>
 #include "cmsis_compiler.h"
 #include "cmsis_os2.h"
 #include "SPI_MultiSlave.h"
+#include "SPI_MultiSlave_Config.h"
 
 /* Determine if load/store exclusive is available */
 #ifndef SPI_EXCLUSIVE_ACCESS

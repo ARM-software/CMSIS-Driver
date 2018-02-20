@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2018 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,11 +17,11 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        10. January 2018
- * $Revision:    V1.0.0
+ * $Date:        20. February 2018
+ * $Revision:    V1.0.1
  *
  * Driver:       Driver_SPI# (default: Driver_SPI0)
- * Project:      SPI Master to Multi-Slave Configuration Wrapper
+ * Project:      SPI Master to Multi-Slave Wrapper
  * -------------------------------------------------------------------- */
 
 #include "Driver_SPI.h"

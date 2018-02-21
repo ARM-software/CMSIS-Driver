@@ -7,11 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.0.1-dev1">
-       I2C and SPI multi-slave wrapper configuration extracted.
-    </release>
-    <release version="2.0.1-dev0">
-       Added LAN9220 Ethernet MAC+PHY driver
+    <release version="2.1.0" date="2018-02-21">
+      Added LAN9220 Ethernet MAC+PHY driver
+      Updated I2C and SPI multi-slave wrapper configuration options moved into separate file.
     </release>
     <release version="2.0.0" date="2018-02-09">
       Initial release

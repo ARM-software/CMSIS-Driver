@@ -21,9 +21,13 @@ REM -- Delete previous generated HTML files ---------------------
   ECHO Delete previous generated HTML files
 
 REM -- Remove generated doxygen files ---------------------
-PUSHD ..\Documentation
-RMDIR /S /Q General
-POPD
+IF EXIST ..\Documentation (
+  PUSHD ..\Documentation
+    RMDIR /S /Q General
+  POPD
+) ELSE (
+  MKDIR ..\Documentation
+)
 
 REM -- Generate New HTML Files ---------------------
   ECHO.

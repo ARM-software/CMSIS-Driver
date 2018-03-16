@@ -1,0 +1,482 @@
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\mainpage
+
+The <a href="http://arm-software.github.io/CMSIS_5/Driver/html/index.html" target="_blank"><b>CMSIS-Driver specification</b></a>
+is a software API that describes peripheral driver interfaces for middleware stacks and user applications.
+
+This software pack contains actual CMSIS-Driver implementations for various devices. It is publicly hosted on GitHub and
+interested parties are welcome to push their drivers to this repository:
+<a href="https://github.com/arm-software/CMSIS-Driver" target="_blank"><b>https://github.com/arm-software/CMSIS-Driver</b></a>.
+
+
+\section License License
+
+The CMSIS is provided free of charge by Arm under Apache 2.0 license. 
+View the <a href="LICENSE.txt">Apache 2.0 License</a>.
+
+
+\section driver_pack_content ARM::CMSIS-Driver Pack
+
+The <b>ARM::CMSIS-Driver</b> Pack contains the following:
+
+File/Directory           | Content                                                                           
+:------------------------|:---------------------------------------------------------------------------------
+\b ARM.CMSIS-Driver.pdsc | Package description file in CMSIS-Pack format.                                                         
+\b LICENSE.txt           | CMSIS license agreement (Apache 2.0)
+\b Config                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations                            
+\b Documentation         | This documentation
+\b ETH                   | \ref driver_eth driver implementations
+\b Flash                 | \ref driver_Flash memory driver implementations
+\b I2C                   | \ref driver_I2C driver implementations
+\b NAND                  | \ref driver_NAND driver implementations
+\b SPI                   | \ref driver_SPI driver implementations
+\b Utilities             | Utilities for generating the pack
+
+<hr>
+
+Revision History
+----------------
+
+<table class="cmtable" summary="Revision History">
+    <tr>
+      <th>Version</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>2.2.0</td>
+      <td><ul>
+	  <li>Documentation added</li>
+	  <li>Set Cvendor to "Keil" in all driver components for ease of migration of existing projects</li>
+	  </ul></td>
+    </tr>
+    <tr>
+      <td>2.1.0</td>
+      <td>Initial public release</td>
+    </tr>
+    <tr>
+      <td>2.0.0</td>
+      <td>Initial internal release</td>
+    </tr>
+</table>
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_eth Ethernet
+
+\section driver_KSZ8851SNL KSZ8851SNL/SNLI
+
+The documentation for the KSZ8851SNL/SNLI can be found here: https://www.microchip.com/KSZ8851
+
+
+\section driver_LAN9220 LAN9220
+
+The documentation for the LAN9220 can be found here: https://www.microchip.com/LAN9220
+
+
+\section driver_DP83848C DP83848C
+
+The documentation for the DP83848C can be found here: http://www.ti.com/product/DP83848C
+
+
+\section driver_KSZ8061RNB KSZ8061RNB
+
+The documentation for the KSZ8061RNB can be found here: https://www.microchip.com/KSZ8061
+
+
+\section driver_KSZ8081RNA KSZ8081RNA
+
+The documentation for the KSZ8081RNA can be found here: https://www.microchip.com/KSZ8081
+
+
+\section driver_LAN8710A LAN8710A
+
+The documentation for the LAN8710A can be found here: https://www.microchip.com/LAN8710A
+
+
+\section driver_LAN8720 LAN8720
+
+The documentation for the LAN8720 can be found here: https://www.microchip.com/LAN8720A
+
+
+\section driver_LAN8742A LAN8742A
+
+The documentation for the LAN8742A can be found here: https://www.microchip.com/LAN8742A
+
+
+\section driver_ST802RT1 ST802RT1
+
+The data brief for the ST802RT1 can be found here:
+http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf
+
+
+*/
+
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_Flash Flash
+
+\section driver_AM29x800BB AM29x800BB
+
+This product is discontinued.
+
+
+\section driver_AT45DB641E AT45DB641E
+
+The documentation for the AT45DB641E can be found here: https://www.adestotech.com/products/data-flash/
+
+
+\section driver_AT45DB642D AT45DB642D
+
+The documentation for the AT45DB642D can be found here: https://www.adestotech.com/legacy-product-datasheets/
+
+
+\section driver_M29EW28F128 M29EW28F128
+
+The documentation for the M29EW28F128 can be found here:
+https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf
+
+
+\section driver_M29W640FB M29W640FB
+
+The documentation for the M29W640FB can be found here:
+https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e
+
+
+\section driver_N25Q032A N25Q032A
+
+The documentation for the N25Q032A can be found here:
+https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e
+
+
+\section driver_S29GL064Nx2 S29GL064Nx2
+
+The documentation for the S29GL064Nx2 can be found here:
+http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash
+
+
+*/
+
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_I2C I2C
+
+The I2C MultiSlave wrapper (I2C_MultiSlave.c) resides on top of an arbitrary I2C CMSIS-Driver and exports maximum of
+eight I2C CMSIS-Drivers (with I2C Master functionality only). Slave functionalities are disabled and calling slave functions
+will return with an error. An I2C slave device connects to one of the exported driver and uses it as any other CMSIS I2C
+driver (in master mode only). The wrapper provides multi-thread protection.
+
+Each slave can use its own bus speed configuration, but the MultiSlave wrapper will limit the bus speed to the lowest
+requested frequency (assuming that three slaves are present and if two slaves configure bus speed \c ARM_I2C_BUS_SPEED_FAST
+(400 KHz) and one slave \c ARM_I2C_BUS_SPEED_STANDARD (100 kHz), then the actual bus speed will be
+\c ARM_I2C_BUS_SPEED_STANDARD).
+
+The wrapper is configured using the I2C_MultiSlave_Config.h file, which contains the following options:
+- \c \#define \c I2C_DRIVER specifies the underlying I2C CMSIS-Driver, which controls the I2C peripheral and accesses the
+  bus. The wrapper connects to that driver.
+- \c \#define \c I2C_ENABLE_SLAVE_x enables each connected slave on the I2C bus. This basically means that the driver control
+  block \c Driver_I2Cn will be exported by the wrapper for each particular slave.
+- \c \#define \c I2C_DRIVER_SLAVE_x sets the exported control block number n, for example \c Driver_I2Cn. The user
+  application connects to this driver.
+  
+<b>Code example</b>
+
+This is a demo application which demonstrates the usage of the I2C MultiSlave driver wrapper. It consists of two threads that
+periodically access two I2C slave devices.
+
+\code
+#include <string.h>
+#include "cmsis_os2.h"
+ 
+#include "RTE_Components.h"
+#include  CMSIS_device_header
+#include "stm32f2xx_hal.h"              // Keil::Device:STM32Cube HAL:Common
+ 
+#include "Driver_I2C.h"                 // ::CMSIS Driver:I2C
+ 
+/* Thread prototypes */
+static void Thread_A (void *argument);
+static void Thread_B (void *argument);
+static void app_main (void *argument);
+ 
+/* A and B Thread IDs */
+static osThreadId_t ThreadId_A;
+static osThreadId_t ThreadId_B;
+ 
+/* I2C A Driver, controls Slave Device 0, uses underlying Driver_I2C1 (see I2C_MultiSlave_Config.h) */
+extern ARM_DRIVER_I2C         Driver_I2C10;
+#define I2C_A               (&Driver_I2C10)
+ 
+/* I2C B Driver, controls Slave Device 1, uses underlying Driver_I2C1 (see I2C_MultiSlave_Config.h) */
+extern ARM_DRIVER_I2C         Driver_I2C11;
+#define I2C_B               (&Driver_I2C11)
+ 
+/*----------------------------------------------------------------------------
+ * I2C Thread A
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_A (void *argument) {
+  uint8_t addr;
+  uint8_t reg;
+  uint8_t val;
+  (void)argument;
+ 
+  /* Initialize and configure I2C */
+  I2C_A->Initialize  (NULL);
+  I2C_A->PowerControl(ARM_POWER_FULL);
+  I2C_A->Control     (ARM_I2C_BUS_SPEED, ARM_I2C_BUS_SPEED_FAST);
+  I2C_A->Control     (ARM_I2C_BUS_CLEAR, 0);
+ 
+  /* Periodically read device register at address 0x0F */
+  addr = 0x68;
+  reg  = 0x0F;
+ 
+  while(1) {
+    I2C_A->MasterTransmit(addr, &reg, 1, true);
+    while (I2C_A->GetStatus().busy);
+ 
+    I2C_A->MasterReceive (addr, &val, 1, false);
+    while (I2C_B->GetStatus().busy);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * I2C Thread B
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_B (void *argument) {
+  uint8_t addr;
+  uint8_t reg;
+  uint8_t val;
+  (void)argument;
+ 
+  /* Initialize and configure I2C */
+  I2C_B->Initialize  (NULL);
+  I2C_B->PowerControl(ARM_POWER_FULL);
+  I2C_B->Control     (ARM_I2C_BUS_SPEED, ARM_I2C_BUS_SPEED_STANDARD);
+  I2C_B->Control     (ARM_I2C_BUS_CLEAR, 0);
+ 
+  /* Periodically write device register at address 0x02 */
+  addr = 0x44;
+  reg  = 0x02;
+  val  = 0xA5;
+ 
+  while(1) {
+    I2C_A->MasterTransmit(addr, &reg, 1, true);
+    while (I2C_A->GetStatus().busy);
+ 
+    I2C_A->MasterTransmit (addr, &val, 1, false);
+    while (I2C_B->GetStatus().busy);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * Application main thread
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void app_main (void *argument) {
+  (void)argument;
+ 
+  /* Create SPI threads */
+  ThreadId_A = osThreadNew (Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew (Thread_B, NULL, NULL);
+ 
+  osDelay (osWaitForever);
+ 
+  for (;;) {}
+}
+ 
+int main (void) {
+ 
+  // System Initialization
+  SystemCoreClockUpdate();
+ 
+  osKernelInitialize();                 // Initialize CMSIS-RTOS
+  osThreadNew(app_main, NULL, NULL);    // Create application main thread
+  osKernelStart();                      // Start thread execution
+  for (;;) {}
+}
+\endcode
+*/
+
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_NAND NAND
+
+This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus.
+*/
+
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_SPI SPI
+
+The SPI MultiSlave wrapper (SPI_MultiSlave.c) resides on top of an arbitrary SPI CMSIS-Driver and exports a maximum of four
+SPI CMSIS-Drivers with SPI Master functionality only. Slave functionalities are disabled and calling the slave functions will
+return with an error. An SPI slave device connects to one of the exported drivers and uses it as any other SPI CMSIS-Driver
+(in master mode only). The wrapper provides multi thread protection.
+
+Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a
+particular function call and reconfigures the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
+mode must always be configured as \c ARM_SPI_SS_MASTER_UNUSED, since the underlying bus controlling the SPI driver can only
+control one slave select line at the time. The slave select line for each particular slave device is instead controlled by
+the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A
+function prototype can be found in the SPI_Multislave.h header file and must be included in the project.
+
+When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case,
+transfer operations will be queued and executed immediately after the current transfer completes. The transfer queue operates
+as a FIFO, so transfers will be executed in the same call order as expected by the application.
+
+The wrapper is configured using the SPI_MultiSlave_Config.h file, which contains the following options:
+- \c \#define \c SPI_DRIVER specifies the underlying SPI CMSIS-Driver, which actually controls the SPI peripheral and the
+  accesses the bus. The wrapper will connect to that driver.
+- \c \#define \c SPI_ENABLE_SLAVE_x enables each SPI bus connected slave. This basically means that the driver control block
+  Driver_SPIn will be exported by the wrapper for each particular slave.
+- \c \#define \c SPI_DRIVER_SLAVE_x sets the exported control block number n, for example Driver_SPIn. The application
+  connects to this driver.
+
+<b>Code example</b>
+
+This is a demo application which demonstrates the usage of the SPI MultiSlave driver wrapper. It consists of two threads that
+periodically access two SPI slave devices.
+
+\code
+#include <string.h>
+#include "cmsis_os2.h"
+ 
+#include "RTE_Components.h"
+#include  CMSIS_device_header
+#include "stm32f2xx_hal.h"              // Keil::Device:STM32Cube HAL:Common
+ 
+#include "SPI_MultiSlave.h"             // Keil::CMSIS Driver:SPI:Multi-Slave
+ 
+/* Thread prototypes */
+static void Thread_A (void *argument);
+static void Thread_B (void *argument);
+static void app_main (void *argument);
+ 
+/* A and B Thread IDs */
+static osThreadId_t ThreadId_A;
+static osThreadId_t ThreadId_B;
+ 
+/* SPI A Driver, controls Slave Device 0, uses underlying Driver_SPI1 (see SPI_MultiSlaveConfig.h) */
+extern ARM_DRIVER_SPI         Driver_SPI10;
+#define SPI_A               (&Driver_SPI10)
+ 
+/* SPI B Driver, controls Slave Device 1, uses underlying Driver_SPI1 (see SPI_MultiSlaveConfig.h) */
+extern ARM_DRIVER_SPI         Driver_SPI11;
+#define SPI_B               (&Driver_SPI11)
+ 
+/**
+  Slave select pin control function.
+
+  \param[in]    driver    SPI Driver Instance
+  \param[in]    ss_state  Slave Select signal state (ARM_SPI_SS_INACTIVE | ARM_SPI_SS_ACTIVE)
+*/
+void SPI_Control_SlaveSelect (uint32_t device, uint32_t ss_state) {
+  GPIO_TypeDef* GPIOx;
+  uint16_t pin;
+ 
+  if (device == 0) {
+    /* Select Device 0 SS pin (SPI_A) */
+    GPIOx = GPIOE;
+    pin   = GPIO_PIN_0;
+  }
+  else {
+    /* Select Device 1 SS pin (SPI_B) */
+    GPIOx = GPIOE;
+    pin   = GPIO_PIN_15;
+  }
+ 
+  if (ss_state == ARM_SPI_SS_INACTIVE) {
+    /* Set GPIO pin high */
+    HAL_GPIO_WritePin (GPIOx, pin, GPIO_PIN_SET);
+  } else {
+    /* Set GPIO pin low */
+    HAL_GPIO_WritePin (GPIOx, pin, GPIO_PIN_RESET);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * SPI Thread A
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_A (void *argument) {
+  char *p = "Sending data to Slave Device 0";
+  (void)argument;
+  
+  SPI_A->Initialize (NULL);
+  SPI_A->PowerControl (ARM_POWER_FULL);
+  SPI_A->Control (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \
+                                      | ARM_SPI_DATA_BITS(8) \
+                                      | ARM_SPI_MSB_LSB      \
+                                      | ARM_SPI_SS_MASTER_UNUSED,
+                                      10000000);
+ 
+  SPI_A->Control (ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+ 
+  while(1) {
+    /* Send to Slave Device 0 */
+    SPI_A->Send (p, strlen(p));
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * SPI Thread B
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_B (void *argument) {
+  char *p = "Sending data to Slave Device 1";
+  (void)argument;
+ 
+  /* Initialize and configure SPI */
+  SPI_B->Initialize (NULL);
+  SPI_B->PowerControl (ARM_POWER_FULL);
+  SPI_B->Control (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \
+                                      | ARM_SPI_DATA_BITS(8) \
+                                      | ARM_SPI_MSB_LSB      \
+                                      | ARM_SPI_SS_MASTER_UNUSED,
+                                      15000000);
+ 
+  SPI_B->Control (ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+ 
+  while(1) {
+    /* Send to Slave Device 1 */
+    SPI_B->Send (p, strlen(p));
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * Application main thread
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void app_main (void *argument) {
+  (void)argument;
+ 
+  /* Create SPI threads */
+  ThreadId_A = osThreadNew (Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew (Thread_B, NULL, NULL);
+ 
+  osDelay (osWaitForever);
+ 
+  for (;;) {}
+}
+ 
+int main (void) {
+  
+  // System Initialization
+  SystemCoreClockUpdate();
+ 
+  osKernelInitialize();                 // Initialize CMSIS-RTOS
+  osThreadNew(app_main, NULL, NULL);    // Create application main thread
+  osKernelStart();                      // Start thread execution
+  for (;;) {}
+}
+\endcode
+*/

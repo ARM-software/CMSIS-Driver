@@ -285,6 +285,7 @@
       <files>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
+        <file category="doc"    name="Documentation/General/html/driver_I2C.html"/>
       </files>
     </component>
 
@@ -299,6 +300,7 @@
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>
+        <file category="doc"    name="Documentation/General/html/driver_SPI.html"/>
       </files>
     </component>
 

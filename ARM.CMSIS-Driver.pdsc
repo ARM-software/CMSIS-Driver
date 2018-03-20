@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version ="2.2.1" date="2018-03-20">
+      Added web link to hardware documentation for CMSIS-Driver components.
+    </release>
     <release version="2.2.0" date="2018-03-19">
       Updated component description setting the vendor explicitly to 'Cvendor="Keil"' to make migration automatic for existing project.
       - if a driver component is no longer found in an existing project, please select the available component with the same name from the Run Time Environment.
@@ -91,6 +94,7 @@
         #define RTE_Drivers_ETH_KSZ8851SNL      /* Driver ETH KSZ8851SNL */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/KSZ8851"/>
         <file category="source" name="ETH/ETH_KSZ8851SNL.c"/>
       </files>
     </component>
@@ -102,6 +106,7 @@
         #define RTE_Drivers_ETH_LAN9220         /* Driver ETH LAN9220 */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/LAN9220"/>
         <file category="source" name="ETH/ETH_LAN9220.c"/>
       </files>
     </component>
@@ -114,6 +119,7 @@
         #define RTE_Drivers_PHY_DP83848C        /* Driver PHY DP83848C */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="http://www.ti.com/product/DP83848C"/>
         <file category="source" name="ETH/PHY_DP83848C.c"/>
       </files>
     </component>
@@ -125,6 +131,7 @@
         #define RTE_Drivers_PHY_KSZ8061RNB      /* Driver PHY KSZ8061RNB */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/KSZ8061"/>
         <file category="source" name="ETH/PHY_KSZ8061RNB.c"/>
       </files>
     </component>
@@ -136,6 +143,7 @@
         #define RTE_Drivers_PHY_KSZ8081RNA      /* Driver PHY KSZ8081RNA/RND */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/KSZ8081"/>
         <file category="source" name="ETH/PHY_KSZ8081RNA.c"/>
       </files>
     </component>
@@ -147,6 +155,7 @@
         #define RTE_Drivers_PHY_LAN8710A        /* Driver PHY LAN8710A */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/LAN8710A"/>
         <file category="source" name="ETH/PHY_LAN8710A.c"/>
       </files>
     </component>
@@ -158,6 +167,7 @@
         #define RTE_Drivers_PHY_LAN8720         /* Driver PHY LAN8720 */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/LAN8720A"/>
         <file category="source" name="ETH/PHY_LAN8720.c"/>
       </files>
     </component>
@@ -169,6 +179,7 @@
         #define RTE_Drivers_PHY_LAN8742A        /* Driver PHY LAN8742A */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/LAN8742A"/>
         <file category="source" name="ETH/PHY_LAN8742A.c"/>
       </files>
     </component>
@@ -180,6 +191,7 @@
         #define RTE_Drivers_PHY_ST802RT1        /* Driver PHY ST802RT1 */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf"/>
         <file category="source" name="ETH/PHY_ST802RT1.c"/>
       </files>
     </component>
@@ -192,6 +204,7 @@
         #define RTE_Driver_Flash_AM29x800BB     /* Driver Flash AM29x800BB */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.microchip.com/KSZ8061"/>
         <file category="source" name="Flash/AM29x800BB/AM29x800BB.c"/>
       </files>
     </component>
@@ -203,6 +216,7 @@
         #define RTE_Drivers_Flash_AT45DB641E    /* Driver Flash AT45DB641E */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.adestotech.com/products/data-flash/"/>
         <file category="source" name="Flash/AT45DB641E/AT45DB641E.c"/>
       </files>
     </component>
@@ -214,6 +228,7 @@
         #define RTE_Drivers_Flash_AT45DB642D    /* Driver Flash AT45DB642D */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.adestotech.com/legacy-product-datasheets/"/>
         <file category="source" name="Flash/AT45DB642D/AT45DB642D.c"/>
       </files>
     </component>
@@ -225,6 +240,7 @@
         #define RTE_Drivers_Flash_M29EW28F128   /* Driver Flash M29EW28F128 */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf"/>
         <file category="source" name="Flash/M29EW28F128/M29EW28F128.c"/>
       </files>
     </component>
@@ -236,6 +252,7 @@
         #define RTE_Drivers_Flash_M29W640FB     /* Driver Flash M29W640FB */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e"/>
         <file category="source" name="Flash/M29W640FB/M29W640FB.c"/>
       </files>
     </component>
@@ -247,6 +264,7 @@
         #define RTE_Drivers_Flash_N25Q032A      /* Driver Flash N25Q032A */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e"/>
         <file category="source" name="Flash/N25Q032A/N25Q032A.c"/>
       </files>
     </component>
@@ -258,6 +276,7 @@
         #define RTE_Drivers_Flash_S29GL064Nx2   /* Driver Flash S29GL064Nx2 */
       </RTE_Components_h>
       <files>
+        <file category="doc" name="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash"/>
         <file category="source" name="Flash/S29GL064Nx2/S29GL064Nx2.c"/>
       </files>
     </component>
@@ -283,9 +302,9 @@
         #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
       </RTE_Components_h>
       <files>
+        <file category="doc"    name="Documentation/General/html/driver_I2C.html"/>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
-        <file category="doc"    name="Documentation/General/html/driver_I2C.html"/>
       </files>
     </component>
 
@@ -297,10 +316,10 @@
         #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
       </RTE_Components_h>
       <files>
+        <file category="doc"    name="Documentation/General/html/driver_SPI.html"/>
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>
-        <file category="doc"    name="Documentation/General/html/driver_SPI.html"/>
       </files>
     </component>
 

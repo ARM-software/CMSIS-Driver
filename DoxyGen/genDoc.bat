@@ -33,9 +33,9 @@ REM -- Generate New HTML Files ---------------------
   ECHO.
   ECHO Generate New HTML Files
 
-pushd General
+PUSHD General
 CALL doxygen_general.bat
-popd
+POPD
 
 :END
   ECHO.

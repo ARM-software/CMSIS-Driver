@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        27. October 2015
- * $Revision:    V1.2
+ * $Date:        18. April 2018
+ * $Revision:    V1.4
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description for M29W640FB (16-bit Bus)

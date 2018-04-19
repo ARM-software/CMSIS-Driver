@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        09. June 2016
- * $Revision:    V1.2
+ * $Date:        19. April 2018
+ * $Revision:    V1.4
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description for M29EW 128Mb (16-bit)

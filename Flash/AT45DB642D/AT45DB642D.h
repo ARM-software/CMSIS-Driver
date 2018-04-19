@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        27. October 2015
- * $Revision:    V1.2
+ * $Date:        19. April 2018
+ * $Revision:    V1.3
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description for Atmel DataFlash AT45DB642D (SPI)

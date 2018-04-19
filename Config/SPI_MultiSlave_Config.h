@@ -31,7 +31,7 @@
  *   Connect to hardware via Driver_SPI# = n (default: 0)
  * -------------------------------------------------------------------- */
 
- //-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
+//-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
 
 // <h>SPI Multi-Slave Driver Configuration
 

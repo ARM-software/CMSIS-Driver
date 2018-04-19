@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        31. March 2014
- * $Revision:    V1.00
+ * $Date:        19. April 2018
+ * $Revision:    V1.0
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Driver - Template
@@ -31,15 +31,10 @@
  *   Connect to hardware via Driver_Flash# = n (default: 0)
  * -------------------------------------------------------------------- */
 
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-  #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#endif
-
 #include "Driver_Flash.h"
 #include "Flash_Template.h"
 
-#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,00) /* driver version */
+#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0) /* driver version */
 
 
 #ifndef DRIVER_FLASH_NUM
@@ -63,7 +58,10 @@ static ARM_FLASH_INFO FlashInfo = {
   FLASH_SECTOR_SIZE,
   FLASH_PAGE_SIZE,
   FLASH_PROGRAM_UNIT,
-  FLASH_ERASED_VALUE
+  FLASH_ERASED_VALUE,
+#if (ARM_FLASH_API_VERSION > 0x201U)
+  { 0U, 0U, 0U }
+#endif
 };
 
 /* Flash Status */
@@ -80,7 +78,10 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 static const ARM_FLASH_CAPABILITIES DriverCapabilities = {
   0,    /* event_ready */
   0,    /* data_width = 0:8-bit, 1:16-bit, 2:32-bit */
-  0     /* erase_chip */
+  0,    /* erase_chip */
+#if (ARM_FLASH_API_VERSION > 0x200U)
+  0U    /* reserved */
+#endif
 };
 
 

@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        31. March 2014
- * $Revision:    V1.00
+ * $Date:        19. April 2018
+ * $Revision:    V1.0
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description - Template

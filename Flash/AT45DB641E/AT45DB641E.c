@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. May 2017
- * $Revision:    V1.2
+ * $Date:        19. April 2018
+ * $Revision:    V1.3
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Driver for Atmel DataFlash AT45DB641E (SPI)
@@ -48,16 +48,11 @@
     Default setting is 40000000 (40MHz).
  */
 
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-  #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#endif
-
 #include "Driver_Flash.h"
 #include "Driver_SPI.h"
 #include "AT45DB641E.h"
 
-#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) /* driver version */
+#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3) /* driver version */
 
 
 #ifndef DRIVER_FLASH_NUM
@@ -188,11 +183,14 @@ static ARM_FLASH_INFO FlashInfo = {
   FLASH_SECTOR_SIZE,
   FLASH_PAGE_SIZE,
   FLASH_PROGRAM_UNIT,
-  FLASH_ERASED_VALUE
+  FLASH_ERASED_VALUE,
+#if (ARM_FLASH_API_VERSION > 0x201U)
+  { 0U, 0U, 0U }
+#endif
 };
 
 /* Flash Status */
-static ARM_FLASH_STATUS FlashStatus = {0};
+static ARM_FLASH_STATUS FlashStatus;
 static uint8_t Flags;
 
 
@@ -206,7 +204,10 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 static const ARM_FLASH_CAPABILITIES DriverCapabilities = {
   0U,   /* event_ready */
   0U,   /* data_width = 0:8-bit, 1:16-bit, 2:32-bit */
-  1U    /* erase_chip */
+  1U,   /* erase_chip */
+#if (ARM_FLASH_API_VERSION > 0x200U)
+  0U    /* reserved */
+#endif
 };
 
 
@@ -237,6 +238,9 @@ static ARM_FLASH_CAPABILITIES GetCapabilities (void) {
 static int32_t Initialize (ARM_Flash_SignalEvent_t cb_event) {
   int32_t status;
   (void)cb_event;
+
+  FlashStatus.busy  = 0U;
+  FlashStatus.error = 0U;
 
   status = ptrSPI->Initialize(NULL);
   if (status != ARM_DRIVER_OK) { return ARM_DRIVER_ERROR; }

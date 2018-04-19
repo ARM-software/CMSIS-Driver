@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        29. June 2016
- * $Revision:    V1.3
+ * $Date:        19. April 2018
+ * $Revision:    V1.4
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Driver for M29EW 128Mb (16-bit Bus)
@@ -43,17 +43,28 @@
     Replace symbol # with the base address of your Flash device. Check the
     external memory configuration for proper setting.
     Default setting is 0x60000000.
+
+    #define FLASH_MANAGE_CACHE #
+    Replace symbol # with 0 when data cache management is not needed (no cache
+    or cache disabled) or with 1 to enable data cache management.
+    Default settings are: 0 when data cache is not present and 1 when data cache
+    is present (regardless of the MPU region configuration).
+
+    MPU Region Configuration:
+
+    Flash device memory space can be placed into cacheable region by configuring
+    the MPU. Cacheable region parameters must be set as follows in order to
+    configure "Write-Through, no write allocate" properties: TEX:000, C:1, B:0.
+    Region base address should be set to defined FLASH_ADDR.
  */
 
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-  #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#endif
+#include "RTE_Components.h"
+#include CMSIS_device_header
 
 #include "Driver_Flash.h"
 #include "M29EW28F128.h"
 
-#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3) /* driver version */
+#define ARM_FLASH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4) /* driver version */
 
 
 #ifndef DRIVER_FLASH_NUM
@@ -64,9 +75,30 @@
 #define FLASH_ADDR              0x60000000  /* Flash base address */
 #endif
 
+#ifndef FLASH_MANAGE_CACHE
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT != 0U)
+#define FLASH_MANAGE_CACHE      1           /* Cache management enabled (data cache present) */
+#else
+#define FLASH_MANAGE_CACHE      0           /* Cache management disabled (no data cache) */
+#endif
+#endif
 
-/* 16-bit Memory Bus Access Macro */
-#define M16(addr)               (*((volatile uint16_t *) (addr)))
+
+/* Enable Data Cache management when present */
+#if (FLASH_MANAGE_CACHE != 0)
+#define DCACHE_INVALIDATE(addr) SCB_InvalidateDCache_by_Addr((uint32_t *)(addr),32);
+#define DMEMORY_BARRIER()       __DMB()
+#else
+#define DCACHE_INVALIDATE(addr)
+#define DMEMORY_BARRIER()
+#endif
+
+/* Memory Bus Access Macro */
+#define RD_MEM(addr)            (*((volatile uint16_t *) (addr)))
+#define WR_MEM(addr, value)     do {                                          \
+                                  *((volatile uint16_t *)(addr)) = (value);   \
+                                  DMEMORY_BARRIER();                          \
+                                } while(0)
 
 /* Flash Base Address */
 #define BASE_ADDR               ((uint32_t)FLASH_ADDR)
@@ -100,11 +132,14 @@ static ARM_FLASH_INFO FlashInfo = {
   FLASH_SECTOR_SIZE,
   FLASH_PAGE_SIZE,
   FLASH_PROGRAM_UNIT,
-  FLASH_ERASED_VALUE
+  FLASH_ERASED_VALUE,
+#if (ARM_FLASH_API_VERSION > 0x201U)
+  { 0U, 0U, 0U }
+#endif
 };
 
 /* Flash Status */
-static ARM_FLASH_STATUS FlashStatus = {0};
+static ARM_FLASH_STATUS FlashStatus;
 static uint8_t Flags;
 
 
@@ -118,30 +153,46 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 static const ARM_FLASH_CAPABILITIES DriverCapabilities = {
   0U,   /* event_ready */
   1U,   /* data_width = 0:8-bit, 1:16-bit, 2:32-bit */
-  1U    /* erase_chip */
+  1U,   /* erase_chip */
+#if (ARM_FLASH_API_VERSION > 0x200U)
+  0U    /* reserved */
+#endif
 };
 
+/* Read Flash Status register */
+__STATIC_FORCEINLINE uint32_t RdStatus (uint32_t addr) {
+  uint32_t fsreg;
+
+  /* Invalidate data cache */
+  DCACHE_INVALIDATE (addr);
+
+  /* Read status register */
+  fsreg = RD_MEM(addr);
+
+  return (fsreg);
+}
 
 /* Check if Program/Erase completed */
 static bool DQ6_Polling (uint32_t addr) {
   uint32_t fsreg;
   uint32_t dqold;
 
-  fsreg = M16(addr);
+  fsreg = RdStatus(addr);
   do {
     dqold = fsreg & DQ6;
-    fsreg = M16(addr);
+    fsreg = RdStatus(addr);
     if ((fsreg & DQ6) == dqold) {
       return true;              /* Done */
     }
   } while ((fsreg & DQ5) != DQ5);
-  fsreg = M16(addr);
+
+  fsreg = RdStatus(addr);
   dqold = fsreg & DQ6;
-  fsreg = M16(addr);
+  fsreg = RdStatus(addr);
   if ((fsreg & DQ6) == dqold) {
     return true;                /* Done */
   }
-  M16(addr) = CMD_RESET;        /* Reset Flash Device */
+  WR_MEM(addr, CMD_RESET);      /* Reset Flash Device */
   return false;                 /* Error */
 }
 
@@ -172,6 +223,10 @@ static ARM_FLASH_CAPABILITIES GetCapabilities (void) {
 */
 static int32_t Initialize (ARM_Flash_SignalEvent_t cb_event) {
   (void)cb_event;
+
+  FlashStatus.busy  = 0U;
+  FlashStatus.error = 0U;
+
   Flags = FLASH_INIT;
   return ARM_DRIVER_OK;
 }
@@ -198,7 +253,7 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
     case ARM_POWER_OFF:
       Flags &= ~FLASH_POWER;
 
-      M16(BASE_ADDR) = CMD_RESET;
+      WR_MEM(BASE_ADDR, CMD_RESET);
 
       FlashStatus.busy  = 0U;
       FlashStatus.error = 0U;
@@ -210,7 +265,7 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       }
 
       if ((Flags & FLASH_POWER) == 0U) {
-        M16(BASE_ADDR) = CMD_RESET;
+        WR_MEM(BASE_ADDR, CMD_RESET);
 
         FlashStatus.busy  = 0U;
         FlashStatus.error = 0U;
@@ -253,7 +308,7 @@ static int32_t ReadData (uint32_t addr, void *data, uint32_t cnt) {
   addr += BASE_ADDR;
   mem = data;
   for (n = cnt; n; n--) {
-    *mem  = M16(addr);
+    *mem  = RD_MEM(addr);
     mem  += 1U;
     addr += 2U;
   }
@@ -289,10 +344,10 @@ static int32_t ProgramData (uint32_t addr, const void *data, uint32_t cnt) {
   addr += BASE_ADDR;
   mem = data;
   for (n = cnt; n; n--) {
-    M16(BASE_ADDR + (0x555UL << 1)) = 0xAAU;
-    M16(BASE_ADDR + (0x2AAUL << 1)) = 0x55U;
-    M16(BASE_ADDR + (0x555UL << 1)) = CMD_PROGRAM;
-    M16(addr) = *mem;
+    WR_MEM(BASE_ADDR + (0x555UL << 1), 0xAAU);
+    WR_MEM(BASE_ADDR + (0x2AAUL << 1), 0x55U);
+    WR_MEM(BASE_ADDR + (0x555UL << 1), CMD_PROGRAM);
+    WR_MEM(addr, *mem);
     mem  += 1U;
     addr += 2U;
     if (n > 1U) {
@@ -321,12 +376,12 @@ static int32_t EraseSector (uint32_t addr) {
   FlashStatus.busy  = 1U;
   FlashStatus.error = 0U;
 
-  M16(BASE_ADDR + (0x555UL << 1)) = 0xAAU;
-  M16(BASE_ADDR + (0x2AAUL << 1)) = 0x55U;
-  M16(BASE_ADDR + (0x555UL << 1)) = CMD_ERASE;
-  M16(BASE_ADDR + (0x555UL << 1)) = 0xAAU;
-  M16(BASE_ADDR + (0x2AAUL << 1)) = 0x55U;
-  M16(BASE_ADDR +  addr)          = CMD_ERASE_SECTOR;
+  WR_MEM(BASE_ADDR + (0x555UL << 1), 0xAAU);
+  WR_MEM(BASE_ADDR + (0x2AAUL << 1), 0x55U);
+  WR_MEM(BASE_ADDR + (0x555UL << 1), CMD_ERASE);
+  WR_MEM(BASE_ADDR + (0x555UL << 1), 0xAAU);
+  WR_MEM(BASE_ADDR + (0x2AAUL << 1), 0x55U);
+  WR_MEM(BASE_ADDR +  addr, CMD_ERASE_SECTOR);
 
   return ARM_DRIVER_OK;
 }
@@ -345,12 +400,12 @@ static int32_t EraseChip (void) {
   FlashStatus.busy  = 1U;
   FlashStatus.error = 0U;
 
-  M16(BASE_ADDR + (0x555UL << 1)) = 0xAAU;
-  M16(BASE_ADDR + (0x2AAUL << 1)) = 0x55U;
-  M16(BASE_ADDR + (0x555UL << 1)) = CMD_ERASE;
-  M16(BASE_ADDR + (0x555UL << 1)) = 0xAAU;
-  M16(BASE_ADDR + (0x2AAUL << 1)) = 0x55U;
-  M16(BASE_ADDR + (0x555UL << 1)) = CMD_ERASE_CHIP;
+  WR_MEM(BASE_ADDR + (0x555UL << 1), 0xAAU);
+  WR_MEM(BASE_ADDR + (0x2AAUL << 1), 0x55U);
+  WR_MEM(BASE_ADDR + (0x555UL << 1), CMD_ERASE);
+  WR_MEM(BASE_ADDR + (0x555UL << 1), 0xAAU);
+  WR_MEM(BASE_ADDR + (0x2AAUL << 1), 0x55U);
+  WR_MEM(BASE_ADDR + (0x555UL << 1), CMD_ERASE_CHIP);
 
   return ARM_DRIVER_OK;
 }
@@ -365,14 +420,15 @@ static ARM_FLASH_STATUS GetStatus (void) {
   uint32_t dqold;
 
   if (FlashStatus.busy) {
-    fsreg = M16(BASE_ADDR);
+    fsreg = RdStatus(BASE_ADDR);
     dqold = fsreg & DQ6;
-    fsreg = M16(BASE_ADDR);
+    fsreg = RdStatus(BASE_ADDR);
+
     if ((fsreg & DQ6) == dqold) {
       FlashStatus.busy = 0U;
     } else {
       if (fsreg & DQ5) {
-        M16(BASE_ADDR) = CMD_RESET;
+        WR_MEM(BASE_ADDR, CMD_RESET);
         FlashStatus.busy  = 0U;
         FlashStatus.error = 1U;
       }

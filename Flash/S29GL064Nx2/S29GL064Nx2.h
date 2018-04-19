@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        27. October 2015
- * $Revision:    V1.2
+ * $Date:        19. April 2018
+ * $Revision:    V1.4
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description for S29GL064Nx2 (32-bit Bus)

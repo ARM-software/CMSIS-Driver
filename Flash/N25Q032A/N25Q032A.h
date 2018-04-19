@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        06. July 2017
- * $Revision:    V1.0
+ * $Date:        19. April 2018
+ * $Revision:    V1.1
  *
  * Driver:       Driver_Flash# (default: Driver_Flash0)
  * Project:      Flash Device Description for Micron N25Q032A (SPI)

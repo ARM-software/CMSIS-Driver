@@ -7,6 +7,11 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version ="2.2.2-dev1">
+      NAND MemoryBus driver updated:
+      - Fixed Ready/Busy configuration handling
+      - Enhanced compatibility for ARM Compiler 6
+    </release>
     <release version ="2.2.2-dev0">
       Flash Drivers updated:
       - Added data cache handling to memory bus based drivers.
@@ -287,7 +292,7 @@
     </component>
 
     <!-- CMSIS-Driver NAND -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="NAND" Csub="Memory Bus" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="NAND" Csub="Memory Bus" Capiversion="2.1.0" Cversion="1.1.0" condition="CMSIS Core">
       <description>NAND Flash connected to Memory Bus</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

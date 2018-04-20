@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        17. April 2014
- * $Revision:    V1.00
+ * $Date:        20. April 2018
+ * $Revision:    V1.1
  *
  * Driver:       Driver_NAND# (default: Driver_NAND0)
  * Project:      NAND Flash Device connected to Memory Bus Driver
@@ -31,17 +31,11 @@
  *   Connect to hardware via Driver_NAND# = n (default: 0)
  * -------------------------------------------------------------------- */
 
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-  #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-  #pragma clang diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "NAND_MemBus_Config.h"
 
 #include "Driver_NAND.h"
 
-#define ARM_NAND_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,00)   /* driver version */
+#define ARM_NAND_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)   /* driver version */
 
 
 #if   (NAND_DEV0 && NAND_DEV1 && NAND_DEV2 && NAND_DEV3)
@@ -56,19 +50,19 @@
 #error "Invalid NAND Device selection!"
 #endif
 
-#if ((NAND_DEV0 && !NAND_DEV0_RB_PIN_IRQ) || \
-     (NAND_DEV1 && !NAND_DEV1_RB_PIN_IRQ) || \
-     (NAND_DEV2 && !NAND_DEV2_RB_PIN_IRQ) || \
-     (NAND_DEV3 && !NAND_DEV3_RB_PIN_IRQ))
+#if (!(NAND_DEV0 && NAND_DEV0_RB_PIN && NAND_DEV0_RB_PIN_IRQ) && \
+     !(NAND_DEV1 && NAND_DEV1_RB_PIN && NAND_DEV1_RB_PIN_IRQ) && \
+     !(NAND_DEV2 && NAND_DEV2_RB_PIN && NAND_DEV2_RB_PIN_IRQ) && \
+     !(NAND_DEV3 && NAND_DEV3_RB_PIN && NAND_DEV3_RB_PIN_IRQ))
 #define NAND_DEVICE_EVENT  0
 #else
 #define NAND_DEVICE_EVENT  1
 #endif
 
-#if ((NAND_DEV0 && !NAND_DEV0_RB_PIN) || \
-     (NAND_DEV1 && !NAND_DEV1_RB_PIN) || \
-     (NAND_DEV2 && !NAND_DEV2_RB_PIN) || \
-     (NAND_DEV3 && !NAND_DEV3_RB_PIN))
+#if (!(NAND_DEV0 && NAND_DEV0_RB_PIN) && \
+     !(NAND_DEV1 && NAND_DEV1_RB_PIN) && \
+     !(NAND_DEV2 && NAND_DEV2_RB_PIN) && \
+     !(NAND_DEV3 && NAND_DEV3_RB_PIN))
 #define NAND_RB_MONITOR    0
 #else
 #define NAND_RB_MONITOR    1
@@ -105,7 +99,7 @@ extern int32_t Driver_NAND_GetDeviceBusy_(NAND_DRIVER) (uint32_t dev_num);
                Needs to be called on Ready/Busy pin rising edge.
   \param[in]   dev_num   Device number
 */
-void Driver_NAND_Event_DeviceReady_(NAND_DRIVER) (uint32_t dev_num);
+extern void Driver_NAND_Event_DeviceReady_(NAND_DRIVER) (uint32_t dev_num);
 #endif
 
 
@@ -137,13 +131,16 @@ static const ARM_NAND_CAPABILITIES DriverCapabilities = {
   0,                 /* ddr2_timing_mode    */
   0,                 /* driver_strength_18  */
   0,                 /* driver_strength_25  */
-  0                  /* driver_strength_50  */
+  0,                 /* driver_strength_50  */
+#if (ARM_NAND_API_VERSION > 0x201U)
+  0
+#endif
 };
 
 
 #if NAND_DEVICE_EVENT
-ARM_NAND_SignalEvent_t NAND_EventCallback;  /* Event Callback */
-uint32_t               NAND_DeviceEvent;    /* Device event enable/disable mask */
+static ARM_NAND_SignalEvent_t NAND_EventCallback;  /* Event Callback */
+static uint32_t               NAND_DeviceEvent;    /* Device event enable/disable mask */
 #endif
 
 
@@ -152,7 +149,7 @@ typedef struct {
   uint32_t addr_base;   /* Base Address */
   uint32_t addr_ale;    /* ALE Address  */
   uint32_t addr_cle;    /* CLE Address  */
-  uint8_t  data_width;  /* Data Bus Width: 0=>8-bit, 1=>16-bit */
+  uint32_t data_width;  /* Data Bus Width: 0=>8-bit, 1=>16-bit */
 } const NAND_BUS_INFO;
 
 
@@ -234,7 +231,9 @@ static ARM_NAND_CAPABILITIES GetCapabilities (void) {
   \return        \ref execution_status
 */
 static int32_t Initialize (ARM_NAND_SignalEvent_t cb_event) {
-#if NAND_DEVICE_EVENT
+#if (NAND_DEVICE_EVENT == 0)
+  (void)cb_event;
+#else
   NAND_EventCallback = cb_event;
 #endif
   return ARM_DRIVER_OK;
@@ -283,6 +282,8 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
   \return        \ref execution_status
 */
 static int32_t DevicePower (uint32_t voltage) {
+  (void)voltage;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 
@@ -297,6 +298,8 @@ static int32_t DevicePower (uint32_t voltage) {
   \return        \ref execution_status
 */
 static int32_t WriteProtect (uint32_t dev_num, bool enable) {
+  (void)dev_num; (void)enable;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 
@@ -311,6 +314,8 @@ static int32_t WriteProtect (uint32_t dev_num, bool enable) {
   \return        \ref execution_status
 */
 static int32_t ChipEnable (uint32_t dev_num, bool enable) {
+  (void)dev_num; (void)enable;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 
@@ -327,6 +332,8 @@ static int32_t GetDeviceBusy (uint32_t dev_num) {
 
   return Driver_NAND_GetDeviceBusy_(NAND_DRIVER) (dev_num);
 #else
+  (void)dev_num;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 #endif
 }
@@ -376,6 +383,8 @@ static int32_t ReadData (uint32_t dev_num, void *data, uint32_t cnt, uint32_t mo
   uint32_t data_width;
   uint32_t n;
 
+  (void)mode;
+
   if (dev_num >= NAND_NUM_DEVS) return ARM_DRIVER_ERROR_PARAMETER;
   if (data == NULL)             return ARM_DRIVER_ERROR_PARAMETER;
 
@@ -411,6 +420,8 @@ static int32_t WriteData (uint32_t dev_num, const void *data, uint32_t cnt, uint
   uint32_t addr_base;
   uint32_t data_width;
   uint32_t n;
+
+  (void)mode;
 
   if (dev_num >= NAND_NUM_DEVS) return ARM_DRIVER_ERROR_PARAMETER;
   if (data == NULL)             return ARM_DRIVER_ERROR_PARAMETER;
@@ -455,6 +466,11 @@ static int32_t ExecuteSequence (uint32_t dev_num, uint32_t code, uint32_t cmd,
                                 uint32_t addr_col, uint32_t addr_row,
                                 void *data, uint32_t data_cnt,
                                 uint8_t *status, uint32_t *count) {
+  (void)dev_num; (void)code; (void)cmd;
+  (void)addr_col; (void)addr_row;
+  (void)data; (void)data_cnt;
+  (void)status; (void)count;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 
@@ -466,6 +482,8 @@ static int32_t ExecuteSequence (uint32_t dev_num, uint32_t code, uint32_t cmd,
   \return        \ref execution_status
 */
 static int32_t AbortSequence (uint32_t dev_num) {
+  (void)dev_num;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 
@@ -536,7 +554,12 @@ static int32_t Control (uint32_t dev_num, uint32_t control, uint32_t arg) {
   \return        NAND status \ref ARM_NAND_STATUS
 */
 static ARM_NAND_STATUS GetStatus (uint32_t dev_num) {
-  ARM_NAND_STATUS stat = {0, 0};
+  ARM_NAND_STATUS stat;
+  (void)dev_num;
+
+  stat.busy      = 0U;
+  stat.ecc_error = 0U;
+
   return stat;
 }
 
@@ -549,6 +572,9 @@ static ARM_NAND_STATUS GetStatus (uint32_t dev_num) {
   \return        \ref execution_status
 */
 static int32_t InquireECC (int32_t index, ARM_NAND_ECC_INFO *info) {
+  (void)index;
+  (void)info;
+
   return ARM_DRIVER_ERROR_UNSUPPORTED;
 }
 

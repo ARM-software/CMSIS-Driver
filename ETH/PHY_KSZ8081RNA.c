@@ -17,12 +17,12 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        28. June 2016
- * $Revision:    V6.2
+ * $Date:        25. May 2018
+ * $Revision:    V6.3
  *
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
  * Project:      Ethernet Physical Layer Transceiver (PHY)
- *               Driver for KSZ8081RNA
+ *               Driver for KSZ8081RNA (KSZ8081RNB compatible)
  * -----------------------------------------------------------------------
  * Use the following configuration settings in the middleware component
  * to connect to this driver.
@@ -33,17 +33,15 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 6.3
+ *    Added reference clock select configuration option (ETH_PHY_REF_CLK_50M)
  *  Version 6.2
  *    Updated for ARM compiler 6
  *  Version 6.1
  *    Added driver flow control flags
  *  Version 6.0
  *    Initial release
- */ 
-
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-#endif
+ */
 
 #include "PHY_KSZ8081RNA.h"
 
@@ -51,11 +49,15 @@
 
 
 #ifndef ETH_PHY_NUM
-#define ETH_PHY_NUM     0        /* Default driver number */
+#define ETH_PHY_NUM          0        /* Default driver number */
 #endif
 
 #ifndef ETH_PHY_ADDR
-#define ETH_PHY_ADDR    0x00     /* Default device address */
+#define ETH_PHY_ADDR         0x00     /* Default device address */
+#endif
+
+#ifndef ETH_PHY_REF_CLK_50M
+#define ETH_PHY_REF_CLK_50M  0        /* RMII Reference Clock (0:25MHz,1:50MHz) */
 #endif
 
 
@@ -66,7 +68,7 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 };
 
 /* Ethernet PHY control structure */
-static PHY_CTRL PHY = { NULL, NULL, 0, 0 };
+static PHY_CTRL PHY = { NULL, NULL, 0, 0, 0 };
 
 
 /**
@@ -161,6 +163,16 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
         /* Invalid PHY ID */
         return ARM_DRIVER_ERROR_UNSUPPORTED;
       }
+
+      #if (ETH_PHY_REF_CLK_50M != 0)
+        /* PHY clock input XI is 50MHz */
+        PHY.reg_rd(ETH_PHY_ADDR, REG_PHYCR2, &val);
+
+        /* Set RMII Reference Clock Select bit */
+        val |= PHYCR2_REF_CLK_SELECT;
+
+        PHY.reg_wr(ETH_PHY_ADDR, REG_PHYCR2, val);
+      #endif
 
       PHY.bmcr = 0U;
 

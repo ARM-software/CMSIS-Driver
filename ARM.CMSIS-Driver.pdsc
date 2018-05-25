@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version ="2.2.2-dev2">
+      Updated PHY_KSZ8081RNA to support 50MHz reference clock
+    </release>
     <release version ="2.2.2-dev1">
       NAND MemoryBus driver updated:
       - Fixed Ready/Busy configuration handling
@@ -146,7 +149,7 @@
       </files>
     </component>
     
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.3.0" condition="CMSIS Core">
       <description>Ethernet PHY KSZ8081RNA Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        28. June 2016
+ * $Date:        25. May 2018
  * $Revision:    V6.2
  *
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -43,11 +43,7 @@
  *    Based on API V1.10 (namespace prefix ARM_ added)
  *  Version 5.0
  *    Initial release
- */ 
-
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-#endif
+ */
 
 #include "PHY_ST802RT1.h"
 
@@ -70,7 +66,7 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 };
 
 /* Ethernet PHY control structure */
-static PHY_CTRL PHY = { NULL, NULL, 0, 0 };
+static PHY_CTRL PHY = { NULL, NULL, 0, 0, 0 };
 
 
 /**

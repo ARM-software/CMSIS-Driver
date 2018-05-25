@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        28. June 2016
+ * $Date:        25. May 2018
  * $Revision:    V1.2
  *  
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -39,11 +39,7 @@
  *    Added driver flow control flags
  *  Version 1.0
  *    Initial release
- */ 
-
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-#endif
+ */
 
 #include "PHY_LAN8742A.h"
 
@@ -66,7 +62,7 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 };
 
 /* Ethernet PHY control structure */
-static PHY_CTRL PHY = { NULL, NULL, 0, 0 };
+static PHY_CTRL PHY = { NULL, NULL, 0, 0, 0 };
 
 
 /**

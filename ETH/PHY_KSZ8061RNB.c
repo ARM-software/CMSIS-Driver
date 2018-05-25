@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        28. June 2016
+ * $Date:        25. May 2018
  * $Revision:    V1.3
  *
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -41,11 +41,7 @@
  *    Fixed tracking initialization and power state
  *  Version 1.0
  *    Initial release
- */ 
-
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wpadded"
-#endif
+ */
 
 #include "PHY_KSZ8061RNB.h"
 
@@ -68,7 +64,7 @@ static const ARM_DRIVER_VERSION DriverVersion = {
 };
 
 /* Ethernet PHY control structure */
-static PHY_CTRL PHY = { NULL, NULL, 0, 0 };
+static PHY_CTRL PHY = { NULL, NULL, 0, 0, 0 };
 
 
 /**

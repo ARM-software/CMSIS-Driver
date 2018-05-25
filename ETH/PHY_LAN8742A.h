@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        28. June 2016
+ * $Date:        25. May 2018
  * $Revision:    V1.2
  *
  * Project:      Ethernet Physical Layer Transceiver (PHY)
@@ -102,6 +102,7 @@ typedef struct phy_ctrl {
   ARM_ETH_PHY_Write_t reg_wr;           /* PHY register write function       */
   uint16_t            bcr;              /* BCR register value                */
   uint8_t             flags;            /* Control flags                     */
+  uint8_t             rsvd;             /* Reserved                          */
 } PHY_CTRL;
 
 #endif /* __PHY_LAN8742A_H */

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="Utilities/PACK.xsd">
+<package schemaVersion="1.4.0" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="Utilities/PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
@@ -7,18 +7,14 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version ="2.2.2-dev2">
+    <release version ="2.3.0" date="2018-06-15">
       Updated PHY_KSZ8081RNA to support 50MHz reference clock
-    </release>
-    <release version ="2.2.2-dev1">
       NAND MemoryBus driver updated:
       - Fixed Ready/Busy configuration handling
       - Enhanced compatibility for ARM Compiler 6
-    </release>
-    <release version ="2.2.2-dev0">
       Flash Drivers updated:
       - Added data cache handling to memory bus based drivers.
-      - Enhanced compatibility for ARM Compiler 6
+      - Fixed warnings flagged by ARM Compiler 6
     </release>
     <release version ="2.2.1" date="2018-03-20">
       Added web link to hardware documentation for CMSIS-Driver components.

@@ -7,6 +7,10 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.3.1-dev0">
+      Cortex-M1:
+      - added beta Cortex-M1 support
+    </release>
     <release version ="2.3.0" date="2018-06-15">
       Updated PHY_KSZ8081RNA to support 50MHz reference clock
       NAND MemoryBus driver updated:
@@ -41,9 +45,10 @@
 
   <conditions>
     <condition id="Cortex-M Device">
-      <description>Cortex-M processor based device: Cortex-M0, Cortex-M0+, Cortex-M3, Cortex-M4, Cortex-M7, Cortex-M23, Cortex-M33, SC000 or SC3000</description>
+      <description>Cortex-M processor based device: Cortex-M0, Cortex-M0+, Cortex-M1, Cortex-M3, Cortex-M4, Cortex-M7, Cortex-M23, Cortex-M33, SC000 or SC3000</description>
       <accept Dcore="Cortex-M0"/>
       <accept Dcore="Cortex-M0+"/>
+      <accept Dcore="Cortex-M1"/>
       <accept Dcore="Cortex-M3"/>
       <accept Dcore="Cortex-M4"/>
       <accept Dcore="Cortex-M7"/>

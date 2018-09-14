@@ -256,19 +256,19 @@ static uint32_t LockSet_Ex (uint8_t *lock) {
 
   __ASM volatile (
 #ifndef __ICCARM__
-  ".syntax unified\n\t"
+  ".syntax unified\n"
 #endif
   "1:\n\t"
     "ldrexb %[ex], [%[lock]]\n\t"
     "cbz    %[ex], 2f\n\t"
     "clrex\n\t"
     "movs   %[ex], #0\n\t"
-    "b      3f\n\t"
+    "b      3f\n"
   "2:\n\t"
     "strexb %[ex], %[val], [%[lock]]\n\t"
-    "cmp    %[ex], #0\n\r"
+    "cmp    %[ex], #0\n"
     "bne    1b\n\t"
-    "movs   %[ex], #1\n\t"
+    "movs   %[ex], #1\n"
   "3:"
   : [ex] "=&l" (ex)
   : [lock] "l" (lock), [val] "l" (val)
@@ -286,13 +286,13 @@ static void LockClr_Ex (uint8_t *lock) {
 
   __ASM volatile (
 #ifndef __ICCARM__
-  ".syntax unified\n\t"
+  ".syntax unified\n"
 #endif
   "1:\n\t"
     "ldrexb %[ex],[%[lock]]\n\t"
     "strexb %[ex],%[val],[%[lock]]\n\t"
     "cbz    %[ex],2f\n\t"
-    "b       1b\n\t"
+    "b       1b\n"
   "2:"
   : [ex] "=&l" (ex)
   : [lock] "l" (lock), [val] "l" (val)
@@ -306,7 +306,7 @@ static uint8_t Qincrement_Ex (uint8_t *addr) {
 
   __ASM volatile (
 #ifndef __ICCARM__
-  ".syntax unified\n\t"
+  ".syntax unified\n"
 #endif
   "1:\n\t"
     "ldrexb %[in],[%[addr]]\n\t"

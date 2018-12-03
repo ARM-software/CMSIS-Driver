@@ -1,8 +1,10 @@
 # CMSIS-Driver
 
-Repository of MCU independent device driver implementations and template files of the CMSIS-Driver API specification (http://arm-software.github.io/CMSIS_5/Driver/html/index.html)
+This repository contains MCU independent device driver implementations and template files. 
+The drivers are implemented using the [CMSIS-Driver API specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html).
+All drivers refer the API Interface header file defintions published in the CMSIS pack (https://github.com/ARM-software/CMSIS_5).
 
-## ETH 
+## ETH - Ehternet MAC & PHY or Ethernet PHY drivers
 - ETH_KSZ8851SNL
 - ETH_LAN9220
 - PHY_DP83848
@@ -13,7 +15,7 @@ Repository of MCU independent device driver implementations and template files o
 - PHY_LAN8742A
 - PHY_ST802RT1
 
-## Flash
+## Flash - Flash device drivers
 - AM29x800BB
 - AT45DB641E
 - AT45DB642D
@@ -22,13 +24,13 @@ Repository of MCU independent device driver implementations and template files o
 - N25Q32A
 - S29GL064Nx2
 
-## I2C
+## I2C - MultiSlave wrapper for I2C CMSIS-Driver implementations
 - I2C_MultiSlave
 
-## NAND
+## NAND - NAND Flash drivers
 - NAND_MemBus
 
-## SPI
+## SPI - MultiSlave wrapper for SPI CMSIS-Driver implementations
 - SPI_MultiSlave
 
 ## License

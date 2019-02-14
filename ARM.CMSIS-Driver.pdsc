@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.0-dev0">
+      Added Inventek WiFi ISM43362 driver
+    </release>
     <release version="2.3.1-dev0">
       Cortex-M1:
       - added beta Cortex-M1 support
@@ -337,6 +340,21 @@
       </files>
     </component>
 
+    <!-- CMSIS-Driver WiFi -->
+
+    <!-- Inventek ISM43362 -->    
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.0.0-beta" Cvariant="SPI" Cversion="1.0.0-beta" condition="CMSIS Core with RTOS2 and SPI Driver">
+      <description>WiFi Inventek ISM43362 Driver (SPI)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_WiFi_ISM43362_SPI   /* Driver WiFi ISM43362 (SPI) */
+      </RTE_Components_h>
+      <files>
+        <file category="header" name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.0.0"/>
+        <file category="source" name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.0.0"/>
+        <file category="source" name="WiFi/ISM43362/WiFi_ISM43362.c"/>
+      </files>
+    </component>
   </components>
 
 </package>

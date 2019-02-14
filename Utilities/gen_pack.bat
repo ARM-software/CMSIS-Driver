@@ -22,7 +22,7 @@ SET PACK_VENDOR=ARM
 SET PACK_NAME=CMSIS-Driver
 
 :: Folder for Pack
-SET PACK_FOLDER_LIST=Config Documentation ETH Flash I2C NAND SPI
+SET PACK_FOLDER_LIST=Config Documentation ETH Flash I2C NAND SPI WiFi
 
 :: Files in base folder for Pack
 SET PACK_FILE_LIST=%PACK_VENDOR%.%PACK_NAME%.pdsc README.md LICENSE.txt

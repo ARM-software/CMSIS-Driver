@@ -19,7 +19,7 @@
  *
  *
  * $Date:        29. January 2019
- * $Revision:    V1.0
+ * $Revision:    V1.0 (beta)
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRIVER_INDEX value)
  * Project:      WiFi Driver for 
@@ -69,8 +69,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
- *  Version 1.0
- *    Initial release
+ *  Version 1.0 (beta)
+ *    Initial beta version
  */
 
 

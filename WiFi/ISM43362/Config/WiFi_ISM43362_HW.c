@@ -18,46 +18,44 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        30. January 2019
+ * $Date:        25. February 2019
  * $Revision:    V1.0
  *
  * Project:      WiFi Driver Hardware specific implementation for 
  *               Inventek ISM43362-M3G-L44 WiFi Module (SPI variant)
  * -------------------------------------------------------------------------- */
 
-#include <stdbool.h>
-
 /**
-  \fn          void WiFi_Pin_RSTN (bool rstn)
+  \fn          void WiFi_Pin_RSTN (uint8_t rstn)
   \brief       Drive Reset line.
   \param[in]   rstn
-                 - \b false Drive Reset line not active state
-                 - \b true  Drive Reset line active state
+                 - value = 0: Drive Reset line not active state
+                 - value = 1: Drive Reset line active state
   \return      none
 */
-void WiFi_ISM43362_Pin_RSTN (bool rstn) {
+void WiFi_ISM43362_Pin_RSTN (uint8_t rstn) {
   // Add code for driving Reset pin here
 }
 
 /**
-  \fn          void WiFi_Pin_SSN (bool ssn)
+  \fn          void WiFi_Pin_SSN (uint8_t ssn)
   \brief       Drive Slave Select line.
   \param[in]   ssn
-                 - \b false Drive Slave Select line not active state
-                 - \b true  Drive Slave Select line active state
+                 - value = 0: Drive Slave Select line not active state
+                 - value = 1: Drive Slave Select line active state
   \return      none
 */
-void WiFi_ISM43362_Pin_SSN (bool ssn) {
+void WiFi_ISM43362_Pin_SSN (uint8_t ssn) {
   // Add code for driving Slave Select pin here
 }
 
 /**
-  \fn          bool WiFi_Pin_DATARDY (void)
+  \fn          uint8_t WiFi_Pin_DATARDY (void)
   \brief       Get Data Ready line state.
   \return      Data Ready line state
-                 - \b false Data Ready line is not active state
-                 - \b true  Data Ready line is active state
+                 - 0: Data Ready line is not active state
+                 - 1: Data Ready line is active state
 */
-bool WiFi_ISM43362_Pin_DATARDY (void) {
+uint8_t WiFi_ISM43362_Pin_DATARDY (void) {
   // Add code for retrieving Data Ready pin state here
 }

@@ -1349,7 +1349,7 @@ static int32_t WiFi_GetOption (uint32_t option, void *data, uint32_t *len) {
   uint8_t            *ptr_resp_buf;
   uint8_t            *ptr_u8_data;
   ARM_WIFI_MAC_IP4_t *ptr_ap_mac_ip4;
-  uint32_t            resp_len;
+  uint32_t            resp_len, copy_len;
   int                 int_val;
   uint8_t             i, num, mutex_acquired;
 
@@ -1391,7 +1391,14 @@ static int32_t WiFi_GetOption (uint32_t option, void *data, uint32_t *len) {
     switch (option) {
       case ARM_WIFI_SSID:                     // Station     Get SSID of connected AP;            data = &ssid,     len<= 33, ssid     (char[32+1]), null-terminated string
         // Extract ssid from response on "C?" command
-        if (sscanf((const char *)resp_buf + 2U, "%33[^,]s", (char *)data) != 1) {
+        if (sscanf((const char *)resp_buf + 2U, "%32[^,]s", cmd_buf) != 1) {
+          copy_len = strlen(cmd_buf) + 1U;
+          if (copy_len > *len) {
+            copy_len = *len;
+          }
+          memcpy((void *)data, (void *)cmd_buf, copy_len);
+          *len = copy_len;
+        } else {
           ret = ARM_DRIVER_ERROR;
         }
         break;
@@ -1400,7 +1407,14 @@ static int32_t WiFi_GetOption (uint32_t option, void *data, uint32_t *len) {
         // Skip ssid (1 ',') from response on "C?" command
         ptr_resp_buf = SkipCommas(resp_buf, 1U);
         if (ptr_resp_buf != NULL) {
-          if (sscanf((const char *)ptr_resp_buf, "%65[^,]s", (char *)data) != 1) {
+          if (sscanf((const char *)ptr_resp_buf, "%64[^,]s", cmd_buf) != 1) {
+            copy_len = strlen(cmd_buf) + 1U;
+            if (copy_len > *len) {
+              copy_len = *len;
+            }
+            memcpy((void *)data, (void *)cmd_buf, copy_len);
+            *len = copy_len;
+          } else {
             ret = ARM_DRIVER_ERROR;
           }
         } else {
@@ -1720,7 +1734,7 @@ static int32_t WiFi_Scan (ARM_WIFI_AP_INFO_t ap_info[], uint32_t max_num) {
         if (ptr_resp_buf != NULL) {
           ptr_resp_buf++;          // Skip '"'
           // Extract SSID
-          if (sscanf((const char *)ptr_resp_buf, "%[^\"]", ap_info[i].ssid) != 1) {
+          if (sscanf((const char *)ptr_resp_buf, "%32[^\"]", ap_info[i].ssid) != 1) {
             ret = ARM_DRIVER_ERROR;
           }
         } else {
@@ -1839,7 +1853,15 @@ static int32_t WiFi_Connect (const char *ssid, const char *pass, uint8_t securit
   uint8_t *ptr_resp_buf;
   uint32_t resp_len;
 
-  if ((ssid == NULL) || ((security != ARM_WIFI_SECURITY_OPEN) && (pass == NULL)) || (ch > 13)) {
+  if ((ssid == NULL) || (strlen(ssid) > 32U)) {
+    return ARM_DRIVER_ERROR_PARAMETER;
+  }
+  if (security != ARM_WIFI_SECURITY_OPEN) {
+    if ((pass == NULL) || (strlen(pass) > 64U)) {
+      return ARM_DRIVER_ERROR_PARAMETER;
+    }
+  }
+  if (ch > 13) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
   if (driver_initialized == 0U) {
@@ -1931,6 +1953,9 @@ static int32_t WiFi_ConnectWPS (const char *pin) {
   uint8_t *ptr_resp_buf;
   uint32_t resp_len;
 
+  if ((pin != NULL) && (strlen(pin) > 8U)) {
+    return ARM_DRIVER_ERROR_PARAMETER;
+  }
   if (driver_initialized == 0U) {
     return ARM_DRIVER_ERROR;
   }
@@ -2095,7 +2120,15 @@ static int32_t WiFi_AP_Start (const char *ssid, const char *pass, uint8_t securi
   uint8_t *ptr_resp_buf;
   uint32_t resp_len;
 
-  if ((ssid == NULL) || ((security != ARM_WIFI_SECURITY_OPEN) && (pass == NULL)) || (ch > 13)) {
+  if ((ssid == NULL) || (strlen(ssid) > 32U)) {
+    return ARM_DRIVER_ERROR_PARAMETER;
+  }
+  if (security != ARM_WIFI_SECURITY_OPEN) {
+    if ((pass == NULL) || (strlen(pass) > 64U)) {
+      return ARM_DRIVER_ERROR_PARAMETER;
+    }
+  }
+  if (ch > 13) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
   if (driver_initialized == 0U) {
@@ -3536,7 +3569,7 @@ static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *
   if ((ip == NULL) || (ip_len == NULL) || (*ip_len != 4U)) {
     return ARM_SOCKET_EINVAL;
   }
-  if (strlen(name) > 64) {
+  if (strlen(name) > 64U) {
     // ISM43362 Limitation: Domain name is limited to 64 characters
     return ARM_SOCKET_ERROR;
   }

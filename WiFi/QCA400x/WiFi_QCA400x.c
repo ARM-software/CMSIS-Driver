@@ -18,7 +18,7 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        29. January 2019
+ * $Date:        26. February 2019
  * $Revision:    V1.0 (beta)
  *
  * Driver:       Driver_WiFin (n = WIFI_QCA400x_DRIVER_INDEX value)
@@ -29,11 +29,6 @@
  *
  *   WIFI_QCA400x_DRIVER_INDEX: defines index of driver structure variable
  *     - default value:    0
- *   ENABLE_STACK_OFFLOAD: defines usage of stack offload 
- *                         (0 = bypass interface, 1 = socket interface)
- *                         THIS DEFINITION HAS TO BE GLOBAL AND DEFINED ALSO 
- *                         FOR QUALCOMM SDK CODE!
- *     - default value:    1
  *   WIFI_QCA400x_CON_DISCON_TIMEOUT: defines maximum wait on WiFi connect
  *                         or disconnect
  *     - default value:    30000
@@ -129,6 +124,7 @@ typedef struct {                        // Socket structure
   uint32_t non_blocking;                // 0 = blocking, non-zero = non-blocking
   uint32_t send_timeout;                // Send Timeout
   uint32_t recv_timeout;                // Receive Timeout
+  uint32_t type;                        // Type
   uint16_t local_port;                  // Local  port number
   uint16_t remote_port;                 // Remote port number
   uint8_t  remote_ip[16];               // Remote IP
@@ -1630,6 +1626,7 @@ static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
       socket_arr[i].remote_port  = 0;
       socket_arr[i].recv_timeout = WIFI_QCA400x_SOCKET_DEF_TIMEOUT;
       socket_arr[i].send_timeout = WIFI_QCA400x_SOCKET_DEF_TIMEOUT;
+      socket_arr[i].type         = type;
       memset((void *)socket_arr[i].remote_ip, 0, 16);
       ret = i;
     } else {
@@ -2249,9 +2246,6 @@ static int32_t WiFi_SocketGetOpt (int32_t socket, int32_t opt_id, void *opt_val,
 
   if (ret == 0) {
     switch (opt_id) {
-      case ARM_SOCKET_IO_FIONBIO:
-        __UNALIGNED_UINT32_WRITE(opt_val, (uint32_t)socket_arr[socket].non_blocking);
-        break;
       case ARM_SOCKET_SO_RCVTIMEO:
         __UNALIGNED_UINT32_WRITE(opt_val, socket_arr[socket].recv_timeout);
         *opt_len = 4U;
@@ -2260,6 +2254,11 @@ static int32_t WiFi_SocketGetOpt (int32_t socket, int32_t opt_id, void *opt_val,
         __UNALIGNED_UINT32_WRITE(opt_val, socket_arr[socket].send_timeout);
         *opt_len = 4U;
         break;
+      case ARM_SOCKET_SO_TYPE:
+        __UNALIGNED_UINT32_WRITE(opt_val, socket_arr[socket].type);
+        *opt_len = 4U;
+        break;
+      case ARM_SOCKET_SO_KEEPALIVE:
       default:
         ret = ARM_SOCKET_ENOTSUP;
         break;
@@ -2309,6 +2308,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
       case ARM_SOCKET_SO_SNDTIMEO:
         socket_arr[socket].send_timeout = val;
         break;
+      case ARM_SOCKET_SO_KEEPALIVE:
       default:
         ret = ARM_SOCKET_ENOTSUP;
         break;

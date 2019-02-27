@@ -34,9 +34,6 @@
  *     - default value:    30000
  *   WIFI_QCA400x_RESOLVE_TIMEOUT: defines maximum wait on hostname resolve
  *     - default value:    5000
- *   WIFI_QCA400x_SOCKET_DEF_TIMEOUT: defines initial timeout setting for 
- *                         socket send/receive
- *     - default value:    10000
  *   WIFI_QCA400x_MAX_PACKET_LEN: defines maximum packet length (in bytes)
  *     - default value:    1576
  *   WIFI_QCA400x_SCAN_BUF_LEN: defines maximum length of buffer for scan 
@@ -54,7 +51,6 @@
 
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "a_config.h"
@@ -131,17 +127,17 @@ typedef struct {                        // Socket structure
 } socket_t;
 
 // Local variables and structures
-static bool                             driver_initialized = false;
+static uint8_t                          driver_initialized = 0U;
 static ARM_WIFI_SignalEvent_t           signal_event_fn;
 
 static uint32_t                         tx_power;
 static uint32_t                         ap_ssid_hidden;
 #if (WIFI_QCA400x_MODE_INT_STACK)       // Enabled internal network stack (socket functions enabled)
-static bool                             ap_dhcp_server;
+static uint8_t                          ap_dhcp_server;
 static uint32_t                         ap_ip_dhcp_begin;
 static uint32_t                         ap_ip_dhcp_end;
 static uint32_t                         ap_ip_dhcp_lease_time;
-static bool                             dhcp_client;
+static uint8_t                          dhcp_client;
 static uint32_t                         ip_address;
 static uint32_t                         ip_submask;
 static uint32_t                         ip_gateway;
@@ -153,8 +149,8 @@ static uint8_t                          mac_num;
 #endif
 
 static osEventFlagsId_t                 event_con_discon;
-static bool                             connected;
-static bool                             ap_running;
+static uint8_t                          connected;
+static uint8_t                          ap_running;
 static uint8_t                          scan_buf[WIFI_QCA400x_SCAN_BUF_LEN] __ALIGNED(4);
 static char                             char_buf[65]                        __ALIGNED(4);
 static ARM_WIFI_MAC_IP4_t               mac_ip4 [WIFI_QCA400x_AP_MAX_NUM]   __ALIGNED(4);
@@ -167,8 +163,8 @@ static socket_t                         socket_arr[MAX_SOCKETS_SUPPORTED];
 #define NUM_RX_FRAME  16                // must be 2^n; must be < 256
 #define NUM_TX_FRAME  4
 
-static volatile uint8_t                rx_q_head;
-static volatile uint8_t                rx_q_tail;
+static volatile uint8_t                 rx_q_head;
+static volatile uint8_t                 rx_q_tail;
 
 // Receive netbuf queue
 static A_NETBUF *                       rx_netbuf_queue[NUM_RX_FRAME];
@@ -203,8 +199,10 @@ static int32_t WiFi_SocketClose    (int32_t socket);
   \param [in]  bssid     Unused
   \param [in]  bssConn   Unused
 */
-static void ConnectCallback (uint32_t value, uint8_t device_id, uint8_t *bssid, bool bssConn) {
-
+static void ConnectCallback (uint32_t value, uint8_t device_id, uint8_t *bssid, uint32_t bssConn) {
+  (void)bssid;
+  (void)bssConn;
+  
   if (device_id == 0U) {
     if (value == 0x10U) {
       osEventFlagsSet(event_con_discon, 2U);
@@ -253,7 +251,7 @@ static void AP_DhcpCallback (uint8_t *mac, uint32_t ip) {
 */
 void WiFi_EthFrameReceived (A_NETBUF *a_netbuf_ptr) {
 
-  if (connected == false) {
+  if (connected == 0U) {
     A_NETBUF_FREE(a_netbuf_ptr);
     return;
   }
@@ -319,16 +317,16 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
 
   if (!driver_initialized) {
     // Initialize all local variables
-    connected             = false;
-    ap_running            = false;
+    connected             = 0U;
+    ap_running            = 0U;
 
     tx_power              = 1U;
     ap_ssid_hidden        = 0U;
 
     memset((void *)mac_ip4,  0, sizeof(mac_ip4));
 #if (WIFI_QCA400x_MODE_INT_STACK)       // Enabled internal network stack (socket functions enabled)
-    dhcp_client           = true;
-    ap_dhcp_server        = false;
+    dhcp_client           = 1U;
+    ap_dhcp_server        = 0U;
 
     mac_num               = 0U;
     ap_ip_dhcp_begin      = 0U;
@@ -368,7 +366,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
     if (ret == ARM_DRIVER_OK) {
       if (ATHEROS_WIFI_IF.INIT(&wifiDev) == A_OK) {
         // If initialization succeeded
-        driver_initialized = true;
+        driver_initialized = 1U;
       } else {
         ret = ARM_DRIVER_ERROR;
       }
@@ -419,7 +417,7 @@ static int32_t WiFi_Uninitialize (void) {
       if (ATHEROS_WIFI_IF.STOP(&wifiDev) == A_OK) {
         // If uninitialization succeeded
         signal_event_fn    = NULL;
-        driver_initialized = false;
+        driver_initialized = 0U;
       } else {
         ret = ARM_DRIVER_ERROR;
       }
@@ -586,7 +584,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
           val = __UNALIGNED_UINT32_READ(data);
           if (qcom_ipconfig(0U, IPCFG_STATIC, &val, &ip_submask, &ip_gateway) == A_OK) {
             ip_address  = val;
-            dhcp_client = false;
+            dhcp_client = 0U;
           } else {
             ret = ARM_DRIVER_ERROR;
           }
@@ -748,7 +746,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
           if (val != 0U) {
             if (qcom_dhcps_set_pool(0U, ap_ip_dhcp_begin, ap_ip_dhcp_end, ap_ip_dhcp_lease_time) == A_OK) {
               if (qcom_dhcps_register_cb(0, (void *)AP_DhcpCallback) == A_OK) {
-                ap_dhcp_server = true;
+                ap_dhcp_server = 1U;
               } else {
                 ret = ARM_DRIVER_ERROR;
               }
@@ -757,7 +755,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
             }
           } else {
             if (qcom_dhcps_release_pool(0U) == A_OK) {
-              ap_dhcp_server = false;
+              ap_dhcp_server = 0U;
             } else {
               ret = ARM_DRIVER_ERROR;
             }
@@ -1122,7 +1120,7 @@ static int32_t WiFi_Scan (ARM_WIFI_AP_INFO_t ap_info[], uint32_t max_num) {
 
   if (ret == ARM_DRIVER_OK) {
     memset((void *)&params, 0, sizeof(qcom_start_scan_params_t));
-    params.forceFgScan = true;
+    params.forceFgScan = 1;
     if (qcom_set_ssid(0U, " ") == A_OK) {
       if (_qcom_set_scan(0U, &params) == A_OK) {
         if (qcom_get_scan(0U, (QCOM_BSS_SCAN_INFO **)&scan_buf, &num) == A_OK) {
@@ -1298,8 +1296,8 @@ static int32_t WiFi_Connect (const char *ssid, const char *pass, uint8_t securit
       evt = osEventFlagsWait(event_con_discon, 2U, osFlagsWaitAny, WIFI_QCA400x_CON_DISCON_TIMEOUT);
       // If evt == 2 then connect has succeeded
       if        (evt == 2U) {
-        connected  = true;
-        ap_running = false;
+        connected  = 1U;
+        ap_running = 0U;
 
 #if (WIFI_QCA400x_MODE_INT_STACK)                       // Enabled internal network stack (socket functions enabled)
         // Enable DHCP if needed
@@ -1358,7 +1356,7 @@ static int32_t WiFi_ConnectWPS (const char *pin) {
     evt = osEventFlagsWait(event_con_discon, 2U, osFlagsWaitAny, WIFI_QCA400x_CON_DISCON_TIMEOUT);
     // If evt == 2 then connect has succeeded
     if        (evt == 2U) {
-      connected = true;
+      connected = 1U;
     } else if (evt == osFlagsErrorTimeout) {
       ret = ARM_DRIVER_ERROR_TIMEOUT;
     } else {
@@ -1393,7 +1391,7 @@ static int32_t WiFi_Disconnect (void) {
       evt = osEventFlagsWait(event_con_discon, 1U, osFlagsWaitAny, WIFI_QCA400x_CON_DISCON_TIMEOUT);
       // If evt == 1 then disconnect has succeeded
       if        (evt == 1U) {
-        connected = false;
+        connected = 0U;
       } else if (evt == osFlagsErrorTimeout) {
         ret = ARM_DRIVER_ERROR_TIMEOUT;
       } else {
@@ -1513,8 +1511,8 @@ static int32_t WiFi_AP_Start (const char *ssid, const char *pass, uint8_t securi
   }
   if (ret == ARM_DRIVER_OK) {
     if (qcom_commit(0U) == A_OK) {
-      ap_running = true;
-      connected  = false;
+      ap_running = 1U;
+      connected  = 0U;
     }
   }
 
@@ -1624,8 +1622,8 @@ static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
       socket_arr[i].non_blocking = 0;
       socket_arr[i].local_port   = 0;
       socket_arr[i].remote_port  = 0;
-      socket_arr[i].recv_timeout = WIFI_QCA400x_SOCKET_DEF_TIMEOUT;
-      socket_arr[i].send_timeout = WIFI_QCA400x_SOCKET_DEF_TIMEOUT;
+      socket_arr[i].recv_timeout = 0xFFFFFFFF;
+      socket_arr[i].send_timeout = 0;
       socket_arr[i].type         = type;
       memset((void *)socket_arr[i].remote_ip, 0, 16);
       ret = i;

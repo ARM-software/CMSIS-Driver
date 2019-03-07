@@ -73,9 +73,11 @@
 
 // Externally provided hardware dependent handling callback functions
 
-extern void    WiFi_ISM43362_Pin_RSTN    (uint8_t rstn);
-extern void    WiFi_ISM43362_Pin_SSN     (uint8_t ssn);
-extern uint8_t WiFi_ISM43362_Pin_DATARDY (void);
+extern void    WiFi_ISM43362_Pin_Initialize   (void);
+extern void    WiFi_ISM43362_Pin_Uninitialize (void);
+extern void    WiFi_ISM43362_Pin_RSTN         (uint8_t rstn);
+extern void    WiFi_ISM43362_Pin_SSN          (uint8_t ssn);
+extern uint8_t WiFi_ISM43362_Pin_DATARDY      (void);
 
 // Exported hardware dependent function called by user code
 
@@ -204,7 +206,7 @@ static uint8_t                          sta_local_ip  [4];
 static uint8_t                          ap_local_ip   [4];
 static ARM_WIFI_MAC_IP4_t               mac_ip4       [8];
 
-static char                             cmd_buf [128  +1] __ALIGNED(4);
+static char                             cmd_buf [64   +1] __ALIGNED(4);
 static uint8_t                          resp_buf[1210 +1] __ALIGNED(4);
 
 static socket_t                         socket_arr[2 * WIFI_ISM43362_SOCKETS_NUM];
@@ -642,7 +644,7 @@ static int32_t SPI_StartStopTransportServerClient (int32_t socket, uint8_t proto
   uint32_t resp_len;
 
   // Set communication socket number
-  sprintf(cmd_buf, "P0=%d\r", socket); resp_len = sizeof(resp_buf) - 1U;
+  snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", socket); resp_len = sizeof(resp_buf) - 1U;
   if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
     return ARM_SOCKET_ERROR;
   }
@@ -657,18 +659,18 @@ static int32_t SPI_StartStopTransportServerClient (int32_t socket, uint8_t proto
   }
   if (server != 0U) {
     // Set transport local port number
-    sprintf(cmd_buf, "P2=%d\r", local_port); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "P2=%d\r", local_port); resp_len = sizeof(resp_buf) - 1U;
     if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
       return ARM_SOCKET_ERROR;
     }
   } else {
     // Set transport remote host IP address
-    sprintf(cmd_buf, "P3=%d.%d.%d.%d\r", remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "P3=%d.%d.%d.%d\r", remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]); resp_len = sizeof(resp_buf) - 1U;
     if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
       return ARM_SOCKET_ERROR;
     }
     // Set transport remote port number
-    sprintf(cmd_buf, "P4=%d\r", remote_port); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "P4=%d\r", remote_port); resp_len = sizeof(resp_buf) - 1U;
     if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
       return ARM_SOCKET_ERROR;
     }
@@ -796,14 +798,14 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                   if ((socket_arr[i].data_to_recv != NULL) && (socket_arr[i].len_to_recv != 0U) && (socket_arr[i].recv_time_left != 0U)) {
                     do {
                       // Send command to read data from remote client if socket is using receive in long blocking
-                      sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+                      snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
                       if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
                         len_req = socket_arr[i].len_to_recv - socket_arr[i].len_recv;
                         if (len_req > 1200U) {
                           len_req = 1200U;
                         }
                         // Set read data packet size
-                        sprintf(cmd_buf, "R1=%d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
+                        snprintf(cmd_buf, sizeof(cmd_buf), "R1=%d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
                         if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
                           // Receive data
                           memcpy((void *)cmd_buf, (void *)"R0\r", 4); resp_len = sizeof(resp_buf) - 1U;
@@ -932,6 +934,9 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
     // If any of mutex or flag creation failed
     ret = ARM_DRIVER_ERROR;
   }
+
+  // Initialize additional pins (Reset, Slave Select, Data Ready)
+  WiFi_ISM43362_Pin_Initialize();
 
   // Initialize SPI interface
   if (ret == ARM_DRIVER_OK) {
@@ -1108,6 +1113,9 @@ static int32_t WiFi_Uninitialize (void) {
   }
 
   if (ret == ARM_DRIVER_OK) {
+    // Uninitialize additional pins (Reset, Slave Select, Data Ready)
+    WiFi_ISM43362_Pin_Uninitialize();
+
     // If uninitialization succeeded
     signal_event_fn    = NULL;
     driver_initialized = 0U;
@@ -1204,7 +1212,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR;
       } else {
         // Set MAC Address
-        sprintf(cmd_buf, "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
       }
       break;
 
@@ -1213,7 +1221,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Network IP Address
-        sprintf(cmd_buf, "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1223,7 +1231,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Network IP Mask
-        sprintf(cmd_buf, "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1233,7 +1241,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Network Gateway
-        sprintf(cmd_buf, "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1243,7 +1251,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Network Primary DNS
-        sprintf(cmd_buf, "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1253,7 +1261,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Network Secondary DNS
-        sprintf(cmd_buf, "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1278,7 +1286,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR;
       } else {
         // Set MAC Address
-        sprintf(cmd_buf, "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
       }
       break;
 
@@ -1287,7 +1295,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
         // Set Access Point IP Address
-        sprintf(cmd_buf, "Z6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf(cmd_buf, sizeof(cmd_buf), "Z6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       }
       break;
 
@@ -1306,7 +1314,7 @@ static int32_t WiFi_SetOption (uint32_t option, const void *data, uint32_t len) 
           (__UNALIGNED_UINT32_READ(data) > (254U * 60U * 60U))) {     // If more then 254 hours
         ret = ARM_DRIVER_ERROR_PARAMETER;
       } else {
-        sprintf(cmd_buf, "AL=%d\r", __UNALIGNED_UINT32_READ(data)/(60U*60U));
+        snprintf(cmd_buf, sizeof(cmd_buf), "AL=%d\r", __UNALIGNED_UINT32_READ(data)/(60U*60U));
         // Store set value to local variable
         ap_dhcp_lease_time = (__UNALIGNED_UINT32_READ(data)/(60U*60U))*60U*60U;
       }
@@ -1872,11 +1880,11 @@ static int32_t WiFi_Connect (const char *ssid, const char *pass, uint8_t securit
     ret = ARM_DRIVER_OK;
 
     // Set network SSID
-    sprintf(cmd_buf, "C1=%s\r", ssid); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "C1=%s\r", ssid); resp_len = sizeof(resp_buf) - 1U;
     ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     // Set network passphrase
     if (ret == ARM_DRIVER_OK) {
-      sprintf(cmd_buf, "C2=%s\r", pass); resp_len = sizeof(resp_buf) - 1U;
+      snprintf(cmd_buf, sizeof(cmd_buf), "C2=%s\r", pass); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     }
     // Set network security mode
@@ -1966,7 +1974,7 @@ static int32_t WiFi_ConnectWPS (const char *pin) {
     if (*pin != NULL) {                 // If pin connection requested
       // Set WPS pin
       if (ret == ARM_DRIVER_OK) {
-        sprintf(cmd_buf, "Z7=%s\r", pin); resp_len = sizeof(resp_buf) -1U;
+        snprintf(cmd_buf, sizeof(cmd_buf), "Z7=%s\r", pin); resp_len = sizeof(resp_buf) -1U;
         ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
       }
       // Activate WPS pin connection
@@ -2159,17 +2167,17 @@ static int32_t WiFi_AP_Start (const char *ssid, const char *pass, uint8_t securi
     }
     // Set AP security key (password)
     if (ret == ARM_DRIVER_OK) {
-      sprintf(cmd_buf, "A2=%s\r", pass); resp_len = sizeof(resp_buf) - 1U;
+      snprintf(cmd_buf, sizeof(cmd_buf), "A2=%s\r", pass); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     }
     // Set AP channel (0 = autoselect)
     if (ret == ARM_DRIVER_OK) {
-      sprintf(cmd_buf, "AC=%d\r", ch); resp_len = sizeof(resp_buf) - 1U;
+      snprintf(cmd_buf, sizeof(cmd_buf), "AC=%d\r", ch); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     }
     // Set AP SSID
     if (ret == ARM_DRIVER_OK) {
-      sprintf(cmd_buf, "AS=0,%s\r", ssid); resp_len = sizeof(resp_buf) - 1U;
+      snprintf(cmd_buf, sizeof(cmd_buf), "AS=0,%s\r", ssid); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     }
     // Set AP maximum number of clients to maximum which is 4
@@ -2839,7 +2847,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
               }
             } else {
               // Set communication socket number
-              sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+              snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
               if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
                 ret = ARM_SOCKET_ERROR;
               }
@@ -2847,7 +2855,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
           }
           // Set receive timeout (ms)
           if (ret == 0) {
-            sprintf(cmd_buf, "R2=%d\r", timeout); resp_len = sizeof(resp_buf) - 1U;
+            snprintf(cmd_buf, sizeof(cmd_buf), "R2=%d\r", timeout); resp_len = sizeof(resp_buf) - 1U;
             if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
               ret = ARM_SOCKET_ERROR;
             }
@@ -2887,7 +2895,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
                 len_req = 1200U;
               }
               // Set read data packet size
-              sprintf(cmd_buf, "R1=%d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
+              snprintf(cmd_buf, sizeof(cmd_buf), "R1=%d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
               if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
                 ret = ARM_SOCKET_ERROR;
               }
@@ -3063,14 +3071,14 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           }
         } else {
           // Set communication socket number
-          sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+          snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
           if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
             ret = ARM_SOCKET_ERROR;
           }
         }
         // Set transmit timeout (ms)
         if (ret == 0) {
-          sprintf(cmd_buf, "S2=%d\r", socket_arr[socket].send_timeout); resp_len = sizeof(resp_buf) - 1U;
+          snprintf(cmd_buf, sizeof(cmd_buf), "S2=%d\r", socket_arr[socket].send_timeout); resp_len = sizeof(resp_buf) - 1U;
           if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
             ret = ARM_SOCKET_ERROR;
           }
@@ -3085,7 +3093,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
               len_req = 1200U;
             }
             // Send data
-            sprintf(cmd_buf, "S3=%04d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
+            snprintf(cmd_buf, sizeof(cmd_buf), "S3=%04d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
             len_sent = SPI_AT_SendCommandAndDataReceiveResponse(cmd_buf, (uint8_t *)buf + len_tot_sent, len_req, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
             if (len_sent > 0) {
               len_tot_sent += len_sent;
@@ -3178,7 +3186,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
     if (ret == 0) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
         // Set communication socket number
-        sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+        snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
         if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
           ret = ARM_SOCKET_ERROR;
         }
@@ -3267,7 +3275,7 @@ static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip
     // Execute functionality on the module through SPI commands
     if (ret == 0) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-        sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+        snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
         if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
           ret = ARM_SOCKET_ERROR;
         }
@@ -3422,7 +3430,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
             if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
               hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
             }
-            sprintf(cmd_buf, "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
+            snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
             if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
               ret = ARM_SOCKET_ERROR;
             }
@@ -3430,7 +3438,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
               if (val == 0U) {
                 memcpy((void *)cmd_buf, (void *)"PK=0,0\r", 7); resp_len = sizeof(resp_buf) - 1U;
               } else {
-                sprintf(cmd_buf, "PK=1,%d\r", val); resp_len = sizeof(resp_buf) - 1U;
+                snprintf(cmd_buf, sizeof(cmd_buf), "PK=1,%d\r", val); resp_len = sizeof(resp_buf) - 1U;
               }
               if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
                 socket_arr[socket].keepalive = val;
@@ -3582,7 +3590,7 @@ static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *
     ret = 0;
 
     // Send command for DNS lookup
-    sprintf(cmd_buf, "D0=%s\r", name); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "D0=%s\r", name); resp_len = sizeof(resp_buf) - 1U;
     if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
       if (resp_len > 0) {
         // Check that "Host not found " string is not present in response
@@ -3642,7 +3650,7 @@ static int32_t WiFi_Ping (const uint8_t *ip, uint32_t ip_len) {
     ret = ARM_DRIVER_OK;
 
     // Set ping target address
-    sprintf(cmd_buf, "T1=%d.%d.%d.%d\r", ip[0], ip[1], ip[2], ip[3]); resp_len = sizeof(resp_buf) - 1U;
+    snprintf(cmd_buf, sizeof(cmd_buf), "T1=%d.%d.%d.%d\r", ip[0], ip[1], ip[2], ip[3]); resp_len = sizeof(resp_buf) - 1U;
     ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
     // Ping IP target address
     if (ret == ARM_DRIVER_OK) {

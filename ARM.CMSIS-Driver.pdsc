@@ -7,9 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.4.0-rc0" date="2019-03-15">
+    <release version="2.4.0" date="2019-03-15">
       Added Inventek ISM43362 WiFi driver
-      Added support for Cortex-M1
+      Updated conditions to support Cortex-M1
     </release>
     <release version ="2.3.0" date="2018-06-15">
       Updated PHY_KSZ8081RNA to support 50MHz reference clock

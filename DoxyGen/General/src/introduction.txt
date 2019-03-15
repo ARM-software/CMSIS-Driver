@@ -32,6 +32,7 @@ File/Directory           | Content
 \b NAND                  | \ref driver_NAND driver implementations
 \b SPI                   | \ref driver_SPI driver implementations
 \b Utilities             | Utilities for generating the pack
+\b WiFi                  | \ref driver_WiFi driver implementations
 
 <hr>
 
@@ -141,6 +142,15 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 
 */
 
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_WiFi WiFi
+
+\section driver_ISM43362 ISM43362
+
+The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/wifi/wifi-modules/ism4336-m3g-l44-e-embedded-serial-to-wifi-module
+
+*/
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**

@@ -7,13 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.4.0-dev0">
-      Added Qualcomm QCA400x WiFi driver
+    <release version="2.4.0-rc0" release="2019-03-15">
       Added Inventek ISM43362 WiFi driver
-    </release>
-    <release version="2.3.1-dev0">
-      Cortex-M1:
-      - added beta Cortex-M1 support
+      Added support for Cortex-M1
     </release>
     <release version ="2.3.0" date="2018-06-15">
       Updated PHY_KSZ8081RNA to support 50MHz reference clock
@@ -100,10 +96,6 @@
       <require condition="CMSIS RTOS2"/>
       <require Cclass="CMSIS Driver" Cgroup="I2C"/>
     </condition>
-    <condition id="QCA400x SDK">
-      <description>Qualcomm QCA400x Host Driver SDK</description>
-      <require Cclass="Qualcomm" Cgroup="QCA400x" Csub="Host Driver SDK"/>
-    </condition>    
   </conditions>
 
   <components>
@@ -346,20 +338,6 @@
     </component>
 
     <!-- CMSIS-Driver WiFi -->
-
-    <!-- Qualcomm QCA400x -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="QCA400x" Capiversion="1.0.0-beta" Cversion="1.0.0-beta" condition="QCA400x SDK">
-      <description>WiFi Qualcomm QCA400x Driver</description>
-      <RTE_Components_h>
-        <!-- the following content goes into file 'RTE_Components.h' -->
-        #define RTE_Drivers_WiFi_QCA400x        /* Driver WiFi QCA400x */
-      </RTE_Components_h>
-      <files>
-        <!-- WiFi Driver -->
-        <file category="header"  name="WiFi/QCA400x/Config/WiFi_QCA400x_Config.h" attr="config" version="1.0.0"/>
-        <file category="source"  name="WiFi/QCA400x/WiFi_QCA400x.c"/>
-        </files>
-    </component>
 
     <!-- Inventek ISM43362 -->    
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.0.0-beta" Cvariant="SPI" Cversion="1.0.0-beta" condition="CMSIS Core with RTOS2 and SPI Driver">

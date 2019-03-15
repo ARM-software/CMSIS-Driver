@@ -44,19 +44,47 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.4.0</td>
+      <td>
+        - Added Inventek ISM43362 WiFi driver
+        - Added support for Cortex-M1
+      </td>
+    </tr>
+    <tr>
+      <td>2.3.0</td>
+      <td>
+        - NAND MemoryBus driver updated:
+          - Fixed Ready/Busy configuration handling
+          - Enhanced compatibility for ARM Compiler 6
+        - Flash Drivers updated:
+          - Added data cache handling to memory bus based drivers
+          - Fixed warnings flagged by ARM Compiler 6
+      </td>
+    </tr>
+    <tr>
+      <td>2.2.1</td>
+      <td>
+        - Added web link to hardware documentation for CMSIS-Driver components
+      </td>
+    </tr>
+    <tr>
       <td>2.2.0</td>
-      <td><ul>
-	  <li>Documentation added</li>
-	  <li>Set Cvendor to "Keil" in all driver components for ease of migration of existing projects</li>
-	  </ul></td>
+      <td>
+        - Documentation added
+        - Set Cvendor to "Keil" in all driver components for ease of migration of existing projects
+      </td>
     </tr>
     <tr>
       <td>2.1.0</td>
-      <td>Initial public release</td>
+      <td>
+        - Initial public release
+      </td>
     </tr>
     <tr>
       <td>2.0.0</td>
-      <td>Initial internal release</td>
+      <td>
+        - Initial internal release
+      </td>
     </tr>
 </table>
 */

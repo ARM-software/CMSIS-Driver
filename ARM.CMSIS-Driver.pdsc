@@ -7,7 +7,7 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.4.0-rc0" release="2019-03-15">
+    <release version="2.4.0-rc0" date="2019-03-15">
       Added Inventek ISM43362 WiFi driver
       Added support for Cortex-M1
     </release>

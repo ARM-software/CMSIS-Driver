@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.1-dev0">
+      ... in development
+    </release>
     <release version="2.4.0" date="2019-03-15">
       Added Inventek ISM43362 WiFi driver
       Updated conditions to support Cortex-M1
@@ -347,6 +350,7 @@
         #define RTE_Drivers_WiFi_ISM43362_SPI   /* Driver WiFi ISM43362 (SPI) */
       </RTE_Components_h>
       <files>
+        <file category="doc"    name="https://www.inventeksys.com/wifi/wifi-modules/ism4336-m3g-l44-e-embedded-serial-to-wifi-module"/>
         <file category="header" name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.0.0"/>
         <file category="source" name="WiFi/ISM43362/WiFi_ISM43362.c"/>

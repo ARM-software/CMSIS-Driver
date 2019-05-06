@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. May 2018
- * $Revision:    V1.2
+ * $Date:        6. May 2019
+ * $Revision:    V1.3
  *
  * Project:      Ethernet Physical Layer Transceiver (PHY)
  *               Definitions for LAN8742A

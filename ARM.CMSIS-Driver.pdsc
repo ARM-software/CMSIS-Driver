@@ -8,7 +8,7 @@
 
   <releases>
     <release version="2.4.1-dev0">
-      ... in development
+      Corrected PHY_LAN8742A power down bit definition
     </release>
     <release version="2.4.0" date="2019-03-15">
       Added Inventek ISM43362 WiFi driver
@@ -189,7 +189,7 @@
       </files>
     </component>
     
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8742A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

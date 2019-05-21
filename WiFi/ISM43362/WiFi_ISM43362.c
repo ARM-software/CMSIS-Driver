@@ -18,7 +18,7 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        1. April 2019
+ * $Date:        21. May 2019
  * $Revision:    V1.0 (beta)
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
@@ -107,16 +107,15 @@ static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIF
 
 // Driver Capabilities
 static const ARM_WIFI_CAPABILITIES driver_capabilities = { 
-  1U,                                   // Mode: Station supported
-  1U,                                   // Mode: Access Point supported
-  0U,                                   // Mode: Station and Access Point not supported
-  0U,                                   // Mode: Ad-hoc not supported
+  1U,                                   // Station supported
+  1U,                                   // Access Point supported
+  0U,                                   // Concurrent Station and Access Point not supported
   1U,                                   // WiFi Protected Setup (WPS) for Station supported
   0U,                                   // WiFi Protected Setup (WPS) for Access Point not supported
   1U,                                   // Access Point: event generated on Station connect
   0U,                                   // Access Point: event not generated on Station disconnect
-  0U,                                   // Bypass or pass-through mode (Ethernet interface) not supported
   0U,                                   // Event not generated on Ethernet frame reception in bypass mode
+  0U,                                   // Bypass or pass-through mode (Ethernet interface) not supported
   1U,                                   // IP (UDP/TCP) (Socket interface) supported
   0U,                                   // IPv6 (Socket interface) not supported
   1U,                                   // Ping (ICMP) supported
@@ -145,6 +144,10 @@ typedef struct {                        // Socket structure
   uint8_t  bound;                       // Socket bound (server)
   uint8_t  reserved1;                   // Reserved
 } socket_t;
+
+// Operating mode
+#define OPER_MODE_STATION               (1U     )
+#define OPER_MODE_AP                    (1U << 1)
 
 // Socket states
 #define SOCKET_STATE_FREE               (0U)
@@ -206,18 +209,13 @@ static ARM_WIFI_SignalEvent_t           signal_event_fn;
 static uint8_t                          spi_datardy_irq;
 
 static uint8_t                          oper_mode;
-static uint8_t                          sta_connected;
-static uint8_t                          ap_running;
 
 static char                             cmd_buf [64   + 1] __ALIGNED(4);
 static uint8_t                          resp_buf[1210 + 1] __ALIGNED(4);
 
 static uint32_t                         sta_lp_time;
 static uint8_t                          sta_dhcp_client;
-static uint8_t                          sta_config;
-static uint8_t                          sta_config_wps_method;
 static uint8_t                          ap_beacon_interval;
-static uint8_t                          ap_config;
 static uint8_t                          ap_num_connected;
 static uint32_t                         ap_dhcp_lease_time;
 
@@ -248,18 +246,13 @@ static void ResetVariables (void) {
 
   spi_datardy_irq       = 0U;
 
-  oper_mode             = ARM_WIFI_MODE_NONE;
-  sta_connected         = 0U;
-  ap_running            = 0U;
+  oper_mode             = 0U;
 
   memset((void *)cmd_buf , 0, sizeof(cmd_buf));
   memset((void *)resp_buf, 0, sizeof(resp_buf));
 
   sta_lp_time           = 0U;
-  sta_config            = 0U;
-  sta_config_wps_method = 0U;
   ap_beacon_interval    = 0U;
-  ap_config             = 0U;
   ap_num_connected      = 0U;
   ap_dhcp_lease_time    = 0U;
 
@@ -786,7 +779,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
             poll_recv = 1U;
           }
         }
-        if (ap_running != 0U) {
+        if (oper_mode == OPER_MODE_AP) {
           poll_async = 1U;
         }
 
@@ -1190,7 +1183,7 @@ static int32_t WiFi_PowerControl (ARM_POWER_STATE state) {
         break;
 
       case ARM_POWER_LOW:
-        if ((sta_lp_time != 0U) && (oper_mode == ARM_WIFI_MODE_STATION)) {
+        if ((sta_lp_time != 0U) && (oper_mode == OPER_MODE_STATION)) {
           snprintf(cmd_buf, sizeof(cmd_buf), "ZP=6,%d\r", sta_lp_time);
         } else if (ap_beacon_interval != 0U) {
           snprintf(cmd_buf, sizeof(cmd_buf), "ZP=2,%d\r", ap_beacon_interval);
@@ -1297,8 +1290,8 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
   switch (option) {
     case ARM_WIFI_LP_TIMER:                 // Station    Set low-power deep-sleep time;              data = &time,     len =  4, uint32_t [seconds]: 0 = disable (default)
-      u32 = *((uint32_t *)data);
-      if (interface == 0U) {                // For Station interface
+      if (interface == 0U) {
+        u32 = *((uint32_t *)data);
         if (u32 <= 3600000U) {
           sta_lp_time = u32;
         } else {
@@ -1311,8 +1304,8 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
       break;
 
     case ARM_WIFI_BEACON:                   //         AP Set beacon interval;                        data = &interval, len =  4, uint32_t [ms]
-      u32 = *((uint32_t *)data);
-      if (interface == 1U) {                // For AP interface
+      if (interface == 1U) {
+        u32 = *((uint32_t *)data);
         if ((u32 >= 1000U) && (u32 <= 60000U)) {
           // Convert to seconds
           ap_beacon_interval = (uint8_t)(u32 / 1000);
@@ -1332,39 +1325,58 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
       break;
 
     case ARM_WIFI_IP:                       // Station/AP Set IPv4 static/assigned address;           data = &ip,       len =  4, uint8_t[4]
-      if (interface == 0U) {                // For Station interface
-        snprintf(cmd_buf, sizeof(cmd_buf), "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
-      } else {                              // For AP interface
-        snprintf(cmd_buf, sizeof(cmd_buf), "Z6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      snprintf(cmd_buf, sizeof(cmd_buf), "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      if (interface == 1U) {
+        cmd_buf[0] = 'Z';
       }
       break;
 
     case ARM_WIFI_IP_SUBNET_MASK:           // Station/AP Set IPv4 subnet mask;                       data = &mask,     len =  4, uint8_t[4]
-      snprintf(cmd_buf, sizeof(cmd_buf), "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      if (interface == 0U) {
+        snprintf(cmd_buf, sizeof(cmd_buf), "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      } else {
+        // Not supported for AP interface
+        ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+      }
       break;
 
     case ARM_WIFI_IP_GATEWAY:               // Station/AP Set IPv4 gateway address;                   data = &ip,       len =  4, uint8_t[4]
-      snprintf(cmd_buf, sizeof(cmd_buf), "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      if (interface == 0U) {
+        snprintf(cmd_buf, sizeof(cmd_buf), "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      } else {
+        // Not supported for AP interface
+        ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+      }
       break;
 
     case ARM_WIFI_IP_DNS1:                  // Station/AP Set IPv4 primary   DNS address;             data = &ip,       len =  4, uint8_t[4]
-      snprintf(cmd_buf, sizeof(cmd_buf), "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      if (interface == 0U) {
+        snprintf(cmd_buf, sizeof(cmd_buf), "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      } else {
+        // Not supported for AP interface
+        ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+      }
       break;
 
     case ARM_WIFI_IP_DNS2:                  // Station/AP Set IPv4 secondary DNS address;             data = &ip,       len =  4, uint8_t[4]
-      snprintf(cmd_buf, sizeof(cmd_buf), "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      if (interface == 0U) {
+        snprintf(cmd_buf, sizeof(cmd_buf), "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      } else {
+        // Not supported for AP interface
+        ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+      }
       break;
 
     case ARM_WIFI_IP_DHCP:                  // Station/AP Set IPv4 DHCP client/server enable/disable; data = &dhcp,     len =  4, uint32_t: 0 = disable, non-zero = enable (default)
       u32 = *((uint32_t *)data);
-      if (interface == 0U) {                // For Station interface
+      if (interface == 0U) {
         memcpy((void *)cmd_buf, (void *)"C4=0\r", 6);
-        if (u32 != 0) {
+        if (u32 != 0U) {
           cmd_buf[3] += 1;
         }
         // Store set value to local variable
         sta_dhcp_client = u32;
-      } else {                              // For AP interface
+      } else {  // For AP interface
         if (u32 == 0U) {
           // DHCP server cannot be disabled
           ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1374,8 +1386,8 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
       break;
 
     case ARM_WIFI_IP_DHCP_LEASE_TIME:       //         AP Set IPv4 DHCP lease time;                   data = &time,     len =  4, uint32_t [seconds]
-      u32 = *((uint32_t *)data);
-      if (interface == 1U) {    // AP
+      if (interface == 1U) {
+        u32 = *((uint32_t *)data);
         if ((u32 >= (30U * 60U)) &&         // If more then 30 minutes
             (u32 <= (254U * 60U * 60U))) {  // If less then 254 hours
           snprintf(cmd_buf, sizeof(cmd_buf), "AL=%d\r", u32/(60U*60U));
@@ -1385,6 +1397,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
           ret = ARM_DRIVER_ERROR_PARAMETER;
         }
       } else {
+        // Not supported for Station interface
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
       }
       break;
@@ -1468,7 +1481,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
 
   switch (option) {
     case ARM_WIFI_LP_TIMER:                 // Station    Get low-power deep-sleep time;              data = &time,     len =  4, uint32_t [seconds]: 0 = disable (default)
-      if (interface == 0U) {                // For Station interface
+      if (interface == 0U) {
         *((uint32_t *)data) = sta_lp_time;
         *len = 4U;
       } else {
@@ -1478,7 +1491,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       break;
 
     case ARM_WIFI_BEACON:                   //         AP Get beacon interval;                        data = &interval, len =  4, uint32_t [ms]
-      if (interface == 1U) {                // For AP interface
+      if (interface == 1U) {
         // Convert to milliseconds
         *((uint32_t *)data) = (uint32_t)ap_beacon_interval * 1000;
         *len = 4U;
@@ -1585,16 +1598,16 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       break;
 
     case ARM_WIFI_IP_DHCP:                  // Station/AP Get IPv4 DHCP client/server enable/disable; data = &dhcp,     len =  4, uint32_t: 0 = disable, non-zero = enable (default)
-      if (interface == 0U) {                // For Station interface
+      if (interface == 0U) {
         *((uint32_t *)data) = sta_dhcp_client;
-      } else {                              // For AP interface
+      } else {  // For AP interface
         *((uint32_t *)data) = 1U;
       }
       *len = 4U;
       break;
 
     case ARM_WIFI_IP_DHCP_LEASE_TIME:       //         AP Get IPv4 DHCP lease time;                   data = &time,     len =  4, uint32_t [seconds]
-      if (interface == 1U) {                // For AP interface
+      if (interface == 1U) {
         if (ap_dhcp_lease_time == 0U) {
           *((uint32_t *)data) = 30U * 60U;
         } else {
@@ -1759,51 +1772,60 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
 }
 
 /**
-  \fn            int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config)
-  \brief         Configure Network Parameters.
+  \fn            int32_t WiFi_Activate (uint32_t interface, ARM_WIFI_CONFIG_t *config)
+  \brief         Activate interface (Connect to a wireless network or activate an access point).
   \param[in]     interface Interface (0 = Station, 1 = Access Point)
   \param[in]     config    Pointer to ARM_WIFI_CONFIG_t structure where Configuration parameters are located
   \return        execution status
                    - ARM_DRIVER_OK                : Operation successful
                    - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported (security type, WPS or channel autodetect not supported)
-                   - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, security type or NULL config_params pointer)
+                   - ARM_DRIVER_ERROR_TIMEOUT     : Timeout occurred
+                   - ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported (security type, channel autodetect or WPS not supported)
+                   - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, NULL config pointer or invalid configuration)
 */
-int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
+static int32_t WiFi_Activate (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
   int32_t  ret;
+  uint8_t *ptr_resp_buf;
   uint32_t resp_len;
 
   if ((interface > 1U) || (config == NULL)) {
+    return ARM_DRIVER_ERROR_PARAMETER;
+  }
+  if (config == NULL) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
   if (driver_initialized == 0U) {
     return ARM_DRIVER_ERROR;
   }
 
-  // SSID has to contain at least 1 non-null character
-  if (config->ssid[0] == 0) {
-    return ARM_DRIVER_ERROR;
-  }
+  if (config->wps_method == ARM_WIFI_WPS_METHOD_NONE) {
+    // For station connect if WPS is not used do a sanity check for ssid and security
 
-  switch (config->security) {
-    case ARM_WIFI_SECURITY_OPEN:
-      break;
-    case ARM_WIFI_SECURITY_WEP:
-    case ARM_WIFI_SECURITY_WPA:
-    case ARM_WIFI_SECURITY_WPA2:
-      // Password has to contain at least 1 non-null character
-      if (config->pass[0] == 0) {
-        return ARM_DRIVER_ERROR;
-      }
-      break;
-    case ARM_WIFI_SECURITY_UNKNOWN:
-    default:
-      return ARM_DRIVER_ERROR;
+    // SSID has to be a valid pointer
+    if (config->ssid == NULL) {
+      return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    switch (config->security) {
+      case ARM_WIFI_SECURITY_OPEN:
+        break;
+      case ARM_WIFI_SECURITY_WEP:
+      case ARM_WIFI_SECURITY_WPA:
+      case ARM_WIFI_SECURITY_WPA2:
+        // Password has to be a valid pointer
+        if (config->pass == NULL) {
+          return ARM_DRIVER_ERROR_PARAMETER;
+        }
+        break;
+      case ARM_WIFI_SECURITY_UNKNOWN:
+      default:
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
   }
 
   // Valid channel settings are 0 for auto and 1 to 13 for exact channel selection
   if (config->ch > 13U) {
-    return ARM_DRIVER_ERROR;
+    return ARM_DRIVER_ERROR_PARAMETER;
   }
 
   switch (config->wps_method) {
@@ -1811,13 +1833,13 @@ int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
     case ARM_WIFI_WPS_METHOD_PBC:
       break;
     case ARM_WIFI_WPS_METHOD_PIN:
-      // PIN has to contain at least 1 non-null character
-      if (config->wps_pin[0] == 0) {
-        return ARM_DRIVER_ERROR;
+      // PIN has to be a valid pointer
+      if (config->wps_pin == NULL) {
+        return ARM_DRIVER_ERROR_PARAMETER;
       }
       break;
     default:
-      return ARM_DRIVER_ERROR;
+      return ARM_DRIVER_ERROR_PARAMETER;
   }
 
   if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
@@ -1837,10 +1859,52 @@ int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
             break;
         }
 
+        // Prepare WPS command
         if (ret == ARM_DRIVER_OK) {
-          sta_config_wps_method = config->wps_method;
-        } else {
-          sta_config_wps_method = 0U;
+          memcpy((void *)cmd_buf, (void *)"CW= \r", 6);
+          switch (config->wps_method) {
+            case ARM_WIFI_WPS_METHOD_PBC:
+              // Prepare WPS push-button connection command
+              cmd_buf[3] = '1';
+              break;
+            case ARM_WIFI_WPS_METHOD_PIN:
+              // Prepare WPS PIN connection command
+              cmd_buf[3] = '0';
+              break;
+            default:
+              ret = ARM_DRIVER_ERROR_PARAMETER;
+              break;
+          }
+        }
+        // Execute command
+        if (ret == ARM_DRIVER_OK) {
+          resp_len = sizeof(resp_buf) - 1U;
+          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, 250000U);
+        }
+
+        // Check if WPS connection has succeeded
+        if (ret == ARM_DRIVER_OK) {
+          ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "WPS ");
+          if (ptr_resp_buf != NULL) {
+            if (strstr((const char *)resp_buf, "No access point found") != NULL) {
+              // Check if WPS connection failed
+              ret = ARM_DRIVER_ERROR_TIMEOUT;
+            } else {
+              // If message contains "WPS " string, parse it and extract ip
+              // Skip 1 comma
+              ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
+              if (ptr_resp_buf != NULL) {
+                // Extract IP Address
+                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
+                  ret = ARM_DRIVER_ERROR;
+                }
+              } else {
+                ret = ARM_DRIVER_ERROR;
+              }
+            }
+          } else {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
       } else {                                                  // If WPS is not configured
         if (config->ch != 0U) {
@@ -1886,11 +1950,39 @@ int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
           }
         }
 
+        // Send command to join a network
         if (ret == ARM_DRIVER_OK) {
-          sta_config = 1U;
-        } else {
-          sta_config = 0U;
+          memcpy((void *)cmd_buf, (void *)"C0\r", 4); resp_len = sizeof(resp_buf) - 1U;
+          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          
+          // Check if connection has succeeded
+          if (ret == ARM_DRIVER_OK) {
+            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "JOIN ");
+            if (ptr_resp_buf != NULL) {
+              // If message contains "JOIN " string, parse it and extract IP
+              // Skip 1 comma
+              ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
+              if (ptr_resp_buf != NULL) {
+                // Extract IP Address
+                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
+                  ret = ARM_DRIVER_ERROR;
+                }
+              }
+            }
+          } else if (ret == ARM_DRIVER_ERROR) {
+            // Check if connection is already established
+            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Already connected!");
+            if (ptr_resp_buf != NULL) {
+              ret = ARM_DRIVER_OK;
+            }
+          }
         }
+      }
+
+      if (ret == ARM_DRIVER_OK) {
+        oper_mode = OPER_MODE_STATION;
+      } else {
+        memset((void *)sta_local_ip, 0, 4);
       }
     } else {                            // AP
       if (config->wps_method != ARM_WIFI_WPS_METHOD_NONE) {     // If WPS is configured
@@ -1898,23 +1990,25 @@ int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
       } else {                                                  // If WPS is not configured
         // Set AP security mode
-        memcpy((void *)cmd_buf, (void *)"A1= \r", 6);
-        switch (config->security) {
-          case ARM_WIFI_SECURITY_OPEN:
-            cmd_buf[3] = '0';
-            break;
-          case ARM_WIFI_SECURITY_WEP:
-            ret = ARM_DRIVER_ERROR_UNSUPPORTED;
-            break;
-          case ARM_WIFI_SECURITY_WPA:
-            cmd_buf[3] = '2';
-            break;
-          case ARM_WIFI_SECURITY_WPA2:
-            cmd_buf[3] = '3';
-            break;
-          default:
-            ret = ARM_DRIVER_ERROR_UNSUPPORTED;
-            break;
+        if (ret == ARM_DRIVER_OK) {
+          memcpy((void *)cmd_buf, (void *)"A1= \r", 6);
+          switch (config->security) {
+            case ARM_WIFI_SECURITY_OPEN:
+              cmd_buf[3] = '0';
+              break;
+            case ARM_WIFI_SECURITY_WEP:
+              ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+              break;
+            case ARM_WIFI_SECURITY_WPA:
+              cmd_buf[3] = '2';
+              break;
+            case ARM_WIFI_SECURITY_WPA2:
+              cmd_buf[3] = '3';
+              break;
+            default:
+              ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+              break;
+          }
         }
         if (ret == ARM_DRIVER_OK) {
           resp_len = sizeof(resp_buf) - 1U;
@@ -1945,159 +2039,34 @@ int32_t WiFi_Configure (uint32_t interface, ARM_WIFI_CONFIG_t *config) {
           ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
         }
 
-        if (ret == ARM_DRIVER_OK) {
-          ap_config = 1U;
-        } else {
-          ap_config = 0U;
-        }
-      }
-    }
-
-    osMutexRelease(mutex_id_spi);
-  } else {
-    ret = ARM_DRIVER_ERROR_TIMEOUT;
-  }
-
-  return ret;
-}
-
-/**
-  \fn            int32_t WiFi_Activate (uint32_t mode)
-  \brief         Activate selected mode of operation.
-  \param[in]     mode     Mode of operation
-                   - ARM_WIFI_MODE_STATION        : Station only
-                   - ARM_WIFI_MODE_AP             : Access Point only
-                   - ARM_WIFI_MODE_STATION_AP     : Station and Access Point
-                   - ARM_WIFI_MODE_AD_HOC         : Ad-hoc
-  \return        execution status
-                   - ARM_DRIVER_OK                : Operation successful
-                   - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_TIMEOUT     : Timeout occurred
-                   - ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported
-                   - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid mode)
-*/
-int32_t WiFi_Activate (uint32_t mode) {
-  int32_t  ret;
-  uint8_t *ptr_resp_buf;
-  uint32_t resp_len;
-
-  if (driver_initialized == 0U) {
-    return ARM_DRIVER_ERROR;
-  }
-
-  if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-    ret = ARM_DRIVER_OK;
-
-    switch (mode) {
-      case ARM_WIFI_MODE_STATION:
-        break;
-      case ARM_WIFI_MODE_AP:
-        break;
-      case ARM_WIFI_MODE_NONE:
-      case ARM_WIFI_MODE_STATION_AP:
-        ret = ARM_DRIVER_ERROR_UNSUPPORTED;
-        break;
-      default:
-        ret = ARM_DRIVER_ERROR_PARAMETER;
-        break;
-    }
-
-    if (mode == ARM_WIFI_MODE_STATION) {    // If station should be activated
-      if (sta_config_wps_method != 0U) {
-        memcpy((void *)cmd_buf, (void *)"CW= \r", 6);
-        switch (sta_config_wps_method) {
-          case ARM_WIFI_WPS_METHOD_PBC:
-            // Prepare WPS push-button connection command
-            cmd_buf[3] = '1';
-            break;
-          case ARM_WIFI_WPS_METHOD_PIN:
-            // Prepare WPS PIN connection command
-            cmd_buf[3] = '0';
-            break;
-          default:
-            ret = ARM_DRIVER_ERROR;
-            break;
-        }
-        // Execute command
-        if (ret == ARM_DRIVER_OK) {
-          resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, 120000U);
-        }
-
-        // Check if WPS connection has succeeded
-        if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "WPS ");
-          if (ptr_resp_buf != NULL) {
-            // If message contains "WPS " string, parse it and extract ip
-            // Skip 1 comma
-            ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
-            if (ptr_resp_buf != NULL) {
-              // Extract IP Address
-              if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
-                ret = ARM_DRIVER_ERROR;
-              }
-            } else {
-              ret = ARM_DRIVER_ERROR;
-            }
-          } else {
-            ret = ARM_DRIVER_ERROR;
-          }
-        }
-
-        if (ret == ARM_DRIVER_OK) {
-          sta_connected = 1U;
-        } else {
-          memset((void *)sta_local_ip, 0, 4);
-        }
-      } else if (sta_config != 0U) {
-        // Send command to join a network
-        memcpy((void *)cmd_buf, (void *)"C0\r", 4); resp_len = sizeof(resp_buf) - 1U;
-        ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-        
-        // Check if connection has succeeded
-        if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "JOIN ");
-          if (ptr_resp_buf != NULL) {
-            // If message contains "JOIN " string, parse it and extract IP
-            // Skip 1 comma
-            ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
-            if (ptr_resp_buf != NULL) {
-              // Extract IP Address
-              if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
-                ret = ARM_DRIVER_ERROR;
-              }
-            }
-          }
-        }
-
-        if (ret == ARM_DRIVER_OK) {
-          sta_connected = 1U;
-        } else {
-          memset((void *)sta_local_ip, 0, 4);
-        }
-      }
-    } else {                                // If AP should be activated
-      if (ap_config != 0U) {
         // Activate AP direct connect mode
-        memcpy((void *)cmd_buf, (void *)"AD\r", 4); resp_len = sizeof(resp_buf) - 1U;
-        ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-
-        // Check if AP has started and extract IP address from response
         if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "[AP ");
-          if (ptr_resp_buf != NULL) {
-            // Skip 2 commas
-            ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 2U);
+          memcpy((void *)cmd_buf, (void *)"AD\r", 4); resp_len = sizeof(resp_buf) - 1U;
+          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+
+          // Check if AP has started and extract IP address from response
+          if (ret == ARM_DRIVER_OK) {
+            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "[AP ");
             if (ptr_resp_buf != NULL) {
-              // Extract IP Address
-              if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ap_local_ip[0], &ap_local_ip[1], &ap_local_ip[2], &ap_local_ip[3]) != 4) {
+              // Skip 2 commas
+              ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 2U);
+              if (ptr_resp_buf != NULL) {
+                // Extract IP Address
+                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ap_local_ip[0], &ap_local_ip[1], &ap_local_ip[2], &ap_local_ip[3]) != 4) {
+                  ret = ARM_DRIVER_ERROR;
+                }
+              } else {
                 ret = ARM_DRIVER_ERROR;
               }
             } else {
               ret = ARM_DRIVER_ERROR;
             }
-          } else {
-            ret = ARM_DRIVER_ERROR;
+          } else if (ret == ARM_DRIVER_ERROR) {
+            // Check if AP is already running
+            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Already running");
+            if (ptr_resp_buf != NULL) {
+              ret = ARM_DRIVER_OK;
+            }
           }
         }
 
@@ -2110,13 +2079,11 @@ int32_t WiFi_Activate (uint32_t mode) {
         }
 
         if (ret == ARM_DRIVER_OK) {
-          ap_running = 1U;
+          oper_mode = OPER_MODE_AP;
           osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);
         } else {
           memset((void *)ap_local_ip, 0, 4);
         }
-      } else {
-        ret = ARM_DRIVER_ERROR;
       }
     }
 
@@ -2125,21 +2092,19 @@ int32_t WiFi_Activate (uint32_t mode) {
     ret = ARM_DRIVER_ERROR_TIMEOUT;
   }
 
-  if (ret == ARM_DRIVER_ERROR) {
-    oper_mode = mode;
-  }
-
   return ret;
 }
 
 /**
-  \fn            int32_t WiFi_Deactivate (void)
-  \brief         Deactivate current mode of operation.
+  \fn            int32_t WiFi_Deactivate (uint32_t interface)
+  \brief         Deactivate interface (Disconnect from a wireless network or deactivate an access point).
+  \param[in]     interface Interface (0 = Station, 1 = Access Point)
   \return        execution status
                    - ARM_DRIVER_OK                : Operation successful
                    - ARM_DRIVER_ERROR             : Operation failed
+                   - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface)
 */
-int32_t WiFi_Deactivate (void) {
+static int32_t WiFi_Deactivate (uint32_t interface) {
   int32_t  ret;
   uint32_t resp_len;
 
@@ -2148,25 +2113,26 @@ int32_t WiFi_Deactivate (void) {
   }
 
   if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
+    ret = ARM_DRIVER_OK;
 
-    if (sta_connected != 0U) {
+    if ((interface == 0U) && (oper_mode == OPER_MODE_STATION)) {
       // Disconnect from network
       memcpy((void *)cmd_buf, (void *)"CD\r", 4); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
 
       if (ret == ARM_DRIVER_OK) {
-        sta_connected = 0U;
+        oper_mode = 0U;
         memset((void *)sta_local_ip, 0, 4);
       }
     }
 
-    if (ap_running != 0U) {
+    if ((interface == 1U) && (oper_mode == OPER_MODE_AP)) {
       // Exit AP direct connect mode
       memcpy((void *)cmd_buf, (void *)"AE\r", 4); resp_len = sizeof(resp_buf) - 1U;
       ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
 
       if (ret == ARM_DRIVER_OK) {
-        ap_running = 0U;
+        oper_mode = 0U;
         memset((void *)ap_local_ip, 0, 4);
       }
     }
@@ -2174,10 +2140,6 @@ int32_t WiFi_Deactivate (void) {
     osMutexRelease(mutex_id_spi);
   } else {
     ret = ARM_DRIVER_ERROR;
-  }
-
-  if (ret == ARM_DRIVER_ERROR) {
-    oper_mode = ARM_WIFI_MODE_NONE;
   }
 
   return ret;
@@ -2213,7 +2175,9 @@ static uint32_t WiFi_IsConnected (void) {
     }
 
     if (num == 0U) {
-      sta_connected = 0U;
+      if (oper_mode == OPER_MODE_STATION) {
+        oper_mode = 0U;
+      }
       memset((void *)sta_local_ip, 0, 4);
     }
 
@@ -2233,7 +2197,7 @@ static uint32_t WiFi_IsConnected (void) {
                    - ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface or NULL net_info pointer)
 */
-int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
+static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
   int32_t  ret;
   uint8_t *ptr_resp_buf;
   uint32_t resp_len;
@@ -2440,8 +2404,8 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
     return ARM_SOCKET_ERROR;
   }
   if (                         (memcmp((void *)ip, "\x00\x00\x00\x00", 4U) != 0)  &&
-     ((sta_connected != 0U) && (memcmp((void *)ip, sta_local_ip,       4U) != 0)) &&
-     ((ap_running    != 0U) && (memcmp((void *)ip, ap_local_ip,        4U) != 0))) {
+     ((oper_mode == OPER_MODE_STATION) && (memcmp((void *)ip, sta_local_ip, 4U) != 0)) &&
+     ((oper_mode == OPER_MODE_AP)      && (memcmp((void *)ip, ap_local_ip,  4U) != 0))) {
     // If IP is different then 0.0.0.0 (accept all) or 
     // if station is active and requested IP is different then station's IP or 
     // if AP is running and requested IP is different then AP's IP
@@ -2457,8 +2421,8 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
     } else {
       for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
         if ((                         (memcmp((void *)ip, "\x00\x00\x00\x00", 4U) == 0)   ||
-            ((sta_connected != 0U) && (memcmp((void *)ip, sta_local_ip,       4U) == 0))  ||
-            ((ap_running    != 0U) && (memcmp((void *)ip, ap_local_ip,        4U) == 0))) &&
+            ((oper_mode == OPER_MODE_STATION) && (memcmp((void *)ip, sta_local_ip, 4U) == 0))  ||
+            ((oper_mode == OPER_MODE_AP)      && (memcmp((void *)ip, ap_local_ip,  4U) == 0))) &&
              (socket_arr[i].local_port == port)) {
           // If IP and port is already used by another socket
           ret = ARM_SOCKET_EADDRINUSE;
@@ -3237,9 +3201,9 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
     }
 
     if (ip != NULL) {
-      if (sta_connected != 0U) {
+      if (oper_mode == OPER_MODE_STATION) {
         memcpy((void *)ip, (void *)sta_local_ip, 4);
-      } else if (ap_running != 0U) {
+      } else if (oper_mode == OPER_MODE_AP) {
         memcpy((void *)ip, (void *)ap_local_ip, 4);
       }
       if (ip_len != NULL) {
@@ -3771,7 +3735,6 @@ ARM_DRIVER_WIFI ARM_Driver_WiFi_(WIFI_ISM43362_DRV_NUM) = {
   WiFi_SetOption,
   WiFi_GetOption,
   WiFi_Scan,
-  WiFi_Configure,
   WiFi_Activate,
   WiFi_Deactivate,
   WiFi_IsConnected,

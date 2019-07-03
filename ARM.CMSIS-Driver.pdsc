@@ -7,15 +7,15 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.4.1-dev0">
-      Updated Inventek ISM43362 WiFi driver
+    <release version="2.4.1-rc0">
+      Updated Inventek ISM43362 WiFi driver (version 1.0)
       Corrected PHY_LAN8742A power down bit definition
     </release>
     <release version="2.4.0" date="2019-03-15">
       Added Inventek ISM43362 WiFi driver
       Updated conditions to support Cortex-M1
     </release>
-    <release version ="2.3.0" date="2018-06-15">
+    <release version="2.3.0" date="2018-06-15">
       Updated PHY_KSZ8081RNA to support 50MHz reference clock
       NAND MemoryBus driver updated:
       - Fixed Ready/Busy configuration handling
@@ -24,7 +24,7 @@
       - Added data cache handling to memory bus based drivers.
       - Fixed warnings flagged by ARM Compiler 6
     </release>
-    <release version ="2.2.1" date="2018-03-20">
+    <release version="2.2.1" date="2018-03-20">
       Added web link to hardware documentation for CMSIS-Driver components.
     </release>
     <release version="2.2.0" date="2018-03-19">

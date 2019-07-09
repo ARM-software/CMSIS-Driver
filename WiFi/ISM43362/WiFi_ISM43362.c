@@ -193,8 +193,9 @@ const osMutexAttr_t mutex_socket_attr = {
 
 // Thread for polling and processing asynchronous messages
 const osThreadAttr_t thread_async_poll_attr = {
-  .name     = "Thread_Async_Poll",      // Thread name
-  .priority = WIFI_ISM43362_ASYNC_PRIORITY
+  .name       = "Thread_Async_Poll",    // Thread name
+  .stack_size = 1024,                   // Required thread stack size
+  .priority   = WIFI_ISM43362_ASYNC_PRIORITY    // Initial thread priority
 };
 
 

@@ -7,7 +7,7 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.4.1-rc0">
+    <release version="2.4.1" date="2019-07-11">
       Updated Inventek ISM43362 WiFi driver (version 1.0)
       Corrected PHY_LAN8742A power down bit definition
     </release>

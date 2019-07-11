@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2019 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. May 2018
- * $Revision:    V1.2
+ * $Date:        6. May 2019
+ * $Revision:    V1.3
  *
  * Project:      Ethernet Physical Layer Transceiver (PHY)
  *               Definitions for LAN8742A
@@ -61,7 +61,7 @@
 #define BCR_LOOPBACK        0x4000      /* Loopback mode                     */
 #define BCR_SPEED_SEL       0x2000      /* Speed Select (1=100Mb/s)          */
 #define BCR_ANEG_EN         0x1000      /* Auto Negotiation Enable           */
-#define BCR_POWER_DOWN      0x8000      /* Power Down (1=power down mode)    */
+#define BCR_POWER_DOWN      0x0800      /* Power Down (1=power down mode)    */
 #define BCR_ISOLATE         0x0400      /* Isolate Media interface           */
 #define BCR_REST_ANEG       0x0200      /* Restart Auto Negotiation          */
 #define BCR_DUPLEX          0x0100      /* Duplex Mode (1=Full duplex)       */

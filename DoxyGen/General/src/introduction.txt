@@ -45,6 +45,13 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.4.1</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver
+        - Corrected PHY_LAN8742A power down bit definition
+      </td>
+    </tr>
+    <tr>
       <td>2.4.0</td>
       <td>
         - Added Inventek ISM43362 WiFi driver
@@ -148,7 +155,7 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 
 \section driver_ISM43362 ISM43362
 
-The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/wifi/wifi-modules/ism4336-m3g-l44-e-embedded-serial-to-wifi-module
+The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
 
 */
 

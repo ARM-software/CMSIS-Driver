@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2019 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. May 2018
- * $Revision:    V1.2
+ * $Date:        6. May 2019
+ * $Revision:    V1.3
  *  
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
  * Project:      Ethernet Physical Layer Transceiver (PHY)
@@ -33,6 +33,8 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    Corrected power down bit definition
  *  Version 1.2
  *    Updated for ARM compiler 6
  *  Version 1.1
@@ -43,7 +45,7 @@
 
 #include "PHY_LAN8742A.h"
 
-#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) /* driver version */
+#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3) /* driver version */
 
 
 #ifndef ETH_PHY_NUM

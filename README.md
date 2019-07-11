@@ -33,7 +33,7 @@ All drivers refer the API Interface header file defintions published in the CMSI
 ## SPI - MultiSlave wrapper for SPI CMSIS-Driver implementations
 - SPI_MultiSlave
 
-## WiFi - WiFi device drivers (compliant with CMSIS 5.5.0 CMSIS-Driver WiFi specification 1.0.0-beta)
+## WiFi - WiFi device drivers (compliant with CMSIS-Driver WiFi specification 1.0.0)
 - ISM43362
 
 ## License

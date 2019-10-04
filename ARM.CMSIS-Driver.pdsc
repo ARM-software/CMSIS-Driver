@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.2-dev0">
+      Added Espressif ESP8266 WiFi driver
+    </release>
     <release version="2.4.1" date="2019-07-11">
       Updated Inventek ISM43362 WiFi driver (version 1.0)
       Corrected PHY_LAN8742A power down bit definition
@@ -99,6 +102,12 @@
       <require condition="CMSIS Core"/>
       <require condition="CMSIS RTOS2"/>
       <require Cclass="CMSIS Driver" Cgroup="I2C"/>
+    </condition>
+    <condition id="CMSIS Core with RTOS2 and USART Driver">
+      <description>CMSIS Core with RTOS2 for Cortex-M and USART Driver</description>
+      <require condition="CMSIS Core"/>
+      <require condition="CMSIS RTOS2"/>
+      <require Cclass="CMSIS Driver" Cgroup="USART"/>
     </condition>
   </conditions>
 
@@ -354,6 +363,26 @@
         <file category="header" name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.0.0"/>
         <file category="source" name="WiFi/ISM43362/WiFi_ISM43362.c"/>
+      </files>
+    </component>
+
+    <!-- ESP8266 -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.0.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+      <description>Espressif ESP8266 WiFi Driver (UART)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_WiFi_ESP8266_UART   /* Driver WiFi ESP8266 (UART) */
+      </RTE_Components_h>
+      <files>
+        <file category="header"  name="WiFi/ESP8266/Config/WiFi_ESP8266_Config.h" attr="config" version="1.0.0"/>
+        <file category="include" name="WiFi/ESP8266/"/>
+        <file category="source"  name="WiFi/ESP8266/WiFi_ESP8266.c"/>
+        <file category="source"  name="WiFi/ESP8266/WiFi_ESP8266_Os.c"/>
+        <file category="source"  name="WiFi/ESP8266/ESP8266.c"/>
+        <file category="source"  name="WiFi/ESP8266/ESP8266_Serial.c"/>
+        <file category="include" name="WiFi/ESP8266/BufList/"/>
+        <file category="source"  name="WiFi/ESP8266/BufList/BufList.c"/>
+        <file category="source"  name="WiFi/ESP8266/BufList/LinkList.c"/>
       </files>
     </component>
   </components>

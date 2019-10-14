@@ -38,6 +38,10 @@
 //   <i> Configuration settings specifying SPI driver number used (if Module uses SPI interface)
 #define WIFI_ISM43362_SPI_DRV_NUM           3
 
+//   <o> Memory pool size
+//   <i> Configuration settings specifying memory pool size for receive packets buffering
+#define WIFI_ISM43362_MEM_POOL_SIZE         8192
+
 // </h>
 
 // Number of sockets supported by Module (default and maximum: 4)
@@ -57,7 +61,7 @@
 // Asynchronous thread polling time interval in ms (default: 1000)
 // Interval in which asynchronous events are polled and also interval 
 // in which long blocking socket receive is split
-#define WIFI_ISM43362_ASYNC_INTERVAL       (1000)
+#define WIFI_ISM43362_ASYNC_INTERVAL       (8)
 
 // Asynchronous thread priority (default: osPriorityAboveNormal)
 // This priority should be above user threads

@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        14. October 2019
- * $Revision:    V1.1
+ * $Date:        30. October 2019
+ * $Revision:    V1.2
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -49,16 +49,33 @@
  * with 1 ms interval to check DATARDY line state change):
  *   - void    WiFi_ISM43362_Pin_DATARDY_IRQ  (void)
  *                                                   
- * Module limitations based on ISM43362_M3G_L44_SPI_C3.5.2.5.STM firmware:
+ * ISM43362 Module limitations:
  *  - configuration of local port for client socket is not supported
- *  - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
- *    SocketListen tests are executed before it because module stays in some 
- *    odd state and never signals accepted client connection
- *  - module sometimes returns previous resolve result on request to 
- *    resolve unexisting host address
+ *  - sometimes connection to remote host fails
+ *
+ * ISM43362 Module on STMicroelctronics B-L475E-IOT01A1 limitations:
+ *  - software with firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
+ *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
+ *      SocketListen tests are executed before it because module stays in some 
+ *      odd state and never signals accepted client connection
+ *    - module sometimes returns previous resolve result on request to 
+ *      resolve unexisting host address
+ *
+ * ISM43362 Module on ISMART43362 shield limitations:
+ *  - hardware es-WiFi SHIELD Rev. C:
+ *    - module has reset line connected directly to 
+ *      header J6 pin 3 (MICRO_RST_N) which means when microcontroller 
+ *      motherboard is reset also WiFi module is reset but also vice-versa 
+ *      meaning when WiFi module is reset (SW2) it also resets microcontroller
+ *  - software with firmware ISM43362_M3G_L44_SPI_C6.2.1.7:
+ *    - command 'ZR' Reset Module pulls the reset line low thus also because 
+ *      of hardware limitation resets the microcontroller
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    - Corrected SocketClose functionality
+ *    - Updated Initialization function to handle unavailable reset pin
  *  Version 1.1
  *    - Updated functionality to comply with CMSIS WiFi Driver Validation
  *    - Added debug of SPI traffic to Event Recorder
@@ -95,6 +112,11 @@
 #error For driver debugging enable RTE: Compiler: Event Recorder!
 #endif
 
+// Legacy compatibility defines
+#ifndef WIFI_ISM43362_SPI_BUS_SPEED
+#define WIFI_ISM43362_SPI_BUS_SPEED    (20000000)
+#endif
+
 // Hardware dependent functions --------
 
 // Exported hardware dependent function called by user code
@@ -115,7 +137,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -177,8 +199,14 @@ typedef struct {                        // Socket structure
 #define EVENT_SPI_XFER_DONE             (1U     )
 #define EVENT_SPI_READY                 (1U << 1)
 #define EVENT_ASYNC_POLL                (1U << 2)
-#define EVENT_ACCEPT                    (1U << 3)
-#define EVENT_SOCKET                    (1U << 4)
+#define EVENT_SOCK_RECV                 (1U     )       // Something was received
+#define EVENT_SOCK_RECV_TIMEOUT         (1U << 1)       // Reception has timed-out
+#define EVENT_SOCK_RECV_DISCON_REMOTE   (1U << 2)       // Remote host closed socket
+#define EVENT_SOCK_RECV_CLOSE           (1U << 3)       // Socket close requested locally
+#define EVENT_SOCK_RECV_CLOSE_DONE      (1U << 4)       // Socket closed locally
+#define EVENT_SOCK_ACCEPTED             (1U << 5)       // Socket accepted new connection
+#define EVENT_SOCK_ACCEPTING_CLOSE      (1U << 6)       // Socket accepting close requested locally
+#define EVENT_SOCK_ACCEPTING_CLOSE_DONE (1U << 7)       // Socket accepting closed locally
 
 // Local macros
 #define SPI_Driver_(n)                  Driver_SPI##n
@@ -219,6 +247,7 @@ static const osThreadAttr_t thread_async_poll_attr = {
 
 
 // Local variables and structures
+static uint8_t                          module_initialized = 0U;
 static uint8_t                          driver_initialized = 0U;
 
 static osEventFlagsId_t                 event_flags_id;
@@ -591,7 +620,7 @@ int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *ptr_recv
   // Parse response
   if (ptr_resp_code != NULL) {
     if (*ptr_recv_len > 4) {
-      if (memcmp((void *)&ptr_recv[len_recv-8U], "\r\nOK\r\n> ", 8) == 0) {
+      if (memcmp((const void *)&ptr_recv[len_recv-8U], (const void *)"\r\nOK\r\n> ", 8) == 0) {
         *ptr_resp_code = 0;                     // OK
       } else {
         for (i = 0U; i < (len_recv - 1U); i++) {
@@ -778,11 +807,14 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
   uint32_t ticks, time_in_ms;
   int32_t  spi_ret, len_recv;
   uint8_t  u8_arr[6];
-  uint8_t  poll_async, poll_recv, repeat, event_signal;
+  uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
+  uint8_t  async_prescaler;
   uint16_t u16_val;
   int8_t   i, hw_socket;
 
   (void)arg;
+
+  async_prescaler = 1U;
 
   for (;;) {
     if ((osEventFlagsWait(event_flags_id, EVENT_ASYNC_POLL, osFlagsWaitAny, osWaitForever) & EVENT_ASYNC_POLL) == EVENT_ASYNC_POLL) {
@@ -792,11 +824,19 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         }
 
         // Check if thread should poll for asynchronous messages or receive in long blocking
-        poll_async = 0U;
-        poll_recv  = 0U;
+        poll_async  = 0U;
+        poll_recv   = 0U;
+        check_async = 0U;
         for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
-          if  (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
+          if (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
             poll_async = 1U;
+            if (async_prescaler > 0U) {
+              async_prescaler --;
+              if (async_prescaler == 0U) {
+                async_prescaler = 16U;
+                check_async     = 1U;
+              }
+            }
           }
           if (socket_arr[i].poll_recv != 0U){
             poll_recv = 1U;
@@ -814,7 +854,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
 
           if (osMutexAcquire(mutex_id_sockets, WIFI_ISM43362_ASYNC_INTERVAL) == osOK) { // Lock socket variables
             if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {      // Lock access to SPI interface (acquire mutex)
-              if (poll_async != 0U) {
+              if (check_async != 0U) {
                 // Send command to read asynchronous message
                 memcpy((void *)spi_send_buf, (void *)"MR\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
                 spi_ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
@@ -856,7 +896,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       }
                       if (i != WIFI_ISM43362_SOCKETS_NUM) {
                         // Socket 'i' has accepted connection
-                        event_socket[i] |= 0x08U;
+                        event_socket[i] |= EVENT_SOCK_ACCEPTED;
                       }
                     }
                   }
@@ -871,7 +911,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       if (sscanf((const char *)ptr_resp_buf, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3], &u8_arr[4], &u8_arr[5]) == 6) {
                         // Check if MAC already exists in mac_ip4 array, if it does ignore it, otherwise add it to array
                         for (i = 0; i < 8; i++) {
-                          if (memcmp((void *)&ap_mac[i][0], (void *)u8_arr, 6) == 0) {
+                          if (memcmp((const void *)&ap_mac[i][0], (const void *)u8_arr, 6) == 0) {
                             break;
                           }
                         }
@@ -900,7 +940,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       if (WiFi_ISM43362_BufferPut (hw_socket, &recv_buf[hw_socket][0], recv_len[hw_socket]) == true) {
                         recv_len[hw_socket] = 0U;
                         if (socket_arr[i].recv_time_left != 0U) {
-                          event_socket[hw_socket] |= 0x01U;
+                          event_socket[hw_socket] |= EVENT_SOCK_RECV;
                           socket_arr[i].recv_time_left = 0U;
                         }
                       }
@@ -916,7 +956,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                           if (resp_code == 0) {                 // If response code is OK
                             if (spi_recv_len <= 10U) {          // No data was received
                               if ((socket_arr[i].recv_time_left != 0U) &&           // If recv was called
-                                  (socket_arr[i].recv_time_left != 0xFFFFFFFFU)) {  // If long blocking (not infinite), check for timeout or lost connection
+                                  (socket_arr[i].recv_time_left != 0xFFFFFFFFU)) {  // If not infinite, check for timeout or lost connection
                                 ticks = osKernelGetTickCount () - socket_arr[i].start_tick_count;
                                 if (kernel_tick_freq_in_ms == 1U) {
                                   time_in_ms = ticks;
@@ -926,8 +966,8 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                                   time_in_ms = ticks / kernel_tick_freq_in_ms;
                                 }
                                 if (time_in_ms >= socket_arr[i].recv_time_left) {
-                                  event_socket[hw_socket] |= 0x01U;
                                   socket_arr[i].recv_time_left = 0U;
+                                  event_socket[hw_socket] |= EVENT_SOCK_RECV_TIMEOUT;
                                 }
                               }
                             } else {                            // Some data was received
@@ -936,8 +976,8 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                               if (WiFi_ISM43362_BufferPut (hw_socket, &spi_recv_buf[2], spi_recv_len - 10U) == true) {
                                 recv_len[hw_socket] = 0U;
                                 if (socket_arr[i].recv_time_left != 0U) {
-                                  event_socket[hw_socket] |= 0x01U;
                                   socket_arr[i].recv_time_left = 0U;
+                                  event_socket[hw_socket] |= EVENT_SOCK_RECV;
                                 }
                                 repeat = 1U;
                               } else {
@@ -947,12 +987,17 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                             }
                           } else if (resp_code == -1) {         // If response code is -1, connection was lost
                             socket_arr[i].poll_recv = 0U;
-                            event_socket[hw_socket] |= 0x02U;
+                            socket_arr[i].recv_time_left = 0U;
+                            event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
                           } else {                              // If unknown error happened
-                            event_socket[hw_socket] |= 0x01U;
+                            socket_arr[i].poll_recv = 0U;
+                            socket_arr[i].recv_time_left = 0U;
+                            event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
                           }
                         } else {                                // If error on SPI happened
-                          event_socket[hw_socket] |= 0x01U;
+                          socket_arr[i].poll_recv = 0U;
+                          socket_arr[i].recv_time_left = 0U;
+                          event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
                         }
                       }
                     }
@@ -1057,21 +1102,54 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
     ret = ptrSPI->Control     (ARM_SPI_SET_DEFAULT_TX_VALUE, 0x0A0AU);
   }
   if (ret == ARM_DRIVER_OK) {
-    ret = ptrSPI->Control     (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0 | ARM_SPI_DATA_BITS(16), 20000000U);
+    ret = ptrSPI->Control     (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0 | ARM_SPI_DATA_BITS(16), WIFI_ISM43362_SPI_BUS_SPEED);
   }
 
   if (ret == ARM_DRIVER_OK) {
-    // Reset WiFi Module
-    WiFi_ISM43362_Pin_RSTN(true);
-    osDelay(50U);
-    WiFi_ISM43362_Pin_RSTN(false);
-    osDelay(100U);
-
-    // Wait for initial SPI ready and detect if user IRQ is provided for SPI ready detection
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-      // Initial SPI ready wait and determine if SPI ready is signaled by IRQ
-      WiFi_ISM43362_Pin_SSN(false);
-      Wait_us(4U);
+
+      if (module_initialized == 0U) {
+
+        // Reset WiFi Module
+        WiFi_ISM43362_Pin_RSTN(true);
+        osDelay(50U);
+        WiFi_ISM43362_Pin_RSTN(false);
+        osDelay(100U);
+
+        // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
+        // Do a read independent of return data
+        WiFi_ISM43362_Pin_SSN(true);
+        Wait_us(15U);
+        memset((void *)spi_recv_buf, 0x55, sizeof(spi_recv_buf));
+        if (ptrSPI->Receive(spi_recv_buf, 3U) == ARM_DRIVER_OK) {
+          if (!SPI_WaitTransferDone(1000U)) {
+            ret = ARM_DRIVER_ERROR;       // If transfer timed out
+          }
+        }
+        WiFi_ISM43362_Pin_SSN(false);
+        Wait_us(3U);
+
+        module_initialized = 1U;
+      }
+
+      // Do a dummy SPI communication so we can determine if event is used for DATARDY state change
+      memcpy((void *)spi_send_buf, (void *)"Z?\r\n", 4);
+      WiFi_ISM43362_Pin_SSN(true);              // Activate slave select line
+      Wait_us(15U);                             // Wait 15 us
+      if (ptrSPI->Send(spi_send_buf, 2U) == ARM_DRIVER_OK) {
+        // If SPI send started successfully
+        if (SPI_WaitTransferDone(100U)) {       // If SPI transfer finished
+          WiFi_ISM43362_Pin_SSN(false);         // Deactivate slave select line
+          Wait_us(3U);                          // Wait 3 us
+        } else {                                // If SPI transfer timed-out
+          ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);
+          ret = ARM_DRIVER_ERROR_TIMEOUT;
+        }
+      } else {                                  // If SPI send start failed
+        ret = ARM_DRIVER_ERROR;
+      }
+
+      // Determine if SPI ready is signaled by IRQ
       for (timeout = WIFI_ISM43362_SPI_TIMEOUT; timeout != 0U; timeout --) {
         if (WiFi_ISM43362_Pin_DATARDY()) {
           flags = osEventFlagsWait(event_flags_id, EVENT_SPI_READY, osFlagsWaitAll, 10U);
@@ -1086,20 +1164,12 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         ret = ARM_DRIVER_ERROR;
       }
 
-      // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
-      if (ret == ARM_DRIVER_OK) {
-        WiFi_ISM43362_Pin_SSN(true);
-        Wait_us(15U);
-        memset((void *)spi_recv_buf, 0, sizeof(spi_recv_buf));
-        if (ptrSPI->Receive(spi_recv_buf, 3U) == ARM_DRIVER_OK) {
-          if (SPI_WaitTransferDone(1000U)) {
-            if (memcmp((void *)spi_recv_buf, "\x15\x15\r\n> ", 6) != 0) {
-              // If initial cursor is not as expected
-              ret = ARM_DRIVER_ERROR;
-            }
-          } else {                      // If transfer timed out
-            ret = ARM_DRIVER_ERROR;
-          }
+      // Receive data requested by 'Z?' command
+      WiFi_ISM43362_Pin_SSN(true);
+      Wait_us(15U);
+      if (ptrSPI->Receive(spi_recv_buf, 64U)  == ARM_DRIVER_OK) {
+        if (!SPI_WaitTransferDone(1000U)) {
+          ret = ARM_DRIVER_ERROR;       // If transfer timed out
         }
       }
       WiFi_ISM43362_Pin_SSN(false);
@@ -2501,7 +2571,7 @@ static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
     }
 
     if (ret >= 0) {
-      osEventFlagsClear(event_flags_sockets_id[ret], 0x1FU);
+      osEventFlagsClear(event_flags_sockets_id[ret], 0xFFU);
 
       WiFi_ISM43362_BufferInitialize ((uint32_t)i);
 
@@ -2554,9 +2624,9 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
   if ((socket_arr[socket].bound != 0U) || (socket_arr[socket].state != SOCKET_STATE_CREATED)) {
     return ARM_SOCKET_EINVAL;
   }
-  if (                                    (memcmp((void *)ip, "\x00\x00\x00\x00", 4U) != 0)  &&
-     ((oper_mode == OPER_MODE_STATION) && (memcmp((void *)ip, sta_local_ip, 4U) != 0))       &&
-     ((oper_mode == OPER_MODE_AP)      && (memcmp((void *)ip, ap_local_ip,  4U) != 0)))       {
+  if (                                    (memcmp((const void *)ip, (const void *)"\x00\x00\x00\x00", 4U) != 0)   &&
+     ((oper_mode == OPER_MODE_STATION) && (memcmp((const void *)ip, (const void *)sta_local_ip, 4U)       != 0))  &&
+     ((oper_mode == OPER_MODE_AP)      && (memcmp((const void *)ip, (const void *)ap_local_ip,  4U)       != 0)))  {
     // If IP is different then 0.0.0.0 (accept all) or 
     // if station is active and requested IP is different then station's IP or 
     // if AP is running and requested IP is different then AP's IP
@@ -2757,8 +2827,8 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
     } else {                            // If blocking mode
       timeout = osWaitForever;
     }
-    flags = osEventFlagsWait(event_flags_sockets_id[socket], 0x18U, osFlagsWaitAny | osFlagsNoClear, timeout);
-    osEventFlagsClear (event_flags_sockets_id[socket], flags & 0x18U);
+    flags = osEventFlagsWait(event_flags_sockets_id[socket],    EVENT_SOCK_ACCEPTED | EVENT_SOCK_ACCEPTING_CLOSE, osFlagsWaitAny | osFlagsNoClear, timeout);
+    osEventFlagsClear (event_flags_sockets_id[socket], flags & (EVENT_SOCK_ACCEPTED | EVENT_SOCK_ACCEPTING_CLOSE));
     if ((flags & 0x80000000UL) != 0U) { // If error
       if (flags == osFlagsErrorTimeout) {
         ret = ARM_SOCKET_EAGAIN;
@@ -2766,8 +2836,9 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
         ret = ARM_SOCKET_ERROR;
       }
     } else {
-      if ((flags & 0x10U) != 0U) {      // If abort signaled from SocketClose
-        ret = ARM_SOCKET_ERROR;
+      if ((flags & EVENT_SOCK_ACCEPTING_CLOSE) != 0U) { // If abort requested from SocketClose
+        ret = ARM_SOCKET_ECONNABORTED;
+        osEventFlagsSet(event_flags_sockets_id[socket], EVENT_SOCK_ACCEPTING_CLOSE_DONE);
       }
     }
 
@@ -2793,7 +2864,7 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
         }
 
         // Start polling for reception
-        socket_arr[socket].poll_recv = 1U;
+        socket_arr[virtual_socket].poll_recv = 1U;
         osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread read
 
         // Because on ISM when accept succeeds same socket is used for communication, 
@@ -2842,7 +2913,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
   if ((ip == NULL) || (ip_len != 4U) || (port == 0U)) {
     return ARM_SOCKET_EINVAL;
   }
-  if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (memcmp((const void *)ip, "\0\0\0\0", 4) == 0)) {
+  if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (memcmp((const void *)ip, (const void *)"\0\0\0\0", 4) == 0)) {
     return ARM_SOCKET_EINVAL;
   }
   if (driver_initialized == 0U) {
@@ -2851,7 +2922,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
 
   dissolve_udp = 0U;
 
-  if ((ip_len == 4U) && (memcmp((const void *)ip, "\0\0\0\0", 4) == 0) && (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP)) {
+  if ((ip_len == 4U) && (memcmp((const void *)ip, (const void *)"\0\0\0\0", 4) == 0) && (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP)) {
     // If request to connect to IP 0.0.0.0 for UDP meaning dissolve the connection
     dissolve_udp = 1U;
   }
@@ -2869,8 +2940,8 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
       return ARM_SOCKET_EINVAL;
   }
 
-  // This module does not support setting of local port it only supports 
-  // 0 value and generates the local port randomly
+  // This module does not support setting of local port for client connection 
+  // it only supports 0 value and selects the local port randomly
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
@@ -2888,22 +2959,33 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
         if (ret == 0) { 
           if (dissolve_udp) {
             if (socket_arr[socket].client == 0U) {
-              ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_STOP, TRANSPORT_CLIENT);
-              if (ret == 0) {
-                socket_arr[socket].client = 0U;
+              // Only auto-assigned local port is supported by module
+              if ((socket_arr[socket].bound == 0U) || ((socket_arr[socket].bound != 0U) && (socket_arr[socket].local_port == 0U))) {
+                ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_STOP, TRANSPORT_CLIENT);
+                if (ret == 0) {
+                  socket_arr[socket].client = 0U;
+                }
+              } else {
+                ret = ARM_SOCKET_ERROR;
               }
             }
           } else {
             if (socket_arr[socket].client == 0U) {
-              ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
-              if (ret == 0) {
-                socket_arr[socket].client = 1U;
-                socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
-                if (socket_arr[socket].non_blocking != 0U) {          // If non-blocking mode
-                  ret = ARM_SOCKET_EINPROGRESS;
+              // Only auto-assigned local port is supported by module
+              if ((socket_arr[socket].bound == 0U) || ((socket_arr[socket].bound != 0U) && (socket_arr[socket].local_port == 0U))) {
+                ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
+                if (ret == 0) {
+                  socket_arr[socket].client = 1U;
+                  socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
+                  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
+                    ret = ARM_SOCKET_EINPROGRESS;
+                  }
                 }
-              } else if (ret == ARM_SOCKET_ERROR) {
-                ret = ARM_SOCKET_ECONNREFUSED;
+                if (ret == ARM_SOCKET_ERROR) {
+                  ret = ARM_SOCKET_ETIMEDOUT;
+                }
+              } else {
+                ret = ARM_SOCKET_ERROR;
               }
             }
           }
@@ -2967,17 +3049,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
-  uint8_t  ip_udp[4];
-  uint32_t ip_udp_len;
-  uint16_t udp_port;
-
-  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
-    // For UDP reception SocketRecvFrom has to be used valid ip, ip_len and port pointers
-    ip_udp_len = 4U;
-    return (WiFi_SocketRecvFrom(socket, buf, len, ip_udp, &ip_udp_len, &udp_port));
-  } else {
-    return (WiFi_SocketRecvFrom(socket, buf, len, NULL, NULL, NULL));
-  }
+  return (WiFi_SocketRecvFrom(socket, buf, len, NULL, NULL, NULL));
 }
 
 /**
@@ -3058,24 +3130,23 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
 
     // Wait for reception/timeout or disconnect signaled from asynchronous thread
     // or abort signaled form SocketClose
-    flags = osEventFlagsWait(event_flags_sockets_id[hw_socket], 0x07U, osFlagsWaitAny | osFlagsNoClear, osWaitForever);
-    osEventFlagsClear (event_flags_sockets_id[hw_socket], flags & 0x07U);
+    flags = osEventFlagsWait(event_flags_sockets_id[hw_socket],    EVENT_SOCK_RECV | EVENT_SOCK_RECV_TIMEOUT | EVENT_SOCK_RECV_CLOSE | EVENT_SOCK_RECV_DISCON_REMOTE, osFlagsWaitAny | osFlagsNoClear, osWaitForever);
+    osEventFlagsClear (event_flags_sockets_id[hw_socket], flags & (EVENT_SOCK_RECV | EVENT_SOCK_RECV_TIMEOUT | EVENT_SOCK_RECV_CLOSE | EVENT_SOCK_RECV_DISCON_REMOTE));
 
     if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
-      if ((flags & 0x80000000UL) != 0U) {       // If error
+      if ((flags & 0x80000000UL) != 0U) {                       // If error
         ret = ARM_SOCKET_ERROR;
-      } else if ((flags & 0x08U) != 0U) {       // If reception was aborted locally by closing socket
+      } else if ((flags & EVENT_SOCK_RECV_CLOSE) != 0U) {       // If reception was aborted locally by closing socket
         ret = ARM_SOCKET_ECONNABORTED;
-      } else if ((flags & 0x02U) != 0U) {       // If reception was aborted by remote host closing socket
+        osEventFlagsSet(event_flags_sockets_id[hw_socket], EVENT_SOCK_RECV_CLOSE_DONE);
+      } else if ((flags & EVENT_SOCK_RECV_DISCON_REMOTE)!=0U) { // If reception was aborted by remote host closing socket
         socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
         ret = ARM_SOCKET_ECONNRESET;
-      } else if ((flags & 0x01U) != 0U) {       // If reception has finished (by received some data or by timeout)
-        // If data was received
+      } else if ((flags & EVENT_SOCK_RECV) != 0U) {             // If reception has finished and some data was received
         ret = WiFi_ISM43362_BufferGet (hw_socket, buf, len);
-        if (ret == 0) {                         // If timeout occured and nothing was received
-          ret = ARM_SOCKET_EAGAIN;
-        }
-      } else {                                  // If still nothing was received
+      } else if ((flags & EVENT_SOCK_RECV_TIMEOUT) != 0U) {     // If reception has timed-out and nothing was received
+        ret = ARM_SOCKET_EAGAIN;
+      } else {                                                  // Should never happen
         ret = ARM_SOCKET_EAGAIN;
       }
       osMutexRelease(mutex_id_sockets);
@@ -3118,31 +3189,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
-  uint8_t   ip_udp[4];
-  uint32_t  ip_udp_len;
-  uint16_t  udp_port;
-
-  if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
-    return ARM_SOCKET_ESOCK;
-  }
-  if ((buf == NULL) || (len == 0U)) {
-    return ARM_SOCKET_EINVAL;
-  }
-  if (driver_initialized == 0U) {
-    return ARM_SOCKET_ERROR;
-  }
-
-  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
-    // For UDP send SocketSendTo has to be used with ip, ip_len and port parameters 
-    // that were provided on SocketConnect
-    ip_udp_len = 4U;
-    udp_port   = socket_arr[socket].remote_port;
-    memcpy((void *)ip_udp, (void *)socket_arr[socket].remote_ip, ip_udp_len);
-
-    return (WiFi_SocketSendTo(socket, buf, len, (const uint8_t *)ip_udp, ip_udp_len, udp_port));
-  } else {
-    return (WiFi_SocketSendTo(socket, buf, len, NULL, 0U, 0U));
-  }
+  return (WiFi_SocketSendTo(socket, buf, len, NULL, 0U, 0U));
 }
 
 /**
@@ -3191,6 +3238,19 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   }
 
   len_tot_sent = 0U;
+
+  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
+    // For UDP send parameters ip, ip_len and port are used as they were provided on SocketConnect
+    if (ip == NULL) {
+      ip = socket_arr[socket].remote_ip;
+    }
+    if (ip_len != 4U) {
+      ip_len = 4U;
+    }
+    if (port == 0U) {
+      port = socket_arr[socket].remote_port;
+    }
+  }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
@@ -3660,8 +3720,10 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketClose (int32_t socket) {
-  int32_t ret;
-  uint8_t hw_socket;
+  int32_t  ret;
+  uint32_t wait_flags;
+  uint32_t flags;
+  uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
     return ARM_SOCKET_ESOCK;
@@ -3681,10 +3743,27 @@ static int32_t WiFi_SocketClose (int32_t socket) {
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
+    wait_flags = 0U;
 
     hw_socket = (uint8_t)socket;
     if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
       hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
+    }
+
+    if (event_flags_sockets_id[hw_socket] != NULL) {
+      if (socket_arr[hw_socket].state == SOCKET_STATE_ACCEPTING) {
+        // If socket is waiting for flag in accept, send abort flag to terminate accept
+        osEventFlagsSet  (event_flags_sockets_id[hw_socket], EVENT_SOCK_ACCEPTING_CLOSE);
+        wait_flags |= EVENT_SOCK_ACCEPTING_CLOSE;
+      }
+      if (socket_arr[socket].poll_recv != 0U) {       // If reception is being polled
+        socket_arr[socket].poll_recv = 0U;            // stop polling reception
+      }
+      if (socket_arr[socket].recv_time_left != 0U) {
+        // If socket is being read (waiting in SocketRecv), send abort flag to terminate receive
+        osEventFlagsSet  (event_flags_sockets_id[hw_socket], EVENT_SOCK_RECV_CLOSE);
+        wait_flags |= EVENT_SOCK_RECV_CLOSE_DONE;
+      }
     }
 
     // Execute functionality on the module through SPI commands
@@ -3719,32 +3798,26 @@ static int32_t WiFi_SocketClose (int32_t socket) {
       }
     }
 
-    if (ret == 0) {
-      if ((event_flags_sockets_id[hw_socket] != NULL) && (socket_arr[socket].state == SOCKET_STATE_ACCEPTING)) {
-        // If socket is waiting for flag in accept, send abort flag to terminate accept
-        osEventFlagsSet(event_flags_sockets_id[hw_socket], 0x10U);
-      }
-      if ((event_flags_sockets_id[hw_socket] != NULL) && (socket_arr[socket].recv_time_left != 0U)) {
-        // If socket is waiting for reception but has timed-out, send abort flag to terminate reception
-        osEventFlagsSet(event_flags_sockets_id[hw_socket], 0x04U);
-      }
+    WiFi_ISM43362_BufferFlush (hw_socket);
+    if (hw_socket == socket) {
+      // Uninitialize buffer for socket
+      WiFi_ISM43362_BufferUninitialize ((uint32_t)hw_socket);
     }
 
-    if (ret == 0) {
-      // Stop polling for reception
-      socket_arr[hw_socket].poll_recv = 0U;
+    // If socket close succeeded, clear all variables
+    memset ((void *)&socket_arr[socket], 0 , sizeof(socket_t));
 
-      if (hw_socket == socket) {
-        // If this is not an virtual socket due to accept
-        WiFi_ISM43362_BufferUninitialize ((uint32_t)hw_socket);
-      }
-
-      // If socket close succeeded, clear all variables
-      memset ((void *)&socket_arr[socket], 0 , sizeof(socket_t));
-    }
     osMutexRelease(mutex_id_sockets);
   } else {
     ret = ARM_SOCKET_ERROR;
+  }
+
+  if (ret == 0) {
+    if (wait_flags != 0U) {           // If events were sent to terminate accept or recv, wait for them to finish
+      osEventFlagsWait (event_flags_sockets_id[hw_socket], wait_flags, osFlagsWaitAll, osWaitForever);
+    } else {
+      osEventFlagsClear(event_flags_sockets_id[hw_socket], 0xFFU);
+    }
   }
 
   return ret;

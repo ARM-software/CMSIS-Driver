@@ -7,8 +7,15 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.2-dev2">
+      Updated Inventek ISM43362 WiFi driver (version 1.2):
+      - Corrected SocketClose functionality
+      - Updated Initialization function to handle unavailable reset pin
+    </release>
     <release version="2.4.2-dev1">
-      Updated Inventek ISM43362 WiFi driver (version 1.1)
+      Updated Inventek ISM43362 WiFi driver (version 1.1):
+      - Updated functionality to comply with CMSIS WiFi Driver Validation
+      - Added debug of SPI traffic to Event Recorder
     </release>
     <release version="2.4.2-dev0">
       Added Espressif ESP8266 WiFi driver
@@ -356,7 +363,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.0.0" Cvariant="SPI" Cversion="1.1.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.0.0" Cvariant="SPI" Cversion="1.2.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

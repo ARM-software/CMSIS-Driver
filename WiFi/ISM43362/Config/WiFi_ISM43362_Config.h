@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        26. June 2019
- * $Revision:    V1.0
+ * $Date:        30. October 2019
+ * $Revision:    V1.1
  *
  * Project:      WiFi Driver Configuration for 
  *               Inventek ISM43362-M3G-L44 WiFi Module (SPI variant)
@@ -40,12 +40,15 @@
 
 //   <o> Memory pool size
 //   <i> Configuration settings specifying memory pool size for receive packets buffering
-#define WIFI_ISM43362_MEM_POOL_SIZE         8192
+#define WIFI_ISM43362_MEM_POOL_SIZE         16384
 
 // </h>
 
 // Number of sockets supported by Module (default and maximum: 4)
 #define WIFI_ISM43362_SOCKETS_NUM          (4)
+
+// SPI bus speed (default: 20 Mbps)
+#define WIFI_ISM43362_SPI_BUS_SPEED        (20000000)
 
 // SPI mutex acquire timeout in ms (default: 1000)
 #define WIFI_ISM43362_SPI_TIMEOUT          (1000)

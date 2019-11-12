@@ -19,10 +19,10 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
-#include "WiFi_ESP8266_Os.h"
+#include "WiFi_WizFi360_Os.h"
 
 #define THREAD_CC_ATTR     __attribute__((section(".bss.os.thread.cb")))
 #define MEMPOOL_CC_ATTR    __attribute__((section(".bss.os.mempool.cb")))

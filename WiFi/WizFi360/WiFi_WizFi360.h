@@ -21,20 +21,20 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      Wiz360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
-#ifndef WIFI_ESP8266_H__
-#define WIFI_ESP8266_H__
+#ifndef WIFI_WIZFI360_H__
+#define WIFI_WIZFI360_H__
 
 #include "Driver_WiFi.h"                // ::CMSIS Driver:WiFi
 #include "cmsis_os2.h"                  // ::CMSIS:RTOS2
 #include "BufList.h"
 
-#include "WiFi_ESP8266_Config.h"
+#include "WiFi_WizFi360_Config.h"
 
-#define WIFI_SERIAL_BAUDRATE        WIFI_ESP8266_SERIAL_BAUDRATE
-#define WIFI_DRIVER_NUMBER          WIFI_ESP8266_DRIVER_NUMBER
+#define WIFI_SERIAL_BAUDRATE        WIFI_WIZ360_SERIAL_BAUDRATE
+#define WIFI_DRIVER_NUMBER          WIFI_WIZ360_DRIVER_NUMBER
 
 /* Command response timeout [ms] (default) */
 #ifndef WIFI_RESP_TIMEOUT
@@ -74,7 +74,7 @@
 
 /* Connection info pooling enable/disable (SYSMSG_CUR disable/enable) */
 #ifndef WIFI_POOL_CONN_INFO
-#define WIFI_POOL_CONN_INFO         (0)
+#define WIFI_POOL_CONN_INFO         (1)
 #endif
 
 /* WIFI interface definitions */
@@ -236,4 +236,4 @@ static uint32_t ConnId_Alloc       (void);
 static void     ConnId_Free        (uint32_t conn_id);
 static void     ConnId_Accept      (uint32_t conn_id);
 
-#endif /* WIFI_ESP8266_H__ */
+#endif /* WIFI_WIZFI360_H__ */

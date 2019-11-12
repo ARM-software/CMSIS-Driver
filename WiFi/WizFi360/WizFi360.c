@@ -19,7 +19,7 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
 /* AT command set variants */
@@ -42,10 +42,10 @@
 
 /* AT command set variant and version used */
 #ifndef AT_VARIANT
-#define AT_VARIANT        AT_VARIANT_ESP
+#define AT_VARIANT        AT_VARIANT_WIZ
 #endif
 #ifndef AT_VERSION
-#define AT_VERSION        AT_ESP_1_6_2_0
+#define AT_VERSION        AT_WIZ_1_0_3_0
 #endif
 
 #include <stdio.h>
@@ -53,9 +53,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "ESP8266.h"
-#include "ESP8266_Serial.h"
-#include "WiFi_ESP8266_Os.h"
+#include "WizFi360.h"
+#include "WizFi360_Serial.h"
+#include "WiFi_WizFi360_Os.h"
 
 /* Control block */
 static AT_PARSER_HANDLE AT_Cb;

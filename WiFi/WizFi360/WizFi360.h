@@ -19,11 +19,11 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
-#ifndef ESP8266_H__
-#define ESP8266_H__
+#ifndef WIZFI360_H__
+#define WIZFI360_H__
 
 #include "BufList.h"
 
@@ -815,4 +815,4 @@ extern int32_t AT_Resp_CtrlConn (uint32_t *conn_id);
 */
 extern int32_t AT_Resp_StaMac (uint8_t mac[]);
 
-#endif /* ESP8266_H__ */
+#endif /* WIZFI360_H__ */

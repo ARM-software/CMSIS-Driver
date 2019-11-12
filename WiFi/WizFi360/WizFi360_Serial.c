@@ -24,19 +24,19 @@
 
 #include <string.h>
 
-#include "ESP8266_Serial.h"
+#include "WizFi360_Serial.h"
 #include "Driver_USART.h"
 #include "cmsis_compiler.h"
 
-#include "WiFi_ESP8266_Config.h"
+#include "WiFi_WizFi360_Config.h"
 
 /* Serial buffer sizes */
 #ifndef SERIAL_TXBUF_SZ
-#define SERIAL_TXBUF_SZ   512
+#define SERIAL_TXBUF_SZ   256
 #endif
 
 #ifndef SERIAL_RXBUF_SZ
-#define SERIAL_RXBUF_SZ   512
+#define SERIAL_RXBUF_SZ   256
 #endif
 
 /* Expansion macro used to create CMSIS Driver references */
@@ -44,7 +44,7 @@
 #define CREATE_SYMBOL(name, port) EXPAND_SYMBOL(name, port)
 
 /* CMSIS-Driver USART reference (Driver_USART#) */
-#define CMSIS_USART_DRIVER        CREATE_SYMBOL(Driver_USART, WIFI_ESP8266_SERIAL_DRIVER)
+#define CMSIS_USART_DRIVER        CREATE_SYMBOL(Driver_USART, WIFI_WIZ360_SERIAL_DRIVER)
 
 /* Extern CMSIS-Driver USART */
 extern ARM_DRIVER_USART           CMSIS_USART_DRIVER;

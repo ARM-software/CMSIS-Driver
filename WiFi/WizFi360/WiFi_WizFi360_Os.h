@@ -19,17 +19,17 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
-#ifndef WIFI_ESP8266_OS_H__
-#define WIFI_ESP8266_OS_H__
+#ifndef WIFI_WIZFI360_OS_H__
+#define WIFI_WIZFI360_OS_H__
 
 #include "cmsis_os2.h"
 #include "cmsis_compiler.h"
 #include "RTE_Components.h"
 
-#include "WiFi_ESP8266_Config.h"
+#include "WiFi_WizFi360_Config.h"
 
 /* Convert priority number to CMSIS-RTOS2 priority value */
 #define CMSIS_RTOS2_PRIORITY(n)      \
@@ -41,16 +41,16 @@
   (n == 5) ? osPriorityRealtime    : osPriorityError)
 
 /* WiFi parser thread priority and stack size */
-#define WIFI_THREAD_PRIORITY          CMSIS_RTOS2_PRIORITY(WIFI_ESP8266_THREAD_PRIORITY)
-#define WIFI_THREAD_STACK_SIZE        WIFI_ESP8266_THREAD_STACK_SIZE
+#define WIFI_THREAD_PRIORITY          CMSIS_RTOS2_PRIORITY(WIFI_WIZ360_THREAD_PRIORITY)
+#define WIFI_THREAD_STACK_SIZE        WIFI_WIZ360_THREAD_STACK_SIZE
 
 /* Socket buffer memory pool: (size of one block * total number of block) */
-#define SOCKET_BUFFER_BLOCK_SIZE      WIFI_ESP8266_SOCKET_BLOCK_SIZE
-#define SOCKET_BUFFER_BLOCK_COUNT     WIFI_ESP8266_SOCKET_BLOCK_COUNT
+#define SOCKET_BUFFER_BLOCK_SIZE      WIFI_WIZ360_SOCKET_BLOCK_SIZE
+#define SOCKET_BUFFER_BLOCK_COUNT     WIFI_WIZ360_SOCKET_BLOCK_COUNT
 
 /* Serial parser buffer memory pool: (size of one block * total number of block) */
-#define PARSER_BUFFER_BLOCK_SIZE      WIFI_ESP8266_PARSER_BLOCK_SIZE
-#define PARSER_BUFFER_BLOCK_COUNT     WIFI_ESP8266_PARSER_BLOCK_COUNT
+#define PARSER_BUFFER_BLOCK_SIZE      WIFI_WIZ360_PARSER_BLOCK_SIZE
+#define PARSER_BUFFER_BLOCK_COUNT     WIFI_WIZ360_PARSER_BLOCK_COUNT
 
 
 #if defined(RTE_CMSIS_RTOS2_RTX5)
@@ -106,4 +106,4 @@ extern const osMemoryPoolAttr_t AT_Parser_MemPool_Attr;
 /* Memory access mutex */
 extern const osMutexAttr_t      BufList_Mutex_Attr;
 
-#endif /* WIFI_ESP8266_OS_H__ */
+#endif /* WIFI_WIZFI360_OS_H__ */

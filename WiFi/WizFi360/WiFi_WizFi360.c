@@ -19,8 +19,8 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
- * Driver:       Driver_WiFin (n = WIFI_ESP8266_DRIVER_NUMBER value)
+ * Project:      WizFi360 WiFi Driver
+ * Driver:       Driver_WiFin (n = WIFI_WIZ360_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
@@ -29,9 +29,9 @@
  */
 
 #include <string.h>
-#include "WiFi_ESP8266.h"
-#include "WiFi_ESP8266_Os.h"
-#include "ESP8266.h"
+#include "WiFi_WizFi360.h"
+#include "WiFi_WizFi360_Os.h"
+#include "WizFi360.h"
 
 /* Driver version */
 #define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 0)
@@ -888,13 +888,7 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         break;
 
       case ARM_WIFI_TX_POWER:                           // Station/AP Set/Get transmit power;                         data = &power,    len =  4, uint32_t: 0 .. 20 [dBm]
-        u32 = *(const uint32_t *)data;
-
-        /* Store value (see GetOption) */
-        pCtrl->tx_power = (uint8_t)u32;
-
-        /* Send command */
-        ex = AT_Cmd_TxPower (u32 * 4U);
+        rval = ARM_DRIVER_ERROR_UNSUPPORTED;
         break;
 
       case ARM_WIFI_LP_TIMER:                           // Station    Set/Get low-power deep-sleep time;              data = &time,     len =  4, uint32_t [seconds]: 0 = disable (default)

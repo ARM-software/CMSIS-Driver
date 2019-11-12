@@ -7,6 +7,10 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.2-dev3">
+      Added Wiznet WizFi360 WiFi driver
+      Aligned ESP8266 codebase and namespace
+    </release>
     <release version="2.4.2-dev2">
       Updated Inventek ISM43362 WiFi driver (version 1.2):
       - Corrected SocketClose functionality
@@ -397,6 +401,25 @@
         <file category="include" name="WiFi/ESP8266/BufList/"/>
         <file category="source"  name="WiFi/ESP8266/BufList/BufList.c"/>
         <file category="source"  name="WiFi/ESP8266/BufList/LinkList.c"/>
+      </files>
+    </component>
+
+    <!-- WizFi360 -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.0.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+      <description>WIZnet WizFi360 WiFi Driver (UART)</description>
+      <RTE_Components_h>
+        #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */
+      </RTE_Components_h>
+      <files>
+        <file category="header"  name="WiFi/WizFi360/Config/WiFi_WizFi360_Config.h" attr="config" version="1.0.0"/>
+        <file category="include" name="WiFi/WizFi360/"/>
+        <file category="source"  name="WiFi/WizFi360/WiFi_WizFi360.c"/>
+        <file category="source"  name="WiFi/WizFi360/WiFi_WizFi360_Os.c"/>
+        <file category="source"  name="WiFi/WizFi360/WizFi360.c"/>
+        <file category="source"  name="WiFi/WizFi360/WizFi360_Serial.c"/>
+        <file category="include" name="WiFi/WizFi360/BufList/"/>
+        <file category="source"  name="WiFi/WizFi360/BufList/BufList.c"/>
+        <file category="source"  name="WiFi/WizFi360/BufList/LinkList.c"/>
       </files>
     </component>
   </components>

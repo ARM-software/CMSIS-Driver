@@ -19,22 +19,22 @@
  * $Date:        12. November 2019
  * $Revision:    V1.0
  *
- * Project:      ESP8266 WiFi Driver
+ * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
 
-// <h>ESP8266 WiFi Driver Configuration
+// <h>WizFi360 WiFi Driver Configuration
 
 // <o> WiFi Driver Number (Driver_WiFi#) <0-255>
 // <i> Defines exported WiFi driver control block number (Driver_WiFi#)
 // <i> Default: 0
-#define WIFI_ESP8266_DRIVER_NUMBER          0
+#define WIFI_WIZ360_DRIVER_NUMBER           0
 
 // <o>Connect to hardware via Driver_USART# <0-255>
 // <i>Defines the serial driver control block number (Driver_USART#)
 // <i> Default: 0
-#define WIFI_ESP8266_SERIAL_DRIVER          0
+#define WIFI_WIZ360_SERIAL_DRIVER           0
 
 // <o> Serial interface baudrate <115200=>115200
 //                               <230400=>230400
@@ -42,7 +42,7 @@
 //                               <921600=>921600
 // <i> Defines the serial interface baudrate.
 // <i> Default: 115200
-#define WIFI_ESP8266_SERIAL_BAUDRATE        115200
+#define WIFI_WIZ360_SERIAL_BAUDRATE         115200
 
 // <o> WiFi thread priority <0=>osPriorityLow
 //                          <1=>osPriorityBelowNormal
@@ -53,36 +53,36 @@
 // <i> Defines the WiFi driver thread priority.
 // <i> The priority of the WiFi thread should be higher as application thread priority.
 // <i> Default: 3
-#define WIFI_ESP8266_THREAD_PRIORITY        3
+#define WIFI_WIZ360_THREAD_PRIORITY         3
 
 // <o> WiFi thread stack size [bytes] <96-1073741824:8>
 // <i> Defines stack size for the WiFi Thread.
 // <i> Default: 512
-#define WIFI_ESP8266_THREAD_STACK_SIZE      512
+#define WIFI_WIZ360_THREAD_STACK_SIZE       512
 
 // <o> Socket buffer block size <128-16384:128>
 // <i> Defines the size of one memory block used for socket data buffering.
 // <i> Socket buffering consists of multiple blocks which are distributed across multiple sockets.
 // <i> Default: 512
-#define WIFI_ESP8266_SOCKET_BLOCK_SIZE      512
+#define WIFI_WIZ360_SOCKET_BLOCK_SIZE       512
 
 // <o> Socket buffer block count <5-256>
 // <i> Defines the total number of memory blocks used for socket data buffering.
 // <i> Socket buffering consists of multiple blocks which are distributed across multiple sockets.
 // <i> Default: 8
-#define WIFI_ESP8266_SOCKET_BLOCK_COUNT     8
+#define WIFI_WIZ360_SOCKET_BLOCK_COUNT      8
 
 // <o> Serial parser buffer block size
 // <i> Defines the size of one memory block in serial parser buffer.
 // <i> The total size of serial parser buffer is defined by memory block size and number of blocks.
 // <i> Default: 256
-#define WIFI_ESP8266_PARSER_BLOCK_SIZE      256
+#define WIFI_WIZ360_PARSER_BLOCK_SIZE       256
 
 // <o> Serial parser buffer block count
 // <i> Defines the number of memory blocks in serial parser buffer.
 // <i> The total size of serial parser buffer is defined by memory block size and number of blocks.
 // <i> Default: 8
-#define WIFI_ESP8266_PARSER_BLOCK_COUNT     8
+#define WIFI_WIZ360_PARSER_BLOCK_COUNT      8
 
 // </h>
 

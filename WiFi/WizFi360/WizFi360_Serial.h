@@ -22,8 +22,8 @@
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */
 
-#ifndef ESP8266_SERIAL_H__
-#define ESP8266_SERIAL_H__
+#ifndef WIZFI360_SERIAL_H__
+#define WIZFI360_SERIAL_H__
 
 #include <stdint.h>
 
@@ -44,4 +44,4 @@ uint32_t Serial_GetTxFree (void);
 
 void Serial_Cb (uint32_t cb_event);
 
-#endif /* ESP8266_SERIAL_H__ */
+#endif /* WIZFI360_SERIAL_H__ */

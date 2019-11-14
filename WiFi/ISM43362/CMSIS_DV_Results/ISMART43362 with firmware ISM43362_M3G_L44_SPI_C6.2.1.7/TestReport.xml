@@ -4,8 +4,8 @@
 <test>
 <title>CMSIS-Driver WiFi Test Report</title>
 <date>Nov 14 2019</date>
-<time>11:36:45</time>
-<file>D:/Development/Current/WiFi/Validation/Pack/CMSIS-Driver_Validation/Source/cmsis_dv.c</file>
+<time>14:33:12</time>
+<file>C:/Keil_v5/ARM/PACK/ARM/CMSIS-Driver_Validation/1.4.0-dev0/Source/cmsis_dv.c</file>
 <group>1</group>
 <test_cases>
 <tc>
@@ -38,6 +38,11 @@
 <no>4</no>
 <func>WIFI_PowerControl</func>
 <dbgi>
+<detail>
+<module>DV_WIFI.c</module>
+<line>389</line>
+<message>[WARNING] PowerControl (ARM_POWER_OFF) not supported</message>
+</detail>
 </dbgi>
 <res>PASSED</res>
 </tc>
@@ -117,7 +122,7 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>4232</line>
+<line>4329</line>
 <message>[WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ETIMEDOUT, expected ARM_SOCKET_ECONNREFUSED)</message>
 </detail>
 </dbgi>
@@ -248,8 +253,8 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>8152</line>
-<message>[INFO] Speed 367 KB/s</message>
+<line>8249</line>
+<message>[INFO] Speed 373 KB/s</message>
 </detail>
 </dbgi>
 <res>PASSED</res>
@@ -260,8 +265,8 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>8220</line>
-<message>[INFO] Speed 471 KB/s</message>
+<line>8317</line>
+<message>[INFO] Speed 470 KB/s</message>
 </detail>
 </dbgi>
 <res>PASSED</res>

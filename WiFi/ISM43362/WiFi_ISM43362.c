@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        30. October 2019
- * $Revision:    V1.2
+ * $Date:        14. November 2019
+ * $Revision:    V1.3
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -73,6 +73,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    - Corrected not setting password in Activate if OPEN security is used
  *  Version 1.2
  *    - Corrected SocketClose functionality
  *    - Updated Initialization function to handle unavailable reset pin
@@ -2082,7 +2084,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
         }
 
         // Set network passphrase
-        if (ret == ARM_DRIVER_OK) {
+        if ((ret == ARM_DRIVER_OK) && (config->security != ARM_WIFI_SECURITY_OPEN)) {
           snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C2=%s\r", config->pass); spi_recv_len = sizeof(spi_recv_buf);
           ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
           if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {

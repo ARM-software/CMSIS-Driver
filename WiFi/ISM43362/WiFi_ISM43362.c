@@ -53,7 +53,7 @@
  *  - configuration of local port for client socket is not supported
  *  - sometimes connection to remote host fails
  *
- * ISM43362 Module on STMicroelctronics B-L475E-IOT01A1 limitations:
+ * ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 limitations:
  *  - software with firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
  *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
  *      SocketListen tests are executed before it because module stays in some 

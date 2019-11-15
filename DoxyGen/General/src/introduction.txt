@@ -44,6 +44,44 @@ Revision History
       <th>Version</th>
       <th>Description</th>
     </tr>
+
+    <tr>
+      <td>2.4.2-dev4</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.3.0):
+          - Corrected not setting password in Activate if OPEN security is used
+          - Added CMSIS Driver Validation test results
+      </td>
+    </tr>
+    <tr>
+      <td>2.4.2-dev3</td>
+      <td>
+        - Added Wiznet WizFi360 WiFi driver
+        - Aligned ESP8266 codebase and namespace
+      </td>
+    </tr>
+    <tr>
+      <td>2.4.2-dev2</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.2.0):
+          - Corrected SocketClose functionality
+          - Updated Initialization function to handle unavailable reset pin
+      </td>
+    </tr>
+    <tr>
+      <td>2.4.2-dev1</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.1.0):
+          - Updated functionality to comply with CMSIS WiFi Driver Validation
+          - Added debug of SPI traffic to Event Recorder
+      </td>
+    </tr>
+    <tr>
+      <td>2.4.2-dev0</td>
+      <td>
+        - Added Espressif ESP8266 WiFi driver
+      </td>
+    </tr>
     <tr>
       <td>2.4.1</td>
       <td>
@@ -156,6 +194,14 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 \section driver_ISM43362 ISM43362
 
 The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
+
+\section driver_ESP8266 ESP8266
+
+The documentation for the Espressif ESP8266 can be found here: https://www.espressif.com/en/products/hardware/esp8266ex/overview/
+
+\section driver_WizFi360 WizFi360
+
+The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
 
 */
 

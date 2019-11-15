@@ -1,0 +1,4 @@
+This test report was produced with following configuration:
+ - Hardware:  STMicroelectonics B-L475E-IOT01A1 board with ISM43362 Module
+ - Firmware:  ISM43362_M3G_L44_SPI_C3.5.2.5.STM
+ - Interface: SPI at 20 MHz

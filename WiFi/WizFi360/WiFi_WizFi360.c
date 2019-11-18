@@ -961,6 +961,13 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         u32 = *(const uint32_t *)data;
 
         if (interface == WIFI_INTERFACE_STATION) {
+          if (u32 == 0) {
+            /* Static DHCP is disabled, use static IP configuration */
+            pCtrl->flags |=  WIFI_FLAGS_STATION_STATIC_IP;
+          } else {
+            pCtrl->flags &= ~WIFI_FLAGS_STATION_STATIC_IP;
+          }
+
           ex = AT_Cmd_DHCP (AT_CMODE_SET, 1U, u32 != 0U);
         } else {
           /* Set/Clear MSB bit as state flag in lease time */
@@ -1442,6 +1449,12 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
   if ((interface > 1U) || (config == NULL)) {
     rval = ARM_DRIVER_ERROR_PARAMETER;
   }
+  else if (config->wps_method != ARM_WIFI_WPS_METHOD_NONE) {
+    rval = ARM_DRIVER_ERROR_UNSUPPORTED;
+  }
+  else if ((config->ssid == NULL) || (config->pass == NULL)) {
+    rval = ARM_DRIVER_ERROR_PARAMETER;
+  }
   else if (config->security == ARM_WIFI_SECURITY_UNKNOWN) {
     rval = ARM_DRIVER_ERROR_PARAMETER;
   }
@@ -1465,7 +1478,15 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
       /* Store encryption type */
       pCtrl->ap_ecn = config->security;
 
-      state = 0;
+      if ((pCtrl->flags & WIFI_FLAGS_STATION_STATIC_IP) != 0) {
+        /* DHCP is disabled */
+        state = 0U;
+      }
+      else {
+        /* DHCP is enabled */
+        state = 1U;
+      }
+
       do {
         switch(state) {
           case 0:
@@ -1489,7 +1510,7 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
         }
         else {
           /* Wait until response arrives */
-          ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, 5*WIFI_RESP_TIMEOUT);
+          ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, 10*WIFI_RESP_TIMEOUT);
 
           if (ex == 0) {
             /* Check response */
@@ -2522,7 +2543,7 @@ static int32_t ARM_WIFI_SocketConnect (int32_t socket, const uint8_t *ip, uint32
               }
               else {
                 if (ex == AT_RESP_ERROR) {
-                  rval = ARM_SOCKET_ECONNREFUSED;
+                  rval = ARM_SOCKET_ETIMEDOUT;
                 }
               }
             }

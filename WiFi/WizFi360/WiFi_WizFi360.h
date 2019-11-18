@@ -164,6 +164,7 @@ typedef struct {
 #define WIFI_FLAGS_STATION_ACTIVE     (1U << 3)
 #define WIFI_FLAGS_STATION_CONNECTED  (1U << 4)
 #define WIFI_FLAGS_STATION_GOT_IP     (1U << 5)
+#define WIFI_FLAGS_STATION_STATIC_IP  (1U << 6)
 
 #define SOCKET_INVALID                0xFF
 #define CONN_ID_INVALID               5

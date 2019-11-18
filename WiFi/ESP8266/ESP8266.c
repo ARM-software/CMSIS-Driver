@@ -2835,7 +2835,8 @@ int32_t AT_Cmd_DnsFunction (uint32_t at_cmode, const char *domain) {
 
   Format: +CIPDOMAIN:<IP address>
 
-  Example: +CIPDOMAIN:192.168.4.2
+  Example: +CIPDOMAIN:192.168.4.2   (ESP)
+  Example: +CIPDOMAIN:"192.168.4.2" (WIZ)
 
   \param[out] ip          IP address
 
@@ -2860,11 +2861,19 @@ int32_t AT_Resp_DnsFunction (uint8_t ip[]) {
       /* Set pointer to start of string */
       p = (char *)&buf[0];
 
+      #if (AT_VARIANT == AT_VARIANT_ESP)
       /* Parse IP address (xxx.xxx.xxx.xxx) */
       ip[0] = (uint8_t)strtoul (&p[0], &p, 10);
       ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
       ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
       ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+      #else
+      /* Parse IP address ("xxx.xxx.xxx.xxx") */
+      ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
+      ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
+      ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
+      ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+      #endif
       break;
     }
   }

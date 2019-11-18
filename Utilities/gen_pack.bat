@@ -92,6 +92,9 @@ FOR %%A IN (%PACK_FOLDER_LIST%) DO (
   RMDIR /Q /S  %RELEASE_PATH%\%%A
 )
 
+:: remove intermediate Documentation directory from root
+RMDIR /Q /S ..\Documentation
+
 DEL ..\zip.log
 
 ECHO gen_pack.bat completed successfully

@@ -58,6 +58,8 @@ typedef struct {
   uint32_t rxc;           /* Rx buffer count */
   uint32_t rxi;           /* Rx buffer index */
   uint32_t txi;           /* Tx buffer index */
+  uint8_t  txb;           /* Tx busy flag    */
+  uint8_t  r[3];          /* Reserved        */
 } SERIAL_COM;
 
 static uint8_t RxBuf[SERIAL_RXBUF_SZ];
@@ -80,6 +82,7 @@ int32_t Serial_Initialize (void) {
   Com.rxc = 0U;
   Com.rxi = 0U;
   Com.txi = 0U;
+  Com.txb = 0U;
 
   /* Initialize serial driver */
   if (Com.drv->Initialize (&UART_Callback) == ARM_DRIVER_OK) {
@@ -139,6 +142,7 @@ int32_t Serial_SetBaudrate (uint32_t baudrate) {
   Com.rxc = 0U;
   Com.rxi = 0U;
   Com.txi = 0U;
+  Com.txb = 0U;
 
   if (status == ARM_DRIVER_OK) {
     /* Configure UART mode: 8 bits, no parity, 1 stop bit, no flow control, 9600 bps */
@@ -177,7 +181,7 @@ int32_t Serial_SetBaudrate (uint32_t baudrate) {
 uint32_t Serial_GetTxFree (void) {
   uint32_t n;
 
-  if (Com.drv->GetStatus().tx_busy != 0U) {
+  if (Com.txb != 0U) {
     n = 0;
   } else {
     n = SERIAL_TXBUF_SZ;
@@ -210,8 +214,11 @@ int32_t Serial_SendBuf (const uint8_t *buf, uint32_t len) {
   stat = Com.drv->Send (&TxBuf[0], cnt);
 
   if (stat == ARM_DRIVER_OK) {
+    Com.txb = 1U;
     n = (int32_t)cnt;
-  } else {
+  }
+  else {
+    Com.txb = 0U;
     n = -1;
   }
 
@@ -297,6 +304,9 @@ static void UART_Callback (uint32_t event) {
 
   if (event & ARM_USART_EVENT_SEND_COMPLETE) {
     flags |= SERIAL_CB_TX_DATA_COMPLETED;
+
+    /* Clear tx busy flag */
+    Com.txb = 0U;
   }
 
   /* Send events */

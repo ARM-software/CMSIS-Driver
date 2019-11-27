@@ -32,11 +32,11 @@
 
 /* Serial buffer sizes */
 #ifndef SERIAL_TXBUF_SZ
-#define SERIAL_TXBUF_SZ   256
+#define SERIAL_TXBUF_SZ   512
 #endif
 
 #ifndef SERIAL_RXBUF_SZ
-#define SERIAL_RXBUF_SZ   256
+#define SERIAL_RXBUF_SZ   512
 #endif
 
 /* Expansion macro used to create CMSIS Driver references */

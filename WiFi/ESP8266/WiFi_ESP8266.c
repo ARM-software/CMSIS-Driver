@@ -25,18 +25,16 @@
 
 /* History:
  *  Version 1.0
- *    Initial version
+ *    Initial version based on AT command set version: 1.6.2.0
  */
 
-#include <string.h>
 #include "WiFi_ESP8266.h"
 #include "WiFi_ESP8266_Os.h"
-#include "ESP8266.h"
 
 /* Driver version */
 #define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 0)
 
-/* --------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 /* Number of supported simultaneus connections */
 #define WIFI_SOCKET_NUM         5
@@ -82,9 +80,7 @@ void AT_Notify (uint32_t event, void *arg) {
   uint32_t addr;
   AT_DATA_LINK_CONN conn;
   WIFI_SOCKET *sock;
-#if (WIFI_POOL_CONN_INFO == 0)
   uint32_t stat;
-#endif
 
   if (event == AT_NOTIFY_EXECUTE) {
     /* Communication on-going, execute parser */
@@ -174,62 +170,90 @@ void AT_Notify (uint32_t event, void *arg) {
   }
   else if (event == AT_NOTIFY_CONNECTION_OPEN) {
     /* Connection is open */
-#if (WIFI_POOL_CONN_INFO == 0)
-    /* Retrieve connection properties (+LINK_CONN received) */
-    ex = AT_Resp_LinkConn (&stat, &conn);
+    if ((pCtrl->flags & WIFI_FLAGS_CONN_INFO_POOLING) == 0U) {
+      /* Retrieve connection properties (+LINK_CONN received) */
+      ex = AT_Resp_LinkConn (&stat, &conn);
 
-    if (ex == 0) {
-      /* Set connection id as used */
-      ConnId_Accept (conn.link_id);
+      if (ex == 0) {
+        /* Set connection id as used */
+        ConnId_Accept (conn.link_id);
 
-      if (conn.c_s == 1U) {
-        /* Device works as a server, put connection on the backlog */
-        for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
-          if (Socket[n].state == SOCKET_STATE_SERVER) {
-            /* Set pointer to server socket */
-            sock = &Socket[n];
+        if (conn.c_s == 1U) {
+          /* Device works as a server, put connection on the backlog */
+          for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
+            if (Socket[n].state == SOCKET_STATE_SERVER) {
+              /* Set pointer to server socket */
+              sock = &Socket[n];
 
-            /* Find available backlog socket */
-            do {
-              n = Socket[n].backlog;
+              /* Find available backlog socket */
+              do {
+                n = Socket[n].backlog;
 
-              if (Socket[n].state == SOCKET_STATE_LISTEN) {
-                /* Set connection id and change state */
-                Socket[n].conn_id = conn.link_id;
-                Socket[n].state   = SOCKET_STATE_CONNECTED;
+                if (Socket[n].state == SOCKET_STATE_LISTEN) {
+                  /* Set connection id and change state */
+                  Socket[n].conn_id = conn.link_id;
+                  Socket[n].state   = SOCKET_STATE_CONNECTED;
 
+                  /* Copy local and remote port number */
+                  Socket[n].l_port = conn.local_port;
+                  Socket[n].r_port = conn.remote_port;
+                  /* Copy remote ip */
+                  memcpy (Socket[n].r_ip, conn.remote_ip, 4);
+                  break;
+                }
+              }
+              while (Socket[n].backlog != sock->backlog);
+
+              break;
+            }
+          }
+
+          if (n != WIFI_SOCKET_NUM) {
+            /* Set event */
+            osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_ACCEPT);
+          }
+        }
+        else {
+          /* Device works as a client, find socket that initiated connection open */
+          for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
+            if (Socket[n].state == SOCKET_STATE_CONNECTREQ) {
+              /* Check connection id */
+              if (Socket[n].conn_id == conn.link_id) {
                 /* Copy local and remote port number */
                 Socket[n].l_port = conn.local_port;
                 Socket[n].r_port = conn.remote_port;
+
                 /* Copy remote ip */
                 memcpy (Socket[n].r_ip, conn.remote_ip, 4);
+
+                /* Socket is now connected */
+                Socket[n].state = SOCKET_STATE_CONNECTED;
                 break;
               }
             }
-            while (Socket[n].backlog != sock->backlog);
+          }
 
-            break;
+          if (n != WIFI_SOCKET_NUM) {
+            /* Set event */
+            osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_OPEN(n));
           }
         }
-
-        if (n != WIFI_SOCKET_NUM) {
-          /* Set event */
-          osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_ACCEPT);
-        }
       }
-      else {
-        /* Device works as a client, find socket that initiated connection open */
+    }
+    else {
+      ex = AT_Resp_CtrlConn (&conn_id);
+
+      if (ex == 0) {
+        /* Set connection id as used */
+        ConnId_Accept (conn_id);
+
+        conn.link_id = (uint8_t)conn_id;
+
+        /* Check client sockets for initiated connection open (<link_id>,CONNECT received) */
         for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
           if (Socket[n].state == SOCKET_STATE_CONNECTREQ) {
             /* Check connection id */
             if (Socket[n].conn_id == conn.link_id) {
-              /* Copy local and remote port number */
-              Socket[n].l_port = conn.local_port;
-              Socket[n].r_port = conn.remote_port;
-
-              /* Copy remote ip */
-              memcpy (Socket[n].r_ip, conn.remote_ip, 4);
-
               /* Socket is now connected */
               Socket[n].state = SOCKET_STATE_CONNECTED;
               break;
@@ -241,64 +265,37 @@ void AT_Notify (uint32_t event, void *arg) {
           /* Set event */
           osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_OPEN(n));
         }
-      }
-    }
-#else
-    ex = AT_Resp_CtrlConn (&conn_id);
+        else {
+          /* Check server sockets and put connection on the backlog */
+          for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
+            if (Socket[n].state == SOCKET_STATE_SERVER) {
+              /* Set pointer to server socket */
+              sock = &Socket[n];
 
-    if (ex == 0) {
-      /* Set connection id as used */
-      ConnId_Accept (conn_id);
+              /* Find available backlog socket */
+              do {
+                n = Socket[n].backlog;
 
-      conn.link_id = (uint8_t)conn_id;
-
-      /* Check client sockets for initiated connection open (<link_id>,CONNECT received) */
-      for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
-        if (Socket[n].state == SOCKET_STATE_CONNECTREQ) {
-          /* Check connection id */
-          if (Socket[n].conn_id == conn.link_id) {
-            /* Socket is now connected */
-            Socket[n].state = SOCKET_STATE_CONNECTED;
-            break;
-          }
-        }
-      }
-
-      if (n != WIFI_SOCKET_NUM) {
-        /* Set event */
-        osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_OPEN(n));
-      }
-      else {
-        /* Check server sockets and put connection on the backlog */
-        for (n = 0U; n < WIFI_SOCKET_NUM; n++) {
-          if (Socket[n].state == SOCKET_STATE_SERVER) {
-            /* Set pointer to server socket */
-            sock = &Socket[n];
-
-            /* Find available backlog socket */
-            do {
-              n = Socket[n].backlog;
-
-              if (Socket[n].state == SOCKET_STATE_LISTEN) {
-                /* Set connection id and change state */
-                Socket[n].conn_id = conn.link_id;
-                Socket[n].state   = SOCKET_STATE_CONNECTED;
-                break;
+                if (Socket[n].state == SOCKET_STATE_LISTEN) {
+                  /* Set connection id and change state */
+                  Socket[n].conn_id = conn.link_id;
+                  Socket[n].state   = SOCKET_STATE_CONNECTED;
+                  break;
+                }
               }
+              while (Socket[n].backlog != sock->backlog);
+
+              break;
             }
-            while (Socket[n].backlog != sock->backlog);
-
-            break;
           }
-        }
 
-        if (n != WIFI_SOCKET_NUM) {
-          /* Set event */
-          osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_ACCEPT);
+          if (n != WIFI_SOCKET_NUM) {
+            /* Set event */
+            osEventFlagsSet (pCtrl->evflags_id, WIFI_WAIT_CONN_ACCEPT);
+          }
         }
       }
     }
-#endif
   }
   else if (event == AT_NOTIFY_CONNECTION_CLOSED) {
     /* Network connection is closed */
@@ -360,6 +357,10 @@ void AT_Notify (uint32_t event, void *arg) {
   else if (event == AT_NOTIFY_DISCONNECTED) {
     /* Local station disconnected from an AP */
     pCtrl->flags &= ~(WIFI_FLAGS_STATION_CONNECTED | WIFI_FLAGS_STATION_GOT_IP);
+  }
+  else if (event == AT_NOTIFY_ERR_CODE) {
+    /* Error code received */
+    ex = AT_Resp_ErrCode (&stat);
   }
   else {
     /* Other */
@@ -702,7 +703,27 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
           ex = SetupCommunication();
 
           if (ex == 0) {
-            /* Enable station */
+            /* Enable station and AP */
+            ex = AT_Cmd_CurrentMode (AT_CMODE_SET, 3U);
+
+            if (ex == 0) {
+              /* Wait until response arrives */
+              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+              if (ex == 0) {
+                /* Response arrived */
+                ex = AT_Resp_Generic();
+              }
+            }
+          }
+
+          if (ex == 0) {
+            /* Load current configuration */
+            ex = LoadOptions();
+          }
+
+          if (ex == 0) {
+            /* Enable station only */
             ex = AT_Cmd_CurrentMode (AT_CMODE_SET, 1U);
 
             if (ex == 0) {
@@ -716,7 +737,6 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
             }
           }
 
-          #if (WIFI_POOL_CONN_INFO == 0)
           if (ex == 0) {
             /* Configure system messages */
             ex = AT_Cmd_SysMessages (3U);
@@ -728,10 +748,18 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
               if (ex == 0) {
                 /* Response arrived */
                 ex = AT_Resp_Generic();
+
+                if (ex != 0) {
+                  /* Reset error indicator */
+                  ex = 0;
+                  /* Enable connection info pooling (instead of +LINK_CONN info) */
+                  pCtrl->flags |=  WIFI_FLAGS_CONN_INFO_POOLING;
+                } else {
+                  pCtrl->flags &= ~WIFI_FLAGS_CONN_INFO_POOLING;
+                }
               }
             }
           }
-          #endif
 
           if (ex == 0) {
             /* Enable multiple connections */
@@ -888,13 +916,21 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         break;
 
       case ARM_WIFI_TX_POWER:                           // Station/AP Set/Get transmit power;                         data = &power,    len =  4, uint32_t: 0 .. 20 [dBm]
-        u32 = *(const uint32_t *)data;
+        #if (AT_VARIANT == AT_VARIANT_WIZ)
+          rval = ARM_DRIVER_ERROR_UNSUPPORTED;
+        #else
+          u32 = *(const uint32_t *)data;
 
-        /* Store value (see GetOption) */
-        pCtrl->tx_power = (uint8_t)u32;
+          /* Store value (see GetOption) */
+          pCtrl->tx_power = (uint8_t)u32;
 
-        /* Send command */
-        ex = AT_Cmd_TxPower (u32 * 4U);
+          /* Send command */
+          #if (AT_VARIANT == AT_VARIANT_ESP32) && (AT_VERSION < AT_VERSION_2_0_0_0)
+          ex = AT_Cmd_TxPower (10 - (u32/2U));  /* ESP32 */
+          #else
+          ex = AT_Cmd_TxPower (u32 * 4U);/* ESP8266, ESP32 V2.0.0 */
+          #endif
+        #endif
         break;
 
       case ARM_WIFI_LP_TIMER:                           // Station    Set/Get low-power deep-sleep time;              data = &time,     len =  4, uint32_t [seconds]: 0 = disable (default)
@@ -968,13 +1004,17 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
 
         if (interface == WIFI_INTERFACE_STATION) {
           if (u32 == 0) {
-            /* Static DHCP is disabled, use static IP configuration */
+            /* Disable DHCP and use static IP configuration */
             pCtrl->flags |=  WIFI_FLAGS_STATION_STATIC_IP;
           } else {
             pCtrl->flags &= ~WIFI_FLAGS_STATION_STATIC_IP;
           }
 
+          #if (AT_VARIANT == AT_VARIANT_ESP32)
+          ex = AT_Cmd_DHCP (AT_CMODE_SET, u32 != 0U, 1U);
+          #else
           ex = AT_Cmd_DHCP (AT_CMODE_SET, 1U, u32 != 0U);
+          #endif
         } else {
           /* Set/Clear MSB bit as state flag in lease time */
           if (u32 == 0) {
@@ -1276,36 +1316,21 @@ static int32_t ARM_WIFI_GetOption (uint32_t interface, uint32_t option, void *da
             }
             break;
 
-          case ARM_WIFI_IP_DNS1:                            // Station/AP Set/Get IPv4 primary   DNS address;             data = &ip,       len =  4, uint8_t[4]
-          case ARM_WIFI_IP_DNS2:                            // Station/AP Set/Get IPv4 secondary DNS address;             data = &ip,       len =  4, uint8_t[4]
-            pu8 = ip_0;
-
-            do {
-              ex = AT_Resp_DNS (pu8);
-
-              /* Set appropriate IP array */
-              if (pu8 == ip_0) { pu8 = ip_1; }
-              else             { pu8 = NULL; }
-            }
-            while (ex == 1);
-
-            if (ex == 0) {
-              pu8 = (uint8_t *)data;
-
-              if (option == ARM_WIFI_IP_DNS1) { memcpy (pu8, ip_0, 4); }
-              else                            { memcpy (pu8, ip_1, 4); }
-            }
-            break;
-
           case ARM_WIFI_IP_DHCP:                            // Station/AP Set/Get IPv4 DHCP client/server enable/disable; data = &dhcp,     len =  4, uint32_t: 0 = disable, non-zero = enable (default)
             pu32 = (uint32_t *)data;
 
             ex = AT_Resp_DHCP (&u32);
 
             if (ex == 0) {
+              #if (AT_VARIANT == AT_VARIANT_ESP32)
+              /* Keep bit 0 when station and bit 1 when AP (bit value 0=disabled, 1=enabled) */
+              if (interface == WIFI_INTERFACE_STATION) { u32  &= 1U; }
+              else                                     { u32 >>= 1U; }
+              #else
               /* Keep bit 0 when AP and bit 1 when station (bit value 0=disabled, 1=enabled) */
               if (interface == WIFI_INTERFACE_STATION) { u32 >>= 1U; }
               else                                     { u32  &= 1U; }
+              #endif
 
               *pu32 = u32;
             }
@@ -1548,6 +1573,41 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
 
       if (ex == AT_RESP_OK) {
         pCtrl->flags |= WIFI_FLAGS_STATION_ACTIVE;
+
+        /* Check if auto connect to AP enabled */
+        ex = AT_Cmd_AutoConnectAP (AT_CMODE_QUERY, 0U);
+
+        if (ex == 0) {
+          /* Wait until response arrives */
+          ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+          if (ex == 0) {
+            /* Response arrived */
+            ex = AT_Resp_Generic();
+
+            if (ex == AT_RESP_OK) {
+              /* Check enable status */
+              ex = AT_Resp_AutoConnectAP (&mode);
+
+              if (ex == 0) {
+                if (mode != 0U) {
+                  /* Disable auto connect of local station to AP */
+                  ex = AT_Cmd_AutoConnectAP(AT_CMODE_SET, 0U);
+
+                  if (ex == 0) {
+                    /* Wait until response arrives */
+                    ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+                    if (ex == 0) {
+                      /* Response arrived */
+                      ex = AT_Resp_Generic();
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
     else /* interface == WIFI_INTERFACE_AP */ {
@@ -1619,7 +1679,11 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
                 mode = 0U;
               }
 
+              #if (AT_VARIANT == AT_VARIANT_ESP32)
+              ex = AT_Cmd_DHCP (AT_CMODE_SET, mode, 2U);
+              #else
               ex = AT_Cmd_DHCP (AT_CMODE_SET, 0U, mode);
+              #endif
               break;
 
             case 5:
@@ -2289,9 +2353,7 @@ static int32_t ARM_WIFI_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_
   int32_t ex, rval;
   int32_t n;
   WIFI_SOCKET *sock;
-#if (WIFI_POOL_CONN_INFO != 0)
   AT_DATA_LINK_CONN conn;
-#endif
 
   WiFi_ThreadKick();
 
@@ -2335,7 +2397,8 @@ static int32_t ARM_WIFI_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_
 
         if (Socket[n].state == SOCKET_STATE_CONNECTED) {
           /* We have connection active */
-          #if (WIFI_POOL_CONN_INFO != 0)
+          if ((pCtrl->flags & WIFI_FLAGS_CONN_INFO_POOLING) != 0U) {
+            /* Pool for connection status, +LINK_CONN is not available */
             ex = AT_Cmd_GetStatus (AT_CMODE_EXEC);
 
             if (ex == 0) {
@@ -2363,7 +2426,8 @@ static int32_t ARM_WIFI_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_
                 while (ex > 0);
               }
             }
-          #endif
+          }
+
           if (ip != NULL) {
             /* Copy remote ip */
             *ip_len = 4U;
@@ -3296,9 +3360,7 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
 static int32_t ARM_WIFI_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
   int32_t ex, rval;
   WIFI_SOCKET *sock;
-#if (WIFI_POOL_CONN_INFO != 0)
   AT_DATA_LINK_CONN conn;
-#endif
 
   rval = 0;
 
@@ -3377,7 +3439,8 @@ static int32_t ARM_WIFI_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t
 
       if (sock->state == SOCKET_STATE_CONNECTED) {
         /* We have connection active */
-        #if (WIFI_POOL_CONN_INFO != 0)
+        if ((pCtrl->flags & WIFI_FLAGS_CONN_INFO_POOLING) != 0U) {
+          /* Pool for connection status, +LINK_CONN is not available */
           ex = AT_Cmd_GetStatus (AT_CMODE_EXEC);
 
           if (ex == 0) {
@@ -3405,7 +3468,7 @@ static int32_t ARM_WIFI_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t
               while (ex > 0);
             }
           }
-        #endif
+        }
       }
 
       if (ip != NULL) {
@@ -4151,6 +4214,59 @@ static int32_t SetupCommunication (void) {
   return (rval);
 }
 
+static int32_t LoadOptions (void) {
+  int32_t ex;
+  int32_t state;
+  int32_t n;
+  
+  /* Set number of different states */
+  n = 4;
+  
+  /* Set initial state */
+  ex    = -1;
+  state =  0;
+
+  while (state < n) {
+    switch (state) {
+      case 0:
+        ex = GetCurrentIpAddr (WIFI_INTERFACE_STATION, pCtrl->options.st_ip,
+                                                       pCtrl->options.st_gateway,
+                                                       pCtrl->options.st_netmask);
+        break;
+
+      case 1:
+        ex = GetCurrentIpAddr (WIFI_INTERFACE_AP, pCtrl->options.ap_ip,
+                                                  pCtrl->options.ap_gateway,
+                                                  pCtrl->options.ap_netmask);
+        break;
+
+      case 2:
+        ex = GetCurrentMAC (WIFI_INTERFACE_AP, pCtrl->options.ap_mac);
+        break;
+      
+      case 3:
+        ex = GetCurrentDhcpPool (&pCtrl->options.ap_dhcp_lease, pCtrl->options.ap_dhcp_pool_start,
+                                                                pCtrl->options.ap_dhcp_pool_end);
+        break;
+
+      default:
+        ex = -1;
+        break;
+    }
+
+    if (ex != 0) {
+      /* Error, exit loop */
+      state = n;
+    }
+    else {
+      /* Load next option */
+      state++;
+    }
+  }
+
+  return (ex);
+}
+
 static int32_t IsUnspecifiedIP (const uint8_t ip[]) {
   int32_t rval;
 
@@ -4162,6 +4278,85 @@ static int32_t IsUnspecifiedIP (const uint8_t ip[]) {
   }
 
   return (rval);
+}
+
+static int32_t GetCurrentMAC (uint32_t interface, uint8_t mac[]) {
+  int32_t ex;
+
+  if (interface == WIFI_INTERFACE_STATION) {
+    ex = AT_Cmd_StationMAC (AT_CMODE_QUERY, NULL);
+  } else {
+    ex = AT_Cmd_AccessPointMAC (AT_CMODE_QUERY, NULL);
+  }
+
+  if (ex == 0) {
+    /* Wait until response arrives */
+    ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+    if (ex == 0) {
+      /* Check response */
+      if (interface == WIFI_INTERFACE_STATION) {
+        ex = AT_Resp_StationMAC (mac);
+      } else {
+        ex = AT_Resp_AccessPointMAC (mac);
+      }
+    }
+  }
+
+  return (ex);
+}
+
+static int32_t GetCurrentIpAddr (uint32_t interface, uint8_t ip[], uint8_t gw[], uint8_t mask[]) {
+  int32_t ex;
+  uint8_t *p;
+
+  if (interface == WIFI_INTERFACE_STATION) {
+    ex = AT_Cmd_StationIP (AT_CMODE_QUERY, NULL, NULL, NULL);
+  } else {
+    ex = AT_Cmd_AccessPointIP (AT_CMODE_QUERY, NULL, NULL, NULL);
+  }
+
+  if (ex == 0) {
+    /* Wait until response arrives */
+    ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+    if (ex == 0) {
+      /* Check response */
+      p = ip;
+
+      do {
+        if (interface == WIFI_INTERFACE_STATION) {
+          ex = AT_Resp_StationIP (p);
+        } else {
+          ex = AT_Resp_AccessPointIP (p);
+        }
+
+        /* Set appropriate IP array */
+        if (p == ip) { p = gw;   }
+        else         { p = mask; }
+      }
+      while (ex == 1);
+    }
+  }
+  return (ex);
+}
+
+static int32_t GetCurrentDhcpPool (uint32_t *t_lease, uint8_t ip_start[], uint8_t ip_end[]) {
+  int32_t ex;
+
+  ex = AT_Cmd_RangeDHCP(AT_CMODE_QUERY, 0U, NULL, NULL);
+
+  if (ex == 0) {
+    /* Wait until response arrives */
+    ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+    if (ex == 0) {
+      /* Check response */
+      ex = AT_Resp_RangeDHCP (t_lease, ip_start, ip_end);
+    }
+  }
+
+  return (ex);
 }
 
 static int32_t GetCurrentDnsAddr (uint32_t interface, uint8_t dns0[], uint8_t dns1[]) {
@@ -4179,6 +4374,9 @@ static int32_t GetCurrentDnsAddr (uint32_t interface, uint8_t dns0[], uint8_t dn
       /* Check response */
       p = dns0;
 
+      #if (AT_VARIANT == AT_VARIANT_ESP32) && (AT_VERSION >= AT_VERSION_2_0_0_0)
+      ex = AT_Resp_DNS (NULL, p, dns1);
+      #else
       do {
         ex = AT_Resp_DNS (p);
 
@@ -4187,6 +4385,7 @@ static int32_t GetCurrentDnsAddr (uint32_t interface, uint8_t dns0[], uint8_t dn
         else           { p = NULL; }
       }
       while (ex == 1);
+      #endif
     }
   }
   return (ex);

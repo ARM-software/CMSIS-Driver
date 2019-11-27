@@ -27,6 +27,35 @@
 
 #include "BufList.h"
 
+#include "WiFi_ESP8266_Config.h"
+
+/* AT command set version and variant used */
+#ifndef AT_VERSION
+#define AT_VERSION                      0x01060200
+#endif
+#ifndef AT_VARIANT
+#define AT_VARIANT                      AT_VARIANT_ESP
+#endif
+
+/* AT command set version definition               */
+/* Version as major.minor.patch.build:  0xMMmmppbb */
+#define AT_VERSION_2_0_0_0              0x20000000
+#define AT_VERSION_1_9_0_0              0x01090000
+#define AT_VERSION_1_8_0_0              0x01080000
+#define AT_VERSION_1_7_0_0              0x01070000
+#define AT_VERSION_1_6_0_0              0x01060000
+#define AT_VERSION_1_5_0_0              0x01050000
+#define AT_VERSION_1_4_0_0              0x01040000
+#define AT_VERSION_1_3_0_0              0x01030000
+#define AT_VERSION_1_2_0_0              0x01020000
+#define AT_VERSION_1_1_0_0              0x01010000
+#define AT_VERSION_1_0_0_0              0x01000000
+
+/* AT command set variants */
+#define AT_VARIANT_ESP                  0   /* ESP8266  */
+#define AT_VARIANT_ESP32                1   /* ESP32    */
+#define AT_VARIANT_WIZ                  2   /* WizFi360 */
+
 /* Callback events codes */
 #define AT_NOTIFY_EXECUTE               9
 #define AT_NOTIFY_CONNECTED             0  /* Local station connected to an AP      */
@@ -42,6 +71,7 @@
 #define AT_NOTIFY_RESPONSE_GENERIC      11 /* Received generic command response     */
 #define AT_NOTIFY_TX_DONE               12 /* Serial transmit completed             */
 #define AT_NOTIFY_OUT_OF_MEMORY         13 /* Serial parser is out of memory        */
+#define AT_NOTIFY_ERR_CODE              14 /* Received "ERR_CODE" response          */
 
 /**
   AT parser notify callback function.
@@ -65,6 +95,7 @@ extern void AT_Notify (uint32_t event, void *arg);
 #define AT_RESP_WIFI_DISCONNECT    10  /* "WIFI DISCONNECT"   */
 #define AT_RESP_ECHO               11  /* (echo)              */
 #define AT_RESP_READY              12  /* "ready"             */
+#define AT_RESP_ERR_CODE           13  /* "ERR CODE:0x..."    */
 #define AT_RESP_UNKNOWN          0xFF  /* (unknown)           */
 
 /* AT command mode */
@@ -144,13 +175,13 @@ typedef struct {
 #define AT_STATE_SEND_DATA   7
 #define AT_STATE_RESP_CTRL   8
 
+/* AT parser functions */
 extern int32_t AT_Parser_Initialize   (void);
 extern int32_t AT_Parser_Uninitialize (void);
 extern int32_t AT_Parser_SetBaudrate  (uint32_t baudrate);
 extern void    AT_Parser_Execute      (void);
 extern void    AT_Parser_Reset        (void);
 
-/* ------------------------------------------------------------------------- */
 /* Command/Response functions */
 
 /**
@@ -450,6 +481,20 @@ extern int32_t AT_Resp_AccessPointIP (uint8_t addr[]);
 */
 extern int32_t AT_Cmd_DNS (uint32_t at_cmode, uint32_t enable, uint8_t dns0[], uint8_t dns1[]);
 
+#if (AT_VARIANT == AT_VARIANT_ESP32) && (AT_VERSION >= AT_VERSION_2_0_0_0)
+/**
+  Get response to DNS command
+
+  \param[out]   enable  Pointer to variable where enable flag will be stored
+  \param[out]   dns0    Pointer to 4 byte array where DNS 0 address will be stored
+  \param[out]   dns1    Pointer to 4 byte array where DNS 1 address will be stored
+  \return execution status
+          - negative: error
+          - 0: address list is empty
+          - 1: address list contains more data
+*/
+extern int32_t AT_Resp_DNS (uint32_t *enable, uint8_t dns0[], uint8_t dns1[]);
+#else
 /**
   Get response to DNS command
 
@@ -460,7 +505,9 @@ extern int32_t AT_Cmd_DNS (uint32_t at_cmode, uint32_t enable, uint8_t dns0[], u
           - 1: address list contains more data
 */
 extern int32_t AT_Resp_DNS (uint8_t addr[]);
+#endif
 
+#if AT_VARIANT != AT_VARIANT_ESP32
 /**
   Set/Query DHCP state
 
@@ -471,6 +518,18 @@ extern int32_t AT_Resp_DNS (uint8_t addr[]);
   \param[in]  enable    0: disable DHCP, 1: enable DHCP
 */
 extern int32_t AT_Cmd_DHCP (uint32_t at_cmode, uint32_t mode, uint32_t enable);
+#else
+/**
+  Set/Query DHCP state
+
+  Command: CWDHCP
+
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  operate   0: disable DHCP, 1: enable DHCP
+  \param[in]  mode      Bit0: set station, Bit1: set soft-ap
+*/
+extern int32_t AT_Cmd_DHCP (uint32_t at_cmode, uint32_t operate, uint32_t mode);
+#endif
 
 /**
   Get response to DHCP command
@@ -507,6 +566,31 @@ extern int32_t AT_Cmd_RangeDHCP (uint32_t at_cmode, uint32_t en_tlease, uint8_t 
           - 0: OK, response retrieved, no more data
 */
 extern int32_t AT_Resp_RangeDHCP (uint32_t *t_lease, uint8_t ip_start[], uint8_t ip_end[]);
+
+/**
+  Set/Query Auto-Connect to the AP
+
+  Command: CWAUTOCONN
+
+  Generic response is expected.
+
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  enable    0:disable, 1:enable auto-connect on power-up
+
+  \return execution status:
+          0: OK, -1 on error
+*/
+extern int32_t AT_Cmd_AutoConnectAP (uint32_t at_cmode, uint32_t enable);
+
+/**
+  Get response to AutoConnectAP command
+
+  \param[out]   enable  Pointer to variable the enable status is stored
+  \return execution status
+          - negative: error
+          - 0: OK, response retrieved, no more data
+*/
+extern int32_t AT_Resp_AutoConnectAP (uint32_t *enable);
 
 /**
   Retrieve the list of IP (stations) connected to access point (execute only command)
@@ -630,8 +714,6 @@ extern int32_t AT_Cmd_RemoteInfo (uint32_t mode);
 */
 extern int32_t AT_Resp_IPD (uint32_t *link_id, uint32_t *len, uint8_t *remote_ip, uint16_t *remote_port);
 
-/* ------------------------------------------------------------------------- */
-
 /**
   Get the connection status.
   
@@ -698,7 +780,6 @@ extern int32_t AT_Resp_DnsFunction (uint8_t ip[]);
 */
 extern int32_t AT_Cmd_ConnOpenTCP (uint32_t at_cmode, uint32_t link_id, const uint8_t r_ip[], uint16_t r_port, uint16_t keep_alive);
 
-
 /**
   Establish UDP transmission.
 
@@ -763,30 +844,12 @@ extern int32_t AT_Cmd_Ping (uint32_t at_cmode, const uint8_t ip[], const char *d
 */
 extern int32_t AT_Resp_Ping (uint32_t *time);
 
-
-/* ------------------------------------------------------------------------- */
-
 /**
   Generic response.
 
   \return response code, see AT_RESP codes
 */
 extern int32_t AT_Resp_Generic (void);
-
-
-/* ------------------------------------------------------------------------- */
-/**
-  Get number of bytes that can be sent.
-*/
-extern uint32_t AT_Send_GetFree (void);
-
-/**
-  Send data (reply to data transmit request).
-*/
-extern uint32_t AT_Send_Data (const uint8_t *buf, uint32_t len);
-
-
-/* ------------------------------------------------------------------------- */
 
 /**
   Get +LINK_CONN response parameters (see +SYSMSG_CUR).
@@ -799,13 +862,12 @@ extern int32_t AT_Resp_LinkConn (uint32_t *status, AT_DATA_LINK_CONN *conn);
 /**
   Get connection number from the <conn_id>,CONNECT and <conn_id>,CLOSED response.
 
-  \param[in]  conn_id   connection ID
+  \param[out] conn_id   connection ID
   \return execution status:
           -1: no response (buffer empty)
            0: connection number retrieved
 */
 extern int32_t AT_Resp_CtrlConn (uint32_t *conn_id);
-
 
 /**
   Get +STA_CONNECTED and +STA_DISCONNECTED response (mac).
@@ -814,5 +876,25 @@ extern int32_t AT_Resp_CtrlConn (uint32_t *conn_id);
   +STA_DISCONNECTED"<sta_mac>
 */
 extern int32_t AT_Resp_StaMac (uint8_t mac[]);
+
+/**
+  Get ERR_CODE:0x... response.
+
+  \param[out] err_code    Pointer to 32-bit variable where error code will be stored.
+  \return execution status:
+          -1: no response (buffer empty)
+           0: error code retrieved
+*/
+extern int32_t AT_Resp_ErrCode (uint32_t *err_code);
+
+/**
+  Get number of bytes that can be sent.
+*/
+extern uint32_t AT_Send_GetFree (void);
+
+/**
+  Send data (reply to data transmit request).
+*/
+extern uint32_t AT_Send_Data (const uint8_t *buf, uint32_t len);
 
 #endif /* ESP8266_H__ */

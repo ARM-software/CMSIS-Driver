@@ -27,18 +27,19 @@
 #ifndef WIFI_ESP8266_H__
 #define WIFI_ESP8266_H__
 
+#include <string.h>
+
 #include "Driver_WiFi.h"                // ::CMSIS Driver:WiFi
 #include "cmsis_os2.h"                  // ::CMSIS:RTOS2
-#include "BufList.h"
 
-#include "WiFi_ESP8266_Config.h"
+#include "ESP8266.h"
 
 #define WIFI_SERIAL_BAUDRATE        WIFI_ESP8266_SERIAL_BAUDRATE
 #define WIFI_DRIVER_NUMBER          WIFI_ESP8266_DRIVER_NUMBER
 
 /* Command response timeout [ms] (default) */
 #ifndef WIFI_RESP_TIMEOUT
-#define WIFI_RESP_TIMEOUT           (2000)
+#define WIFI_RESP_TIMEOUT           (5000)
 #endif
 
 /* Connection open timeout [ms] (default) */
@@ -59,7 +60,7 @@
 
 /* WiFi thread pooling interval [ms] */
 #ifndef WIFI_THREAD_POOLING_TIMEOUT
-#define WIFI_THREAD_POOLING_TIMEOUT (10)
+#define WIFI_THREAD_POOLING_TIMEOUT (20)
 #endif 
 
 /* Access point default channel (used when channel not specified in Activate) */
@@ -70,11 +71,6 @@
 /* AT response echo enable/disable */
 #ifndef WIFI_AT_ECHO
 #define WIFI_AT_ECHO                (0)
-#endif
-
-/* Connection info pooling enable/disable (SYSMSG_CUR disable/enable) */
-#ifndef WIFI_POOL_CONN_INFO
-#define WIFI_POOL_CONN_INFO         (0)
 #endif
 
 /* WIFI interface definitions */
@@ -160,11 +156,12 @@ typedef struct {
 /* WIFI driver state flags */
 #define WIFI_FLAGS_INIT               (1U << 0)
 #define WIFI_FLAGS_POWER              (1U << 1)
-#define WIFI_FLAGS_AP_ACTIVE          (1U << 2)
-#define WIFI_FLAGS_STATION_ACTIVE     (1U << 3)
-#define WIFI_FLAGS_STATION_CONNECTED  (1U << 4)
-#define WIFI_FLAGS_STATION_GOT_IP     (1U << 5)
-#define WIFI_FLAGS_STATION_STATIC_IP  (1U << 6)
+#define WIFI_FLAGS_CONN_INFO_POOLING  (1U << 2)
+#define WIFI_FLAGS_AP_ACTIVE          (1U << 3)
+#define WIFI_FLAGS_STATION_ACTIVE     (1U << 4)
+#define WIFI_FLAGS_STATION_CONNECTED  (1U << 5)
+#define WIFI_FLAGS_STATION_GOT_IP     (1U << 6)
+#define WIFI_FLAGS_STATION_STATIC_IP  (1U << 7)
 
 #define SOCKET_INVALID                0xFF
 #define CONN_ID_INVALID               5
@@ -229,7 +226,11 @@ static void     WiFi_Thread        (void *arg) __attribute__((noreturn));
 static int32_t  WiFi_Wait          (uint32_t event, uint32_t timeout);
 static int32_t  ResetModule        (void);
 static int32_t  SetupCommunication (void);
+static int32_t  LoadOptions        (void);
 static int32_t  IsUnspecifiedIP    (const uint8_t ip[]);
+static int32_t  GetCurrentMAC      (uint32_t interface, uint8_t mac[]);
+static int32_t  GetCurrentIpAddr   (uint32_t interface, uint8_t ip[], uint8_t gw[], uint8_t mask[]);
+static int32_t  GetCurrentDhcpPool (uint32_t *t_lease, uint8_t ip_start[], uint8_t ip_end[]);
 static int32_t  GetCurrentDnsAddr  (uint32_t interface, uint8_t dns0[], uint8_t dns1[]);
 static uint32_t GetOpt             (const void *opt_val, uint32_t opt_len);
 static uint32_t SetOpt             (void *opt_val, uint32_t val, uint32_t opt_len);

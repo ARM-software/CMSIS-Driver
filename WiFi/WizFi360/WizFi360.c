@@ -22,32 +22,6 @@
  * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
 
-/* AT command set variants */
-#define AT_VARIANT_ESP    0 /* ESP8266, ESP32 */
-#define AT_VARIANT_WIZ    1 /* WizFi360 */
-
-/* AT command set versions (major_minor_patch_build: MMmmppbb) */
-#define AT_ESP_1_7_0_0    0x01070000
-#define AT_ESP_1_6_2_0    0x01060200
-#define AT_ESP_1_6_1_0    0x01060100
-#define AT_ESP_1_6_0_0    0x01060000
-
-#define AT_WIZ_1_0_0_0    0x01000000
-#define AT_WIZ_1_0_1_0    0x01000100
-#define AT_WIZ_1_0_2_0    0x01000200
-#define AT_WIZ_1_0_3_0    0x01000300
-#define AT_WIZ_1_0_4_0    0x01000400
-#define AT_WIZ_1_0_5_0    0x01000500
-#define AT_WIZ_1_0_6_0    0x01000600
-
-/* AT command set variant and version used */
-#ifndef AT_VARIANT
-#define AT_VARIANT        AT_VARIANT_WIZ
-#endif
-#ifndef AT_VERSION
-#define AT_VERSION        AT_WIZ_1_0_3_0
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -80,10 +54,12 @@ static uint8_t     GetASCIIResponseCode (BUF_LIST *mem);
 static uint8_t     GetGMRResponseCode   (BUF_LIST *mem);
 static uint8_t     GetCtrlResponseCode  (BUF_LIST *mem);
 static int32_t     GetRespArg (uint8_t *buf, uint32_t sz);
-static int32_t     CmdOpen (uint8_t cmd_code, uint32_t cmd_mode, char *buf);
-static int32_t     CmdSend (uint8_t cmd, char *buf, int32_t num);
+static int32_t     CmdOpen   (uint8_t cmd_code, uint32_t cmd_mode, char *buf);
+static int32_t     CmdSend   (uint8_t cmd, char *buf, int32_t num);
 static const char *CmdString (uint8_t cmd);
 static int32_t     CmdSetWFE (uint8_t cmd);
+static void        AT_Parse_IP  (char *buf, uint8_t ip[]);
+static void        AT_Parse_MAC (char *buf, uint8_t mac[]);
 
 
 /* Command list (see also CommandCode_t) */
@@ -102,12 +78,13 @@ static STRING_LIST_t List_PlusResp[] = {
   { "CIPDNS_CUR"       },
   { "CWDHCP_CUR"       },
   { "CWDHCPS_CUR"      },
+  { "CWAUTOCONN"       },
   { "CWLIF"            },
   { "UART_CUR"         },
 #if (AT_VARIANT == AT_VARIANT_ESP)
-#if (AT_VERSION >= AT_ESP_1_6_0_0) && (AT_VERSION < AT_ESP_1_7_0_0)
+#if (AT_VERSION >= AT_VERSION_1_6_0_0) && (AT_VERSION < AT_VERSION_1_7_0_0)
   { "SYSMSG"           },
-#elif (AT_VERSION >= AT_ESP_1_7_0_0)
+#elif (AT_VERSION >= AT_VERSION_1_7_0_0)
   { "SYSMSG_CUR"       },
 #endif
 #else
@@ -147,6 +124,7 @@ typedef enum {
   CMD_CIPDNS_CUR,
   CMD_CWDHCP_CUR,
   CMD_CWDHCPS_CUR,
+  CMD_CWAUTOCONN,
   CMD_CWLIF,
   CMD_UART_CUR,
   CMD_SYSMSG_CUR,
@@ -192,7 +170,8 @@ static STRING_LIST_t List_ASCIIResp[] = {
 #endif
 /* Special responses */
   { "AT"                },
-  { "ready"             }
+  { "ready"             },
+  { "ERR CODE"          },
 };
 
 
@@ -477,6 +456,14 @@ void AT_Parser_Execute (void) {
           /* Echo response */
           //
         }
+        else if (pCb->gen_resp == AT_RESP_ERR_CODE) {
+          /* Error code received */
+          /* Artificially add '+' character and copy response */
+          BufWriteByte ('+', &(pCb->resp));
+          BufCopy (&(pCb->resp), &(pCb->mem), pCb->resp_len+2);
+
+          AT_Notify (AT_NOTIFY_ERR_CODE, NULL);
+        }
         else if ((pCb->gen_resp == AT_RESP_BUSY_P) || (pCb->gen_resp == AT_RESP_BUSY_S)) {
           /* Busy processing or busy sending */
           pCb->state = AT_STATE_FLUSH;
@@ -599,20 +586,20 @@ static int32_t ReceiveData (void) {
   return (err);
 }
 
-#define ESP_LINE_NODATA       (1U << 0) /* Line is empty                        */
-#define ESP_LINE_INCOMPLETE   (1U << 1) /* Line contains incomplete response    */
-#define ESP_LINE_PLUS         (1U << 2) /* Line starts with '+' response        */
-#define ESP_LINE_COLON        (1U << 3) /* Line contains ':' character          */
-#define ESP_LINE_ASCII        (1U << 4) /* Line starts with ASCII characters    */
-#define ESP_LINE_CRLF         (1U << 5) /* Line contains CRLF characters        */
-#define ESP_LINE_TXREQ        (1U << 6) /* Line starts with '>' character       */
-#define ESP_LINE_CTRL         (1U << 7) /* Line starts with numeric character   */
-#define ESP_LINE_NUMBER       (1U << 8) /* Line contains numeric character      */
+#define AT_LINE_NODATA       (1U << 0) /* Line is empty                        */
+#define AT_LINE_INCOMPLETE   (1U << 1) /* Line contains incomplete response    */
+#define AT_LINE_PLUS         (1U << 2) /* Line starts with '+' response        */
+#define AT_LINE_COLON        (1U << 3) /* Line contains ':' character          */
+#define AT_LINE_ASCII        (1U << 4) /* Line starts with ASCII characters    */
+#define AT_LINE_CRLF         (1U << 5) /* Line contains CRLF characters        */
+#define AT_LINE_TXREQ        (1U << 6) /* Line starts with '>' character       */
+#define AT_LINE_CTRL         (1U << 7) /* Line starts with numeric character   */
+#define AT_LINE_NUMBER       (1U << 8) /* Line contains numeric character      */
 
 /**
-  Analyze received data and set ESP_LINE_n flags based on the line content.
+  Analyze received data and set AT_LINE_n flags based on the line content.
 
-  \return ESP_LINE flags
+  \return AT_LINE flags
 */
 static uint32_t AnalyzeLine (BUF_LIST *mem) {
   uint8_t  crlf[] = {'\r', '\n'};
@@ -628,7 +615,7 @@ static uint32_t AnalyzeLine (BUF_LIST *mem) {
 
     if (val < 0) {
       /* Buffer empty */
-      flags |= ESP_LINE_NODATA;
+      flags |= AT_LINE_NODATA;
       break;
     }
 
@@ -636,16 +623,16 @@ static uint32_t AnalyzeLine (BUF_LIST *mem) {
 
     if (b == '+') {
       /* Found: +command response */
-      flags |= ESP_LINE_PLUS;
+      flags |= AT_LINE_PLUS;
 
       /* Check if colon is received */
       val = BufFindByte (':', mem);
 
       if (val != -1) {
-        flags |= ESP_LINE_COLON;
+        flags |= AT_LINE_COLON;
       } else {
         /* Not terminated */
-        flags |= ESP_LINE_INCOMPLETE;
+        flags |= AT_LINE_INCOMPLETE;
 
         /* Check if next character is a number (PING response) */
         val = BufPeekOffs(1, mem);
@@ -654,19 +641,19 @@ static uint32_t AnalyzeLine (BUF_LIST *mem) {
           b = (uint8_t)val;
 
           if ((b >= '0') && (b <= '9')) {
-            flags &= ~ESP_LINE_INCOMPLETE;
-            flags |=  ESP_LINE_NUMBER;
+            flags &= ~AT_LINE_INCOMPLETE;
+            flags |=  AT_LINE_NUMBER;
           }
         }
       }
     }
     else if (b == '>') {
       /* Found: data input request */
-      flags |= ESP_LINE_TXREQ;
+      flags |= AT_LINE_TXREQ;
     }
     else if (((b >= 'A') && (b <= 'Z')) || ((b >= 'a') && (b <= 'z'))) {
       /* Found: command ASCII response */
-      flags |= ESP_LINE_ASCII;
+      flags |= AT_LINE_ASCII;
 
       /* Check if terminated */
       val = BufFind (crlf, 2, mem);
@@ -674,24 +661,24 @@ static uint32_t AnalyzeLine (BUF_LIST *mem) {
       if (val != -1) {
         pCb->resp_len = (uint8_t)val;
 
-        flags |= ESP_LINE_CRLF;
+        flags |= AT_LINE_CRLF;
       } else {
         /* Not terminated */
-        flags |= ESP_LINE_INCOMPLETE;
+        flags |= AT_LINE_INCOMPLETE;
       }
     }
     else if ((b >= '0') && (b <= '9')) {
       /* [<link ID>,] CLOSED response ? */
-      flags |= ESP_LINE_CTRL;
+      flags |= AT_LINE_CTRL;
 
       /* Check if terminated */
       val = BufFind (crlf, 2, mem);
 
       if (val != -1) {
-        flags |= ESP_LINE_CRLF;
+        flags |= AT_LINE_CRLF;
       } else {
         /* Not terminated */
-        flags |= ESP_LINE_INCOMPLETE;
+        flags |= AT_LINE_INCOMPLETE;
       }
     }
     else {
@@ -719,13 +706,13 @@ static uint8_t AnalyzeLineData (void) {
 
   flags = AnalyzeLine(pMem);
 
-  if ((flags & ESP_LINE_NODATA) || (flags & ESP_LINE_INCOMPLETE)) {
+  if ((flags & AT_LINE_NODATA) || (flags & AT_LINE_INCOMPLETE)) {
     /* No data or incomplete response */
     rval = AT_STATE_WAIT;
   }
-  else if (flags & ESP_LINE_PLUS) {
+  else if (flags & AT_LINE_PLUS) {
     /* Comand response with data */
-    if (flags & ESP_LINE_COLON) {
+    if (flags & AT_LINE_COLON) {
       /* Line contains colon, string compare can be performed */
       pCb->resp_code = GetCommandCode (pMem);
 
@@ -752,7 +739,7 @@ static uint8_t AnalyzeLineData (void) {
         }
       }
     }
-    else if (flags & ESP_LINE_NUMBER) {
+    else if (flags & AT_LINE_NUMBER) {
       /* Response contains plus and a number, ping response (+x) */
       pCb->resp_code = CMD_PING;
 
@@ -775,9 +762,9 @@ static uint8_t AnalyzeLineData (void) {
       rval = AT_STATE_FLUSH;
     }
   }
-  else if (flags & ESP_LINE_ASCII) {
+  else if (flags & AT_LINE_ASCII) {
     /* Line contains ascii characters */
-    if (flags & ESP_LINE_CRLF) {
+    if (flags & AT_LINE_CRLF) {
       /* Line is terminated, string compare can be performed */
       code = GetGMRResponseCode(pMem);
 
@@ -805,9 +792,9 @@ static uint8_t AnalyzeLineData (void) {
       rval = AT_STATE_FLUSH;
     }
   }
-  else if (flags & ESP_LINE_CTRL) {
+  else if (flags & AT_LINE_CTRL) {
     /* Line contains ascii number */
-    if (flags & ESP_LINE_CRLF) {
+    if (flags & AT_LINE_CRLF) {
       /* Line is terminated, check content */
       code = GetCtrlResponseCode (pMem);
 
@@ -820,7 +807,7 @@ static uint8_t AnalyzeLineData (void) {
       rval = AT_STATE_FLUSH;
     }
   }
-  else if (flags & ESP_LINE_TXREQ) {
+  else if (flags & AT_LINE_TXREQ) {
     /* Line contains data request character */
     rval = AT_STATE_SEND_DATA;
   }
@@ -1108,10 +1095,7 @@ int32_t AT_Resp_IPD (uint32_t *link_id, uint32_t *len, uint8_t *remote_ip, uint1
     else if (a == 2) {
       /* Read <remote_ip> (buf = "xxx.xxx.xxx.xxx") */
       if (remote_ip != NULL) {
-        remote_ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        remote_ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        remote_ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        remote_ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, remote_ip);
       }
     }
     else if (a == 3) {
@@ -1194,10 +1178,7 @@ int32_t AT_Resp_LinkConn (uint32_t *status, AT_DATA_LINK_CONN *conn) {
       }
       else if (a == 4) {
         /* Read <remote_ip> (buf = "xxx.xxx.xxx.xxx") */
-        conn->remote_ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, conn->remote_ip);
       }
       else if (a == 5) {
         /* Read <remote_port> (buf = integer) */
@@ -1278,12 +1259,38 @@ int32_t AT_Resp_StaMac (uint8_t mac[]) {
     p = (char *)&buf[0];
 
     /* Read <sta_mac> (buf = "xx:xx:xx:xx:xx:xx") */
-    mac[0] = (uint8_t)strtoul (&p[1], &p, 16);
-    mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
-    mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
-    mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
-    mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
-    mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
+    AT_Parse_MAC (p, mac);
+
+    val = 0;
+  }
+
+  return (val);
+}
+
+/**
+  Get ERR_CODE:0x... response.
+
+  \param[out] err_code    Pointer to 32-bit variable where error code will be stored.
+  \return execution status:
+          -1: no response (buffer empty)
+           0: error code retrieved
+*/
+int32_t AT_Resp_ErrCode (uint32_t *err_code) {
+  char    *p;
+  uint8_t  buf[32];
+  int32_t  val;
+  uint32_t uval;  /* Unsigned value storage */
+
+  /* Retrieve response argument */
+  val = GetRespArg (buf, sizeof(buf));
+
+  if (val > 1) {
+    p = (char *)&buf[0];
+
+    /* Read error code (buf = hex integer) */
+    uval = strtoul (p, &p, 16);
+
+    *err_code = uval;
 
     val = 0;
   }
@@ -1557,9 +1564,15 @@ int32_t AT_Resp_ConfigUART (uint32_t *baudrate, uint32_t *databits, uint32_t *st
 /**
   Set maximum value of RF TX power (dBm).
 
+  Power range for
+  ESP8266: range [0:82], units 0.25dBm
+  ESP32:
+    AT 1.2.0: range[0:11] = {19.5, 19, 18.5, 17, 15, 13, 11, 8.5, 7, 5, 2, -1}dBm
+    AT 2.0.0: range[40,82], units 0.25dBm (value 78 means RF power 78*0.25dBm = 19.5dBm)
+
   Response: Generic
 
-  \param[in]  tx_power  power value: range [0:82], units 0.25dBm
+  \param[in]  tx_power  power value
   \return 0: ok, -1: error
 */
 int32_t AT_Cmd_TxPower (uint32_t tx_power) {
@@ -1579,7 +1592,7 @@ int32_t AT_Cmd_TxPower (uint32_t tx_power) {
 /**
   Set current system messages.
 
-  Command: SYSMSG_CUR
+  Command: SYSMSG/SYSMSG_CUR
   Response: Generic
 
   Bit 0: configure the message of quitting passthrough transmission
@@ -1615,7 +1628,7 @@ int32_t AT_Cmd_SysMessages (uint32_t n) {
   Response Q: AT_Resp_CurrentMode
   
   \param[in]  at_cmode  Command mode (inquiry, set, exec)
-  \param[in]  mode      Mode, 1: station, 2: soft AP, 3: soft AP + station
+  \param[in]  mode      Mode, 0: RF disabled (ESP32), 1: station, 2: soft AP, 3: soft AP + station
   \return 0: OK, -1: error (invalid mode, etc)
 */
 int32_t AT_Cmd_CurrentMode (uint32_t at_cmode, uint32_t mode) {
@@ -1757,12 +1770,7 @@ int32_t AT_Resp_ConnectAP (AT_DATA_CWJAP *ap) {
       }
       else if (a == 1) {
         /* Read <bssid> (buf = "xx:xx:xx:xx:xx:xx") */
-        ap->bssid[0] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->bssid[1] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->bssid[2] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->bssid[3] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->bssid[4] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->bssid[5] = (uint8_t)strtoul (&p[1], &p, 16);
+        AT_Parse_MAC (p, ap->bssid);
       }
       else if (a == 2) {
         /* Read <ch> */
@@ -1989,12 +1997,7 @@ int32_t AT_Resp_ListAP (AT_DATA_CWLAP *ap) {
       }
       else if (a == 3) {
         /* Read <mac> (p == "xx:xx:xx:xx:xx:xx") */
-        ap->mac[0] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
-        ap->mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
+        AT_Parse_MAC (p, ap->mac);
       }
       else if (a == 4) {
         /* Read <ch> */
@@ -2087,13 +2090,8 @@ int32_t AT_Resp_StationMAC (uint8_t mac[]) {
       /* Set pointer to MAC string: "xx:xx:xx:xx:xx:xx" */
       p = (char *)&buf[0];
 
-      /* Parse MAC string, skip initial quote */
-      mac[0] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
+      /* Parse MAC string */
+      AT_Parse_MAC (p, mac);
     }
   }
   while (val != 3);
@@ -2158,12 +2156,7 @@ int32_t AT_Resp_AccessPointMAC (uint8_t mac[]) {
       p = (char *)&buf[0];
 
       /* Parse MAC string, skip initial quote */
-      mac[0] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
-      mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
+      AT_Parse_MAC (p, mac);
     }
   }
   while (val != 3);
@@ -2248,10 +2241,7 @@ int32_t AT_Resp_StationIP (uint8_t addr[]) {
       p = (char *)&buf[0];
 
       /* Parse IP address (xxx.xxx.xxx.xxx) */
-      addr[0] = (uint8_t)strtoul (&p[1], &p, 10);
-      addr[1] = (uint8_t)strtoul (&p[1], &p, 10);
-      addr[2] = (uint8_t)strtoul (&p[1], &p, 10);
-      addr[3] = (uint8_t)strtoul (&p[1], &p, 10);
+      AT_Parse_IP (p, addr);
     }
   }
   while ((val != 2) && (val != 3));
@@ -2349,6 +2339,77 @@ int32_t AT_Cmd_DNS (uint32_t at_cmode, uint32_t enable, uint8_t dns0[], uint8_t 
   return (CmdSend(CMD_CIPDNS_CUR, out, n));
 }
 
+#if (AT_VARIANT == AT_VARIANT_ESP32) && (AT_VERSION >= AT_VERSION_2_0_0_0)
+/**
+  Get response to DNS command
+
+  Example: +CIPDNS=1,"192.168.0.1","192.168.0.2"\r\n
+
+  \param[out]   enable  Pointer to variable where enable flag will be stored
+  \param[out]   dns0    Pointer to 4 byte array where DNS 0 address will be stored
+  \param[out]   dns1    Pointer to 4 byte array where DNS 1 address will be stored
+  \return execution status
+          - negative: error
+          - 0: OK, response retrieved, no more data
+*/
+int32_t AT_Resp_DNS (uint32_t *enable, uint8_t dns0[], uint8_t dns1[]) {
+  char    *p;
+  uint8_t  buf[32];
+  int32_t  val;
+  uint32_t a;     /* Argument counter */
+  uint32_t uval;  /* Unsigned value storage */
+
+  a = 0U;
+
+  do {
+    /* Retrieve response argument */
+    val = GetRespArg (buf, sizeof(buf));
+
+    if (val < 0) {
+      break;
+    }
+
+    /* Ignore ':' delimiter */
+    if (val != -1) {
+      p = (char *)&buf[0];
+
+      /* Got valid argument */
+      if (a == 0) {
+      /* Read <lease time> (buf = integer) */
+        uval = strtoul (&p[0], &p, 10);
+
+        if (enable != NULL) {
+          *enable = uval;
+        }
+      }
+      else if (a == 1) {
+        /* Parse DNS0 */
+        AT_Parse_IP (p, dns0);
+      }
+      else if (a == 2) {
+        /* Parse DNS1 */
+        AT_Parse_IP (p, dns1);
+      }
+      else {
+        /* ??? */
+        break;
+      }
+
+      /* Increment number of arguments */
+      a++;
+    }
+  }
+  while (val != 3);
+
+  if (val < 0) {
+    val = -1;
+  } else {
+    val = 0;
+  }
+
+  return (val);
+}
+#else
 /**
   Get response to DNS command
 
@@ -2376,12 +2437,9 @@ int32_t AT_Resp_DNS (uint8_t addr[]) {
     if (val != 1) {
       /* Set pointer to start of string */
       p = (char *)&buf[0];
-
-      /* Parse IP address (xxx.xxx.xxx.xxx) */
-      addr[0] = (uint8_t)strtoul (&p[0], &p, 10);
-      addr[1] = (uint8_t)strtoul (&p[1], &p, 10);
-      addr[2] = (uint8_t)strtoul (&p[1], &p, 10);
-      addr[3] = (uint8_t)strtoul (&p[1], &p, 10);
+      
+      /* Parse IP address */
+      AT_Parse_IP (p, addr);
       break;
     }
   }
@@ -2400,8 +2458,36 @@ int32_t AT_Resp_DNS (uint8_t addr[]) {
 
   return (val);
 }
+#endif
 
 
+#if (AT_VARIANT == AT_VARIANT_ESP32)
+/**
+  Set/Query DHCP state
+
+  Query: AT+CWDHCP?
+  Set:   AT+CWDHCP=<operate>,<mode>
+
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  operate   0: disable DHCP, 1: enable DHCP
+  \param[in]  mode      Bit0: set station, Bit1: set soft-ap
+*/
+int32_t AT_Cmd_DHCP (uint32_t at_cmode, uint32_t operate, uint32_t mode) {
+  char out[64];
+  int32_t n;
+
+  /* Open AT command (AT+<cmd><mode> */
+  n = CmdOpen (CMD_CWDHCP_CUR, at_cmode, out);
+
+  if (at_cmode == AT_CMODE_SET) {
+    /* Add command arguments */
+    n += sprintf (&out[n], "%d,%d", operate, mode);
+  }
+
+  /* Append CRLF and send command */
+  return (CmdSend(CMD_CWDHCP_CUR, out, n));
+}
+#else
 /**
   Set/Query DHCP state
 
@@ -2427,6 +2513,7 @@ int32_t AT_Cmd_DHCP (uint32_t at_cmode, uint32_t mode, uint32_t enable) {
   /* Append CRLF and send command */
   return (CmdSend(CMD_CWDHCP_CUR, out, n));
 }
+#endif
 
 
 /**
@@ -2458,7 +2545,7 @@ int32_t AT_Resp_DHCP (uint32_t *mode) {
       p = (char *)&buf[0];
 
       /* Read <mode> */
-      *mode = p[0] - '0';
+      *mode = (p[0] - '0') & 0x03U;
       break;
     }
   }
@@ -2564,17 +2651,11 @@ int32_t AT_Resp_RangeDHCP (uint32_t *t_lease, uint8_t ip_start[], uint8_t ip_end
       }
       else if (a == 1) {
         /* Read <start IP> (buf = "xxx.xxx.xxx.xxx") */
-        ip_start[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_start[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_start[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_start[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, ip_start);
       }
       else if (a == 2) {
         /* Read <end IP> (buf = "xxx.xxx.xxx.xxx") */
-        ip_end[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_end[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_end[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip_end[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, ip_end);
       }
       else {
         /* ??? */
@@ -2583,6 +2664,80 @@ int32_t AT_Resp_RangeDHCP (uint32_t *t_lease, uint8_t ip_start[], uint8_t ip_end
 
       /* Increment number of arguments */
       a++;
+    }
+  }
+  while (val != 3);
+
+  if (val < 0) {
+    val = -1;
+  } else {
+    val = 0;
+  }
+
+  return (val);
+}
+
+
+/**
+  Set/Query Auto-Connect to the AP
+
+  Format: AT+CWAUTOCONN=<enable>
+
+  Generic response is expected.
+
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  enable    0:disable, 1:enable auto-connect on power-up
+
+  \return execution status:
+          0: OK, -1 on error
+*/
+int32_t AT_Cmd_AutoConnectAP (uint32_t at_cmode, uint32_t enable) {
+  char out[64];
+  int32_t n;
+
+  /* Open AT command (AT+<cmd><mode> */
+  n = CmdOpen (CMD_CWAUTOCONN, at_cmode, out);
+
+  if (at_cmode == AT_CMODE_SET) {
+    /* Add command argument */
+    n += sprintf (&out[n], "%d", enable);
+  }
+
+  /* Append CRLF and send command */
+  return (CmdSend(CMD_CWAUTOCONN, out, n));
+}
+
+/**
+  Get response to AutoConnectAP command
+
+  Response Q: +CWAUTOCONN:<enable>
+  Example  Q: +CWAUTOCONN:0\r\n\OK\r\n\
+
+  \param[out]   enable  Pointer to variable the enable status is stored
+  \return execution status
+          - negative: error
+          - 0: OK, response retrieved, no more data
+*/
+int32_t AT_Resp_AutoConnectAP (uint32_t *enable) {
+  uint8_t buf[32];
+  int32_t val;
+  char *p;
+
+  do {
+    /* Retrieve response argument */
+    val = GetRespArg (buf, sizeof(buf));
+
+    if (val < 0) {
+      break;
+    }
+
+    if (val != 1) {
+      /* Set pointer to extracted value */
+      p = (char *)&buf[0];
+
+      /* Read <mode> */
+      *enable = p[0] - '0';
+      break;
     }
   }
   while (val != 3);
@@ -2650,19 +2805,11 @@ int32_t AT_Resp_ListIP (uint8_t ip[], uint8_t mac[]) {
 
       if (a == 0) {
         /* Parse IP address (xxx.xxx.xxx.xxx) */
-        ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, ip);
       }
       else {
         /* Parse MAC string (xx:xx:xx:xx:xx:xx) */
-        mac[0] = (uint8_t)strtoul (&p[1], &p, 16);
-        mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
-        mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
-        mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
-        mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
-        mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
+        AT_Parse_MAC (p, mac);
       }
 
       /* Increment number of arguments */
@@ -2753,10 +2900,7 @@ int32_t AT_Resp_GetStatus (AT_DATA_LINK_CONN *conn) {
       }
       else if (a == 2) {
         /* Read <remote_ip> (buf = "xxx.xxx.xxx.xxx") */
-        conn->remote_ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-        conn->remote_ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+        AT_Parse_IP (p, conn->remote_ip);
       }
       else if (a == 3) {
         /* Read <remote_port> (buf = integer?) */
@@ -2861,19 +3005,8 @@ int32_t AT_Resp_DnsFunction (uint8_t ip[]) {
       /* Set pointer to start of string */
       p = (char *)&buf[0];
 
-      #if (AT_VARIANT == AT_VARIANT_ESP)
-      /* Parse IP address (xxx.xxx.xxx.xxx) */
-      ip[0] = (uint8_t)strtoul (&p[0], &p, 10);
-      ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-      ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-      ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
-      #else
-      /* Parse IP address ("xxx.xxx.xxx.xxx") */
-      ip[0] = (uint8_t)strtoul (&p[1], &p, 10);
-      ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
-      ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
-      ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
-      #endif
+      /* Parse IP address */
+      AT_Parse_IP (p, ip);
       break;
     }
   }
@@ -3443,4 +3576,50 @@ uint32_t AT_Send_Data (const uint8_t *buf, uint32_t len) {
 
   /* Return number of bytes actually sent */
   return (n);
+}
+
+/* ------------------------------------------------------------------------- */
+
+/**
+  Parse IP address from string to byte value.
+*/
+static void AT_Parse_IP (char *buf, uint8_t ip[]) {
+  char *p;
+
+  /* Set pointer to start of string */
+  p = (char *)&buf[0];
+
+  if (p[0] == '"') {
+    /* Strip out the first quotation mark */
+    p++;
+  }
+
+  /* Parse IP address (xxx.xxx.xxx.xxx or "xxx.xxx.xxx.xxx") */
+  ip[0] = (uint8_t)strtoul (&p[0], &p, 10);
+  ip[1] = (uint8_t)strtoul (&p[1], &p, 10);
+  ip[2] = (uint8_t)strtoul (&p[1], &p, 10);
+  ip[3] = (uint8_t)strtoul (&p[1], &p, 10);
+}
+
+/**
+  Parse MAC address from (hex) string to byte value.
+*/
+static void AT_Parse_MAC (char *buf, uint8_t mac[]) {
+  char *p;
+
+  /* Set pointer to start of string */
+  p = (char *)&buf[0];
+
+  if (p[0] == '"') {
+    /* Strip out the first quotation mark */
+    p++;
+  }
+
+  /* Parse MAC address (xx:xx:xx:xx:xx:xx or "xx:xx:xx:xx:xx:xx") */
+  mac[0] = (uint8_t)strtoul (&p[0], &p, 16);
+  mac[1] = (uint8_t)strtoul (&p[1], &p, 16);
+  mac[2] = (uint8_t)strtoul (&p[1], &p, 16);
+  mac[3] = (uint8_t)strtoul (&p[1], &p, 16);
+  mac[4] = (uint8_t)strtoul (&p[1], &p, 16);
+  mac[5] = (uint8_t)strtoul (&p[1], &p, 16);
 }

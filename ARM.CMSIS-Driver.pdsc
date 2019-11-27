@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.4.2-dev6">
+      Added Espressif ESP32 WiFi driver
+    </release>
     <release version="2.4.2-dev5">
       Fixes for ESP8266 and WizFi360 (DNS function and Activate with DHCP)
     </release>
@@ -389,6 +392,25 @@
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Buf.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Mem.c"/>
+      </files>
+    </component>
+
+    <!-- ESP32 -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.0.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+      <description>Espressif ESP32 WiFi Driver (UART)</description>
+      <RTE_Components_h>
+        #define RTE_Drivers_WiFi_ESP32_UART   /* Driver WiFi ESP32 (UART) */
+      </RTE_Components_h>
+      <files>
+        <file category="header"  name="WiFi/ESP32/Config/WiFi_ESP32_Config.h" attr="config" version="1.0.0"/>
+        <file category="include" name="WiFi/ESP32/"/>
+        <file category="source"  name="WiFi/ESP32/WiFi_ESP32.c"/>
+        <file category="source"  name="WiFi/ESP32/WiFi_ESP32_Os.c"/>
+        <file category="source"  name="WiFi/ESP32/ESP32.c"/>
+        <file category="source"  name="WiFi/ESP32/ESP32_Serial.c"/>
+        <file category="include" name="WiFi/ESP32/BufList/"/>
+        <file category="source"  name="WiFi/ESP32/BufList/BufList.c"/>
+        <file category="source"  name="WiFi/ESP32/BufList/LinkList.c"/>
       </files>
     </component>
 

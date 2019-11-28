@@ -3,9 +3,9 @@
 <report>
 <test>
 <title>CMSIS-Driver WiFi Test Report</title>
-<date>Nov 15 2019</date>
-<time>16:35:53</time>
-<file>C:/Keil_v5/ARM/PACK/ARM/CMSIS-Driver_Validation/1.4.0-rc0/Source/cmsis_dv.c</file>
+<date>Nov 28 2019</date>
+<time>10:33:03</time>
+<file>C:\Keil_v5\ARM\PACK\ARM\CMSIS-Driver_Validation\1.4.0\Source\cmsis_dv.c</file>
 <group>1</group>
 <test_cases>
 <tc>
@@ -122,7 +122,7 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>4329</line>
+<line>4337</line>
 <message>[WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ETIMEDOUT, expected ARM_SOCKET_ECONNREFUSED)</message>
 </detail>
 </dbgi>
@@ -253,8 +253,8 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>8249</line>
-<message>[INFO] Speed 367 KB/s</message>
+<line>8281</line>
+<message>[INFO] Speed 351 KB/s</message>
 </detail>
 </dbgi>
 <res>PASSED</res>
@@ -265,8 +265,8 @@
 <dbgi>
 <detail>
 <module>DV_WIFI.c</module>
-<line>8317</line>
-<message>[INFO] Speed 496 KB/s</message>
+<line>8349</line>
+<message>[INFO] Speed 477 KB/s</message>
 </detail>
 </dbgi>
 <res>PASSED</res>

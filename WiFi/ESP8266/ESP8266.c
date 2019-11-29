@@ -105,6 +105,7 @@ static STRING_LIST_t List_PlusResp[] = {
   { "LINK_CONN"        },
   { "STA_CONNECTED"    },
   { "STA_DISCONNECTED" },
+  { "SLEEP"            },
   { "E"                },
   { ""                 }
 };
@@ -143,6 +144,7 @@ typedef enum {
   CMD_LINK_CONN,
   CMD_STA_CONNECTED,
   CMD_STA_DISCONNECTED,
+  CMD_SLEEP,
   CMD_ECHO        = 0xFD, /* Command Echo                 */
   CMD_TEST        = 0xFE, /* AT startup (empty command)   */
   CMD_UNKNOWN     = 0xFF  /* Unknown or unhandled command */
@@ -1557,6 +1559,76 @@ int32_t AT_Resp_ConfigUART (uint32_t *baudrate, uint32_t *databits, uint32_t *st
       /* Response is pending */
       val = 1;
     }
+  }
+
+  return (val);
+}
+
+/**
+  Configure the sleep modes.
+
+  Format: AT+SLEEP=<sleep mode>
+
+  \note Command can be used only in Station mode. Modem-sleep is the default mode.
+
+  \param[in]  sleep_mode  sleep mode (0: disabled, 1: Light-sleep, 2: Modem-sleep)
+  \return 0: ok, -1: error
+*/
+int32_t AT_Cmd_Sleep (uint32_t at_cmode, uint32_t sleep_mode) {
+  char out[32];
+  int32_t n;
+
+  /* Open AT command (AT+<cmd><mode> */
+  n = CmdOpen (CMD_SLEEP, AT_CMODE_SET, out);
+
+  if (at_cmode == AT_CMODE_SET) {
+    /* Add command arguments */
+    n += sprintf (&out[n], "%d", sleep_mode);
+  }
+
+  /* Append CRLF and send command */
+  return (CmdSend(CMD_SLEEP, out, n));
+}
+
+/**
+  Get response to AutoConnectAP command.
+
+  Response Q: +SLEEP:<sleep mode>
+  Example  Q: +SLEEP:2\r\n\r\nOK\r\n\
+
+  \param[out]   sleep_mode  Pointer to variable the where sleep mode is stored
+  \return execution status
+          - negative: error
+          - 0: OK, response retrieved, no more data
+*/
+int32_t AT_Resp_Sleep (uint32_t *sleep_mode) {
+  uint8_t buf[32];
+  int32_t val;
+  char *p;
+
+  do {
+    /* Retrieve response argument */
+    val = GetRespArg (buf, sizeof(buf));
+
+    if (val < 0) {
+      break;
+    }
+
+    if (val != 1) {
+      /* Set pointer to extracted value */
+      p = (char *)&buf[0];
+
+      /* Read <sleep mode> */
+      *sleep_mode = p[0] - '0';
+      break;
+    }
+  }
+  while (val != 3);
+
+  if (val < 0) {
+    val = -1;
+  } else {
+    val = 0;
   }
 
   return (val);

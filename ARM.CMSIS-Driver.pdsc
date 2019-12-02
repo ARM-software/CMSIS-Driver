@@ -7,7 +7,7 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.5.0-rc0">
+    <release version="2.5.0" date="2019-12-02">
       Added Espressif ESP32 WiFi driver
       Added Espressif ESP8266 WiFi driver
       Added Wiznet WizFi360 WiFi driver

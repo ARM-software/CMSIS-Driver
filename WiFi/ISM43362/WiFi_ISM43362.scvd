@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<component_viewer schemaVersion="0.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="Component_Viewer.xsd">
+<component name="WiFi ISM43362 Debug" version="1.0.0"/>       <!-- name and version of the component -->
+  <events>
+    <group name="CMSIS WiFi Driver">
+      <component name="WiFi Driver" brief="WiFi" no="0x3F" prefix="EvrWiFi_" info="WiFi Events"/>
+    </group>
+
+    <event id="0x3F00 + 0x00" level="Error"  property="SPI_SendReceive" value="return value = %d[val1]" info=""/>
+    <event id="0x3F00 + 0x01" level="Detail" property="SPI_SendReceive" value="%t[val1]"                info=""/>
+  </events>
+</component_viewer>

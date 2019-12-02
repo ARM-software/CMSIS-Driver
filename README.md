@@ -33,8 +33,11 @@ All drivers refer the API Interface header file defintions published in the CMSI
 ## SPI - MultiSlave wrapper for SPI CMSIS-Driver implementations
 - SPI_MultiSlave
 
-## WiFi - WiFi device drivers (compliant with CMSIS-Driver WiFi specification 1.0.0)
+## WiFi - WiFi device drivers
 - ISM43362
+- ESP32
+- ESP8266
+- WizFi360
 
 ## License
 Licensed under Apache 2.0 License.

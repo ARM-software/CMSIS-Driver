@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright © 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        26. June 2019
- * $Revision:    V1.0
+ * $Date:        15. November 2019
+ * $Revision:    V1.3
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -48,17 +48,53 @@
  * changes from inactive to active (otherwise the driver will use polling 
  * with 1 ms interval to check DATARDY line state change):
  *   - void    WiFi_ISM43362_Pin_DATARDY_IRQ  (void)
+ *                                                   
+ * Generic ISM43362 Module limitations:
+ *  - power off is not supported because it disables host interface
+ *  - configuration of local port for client socket is not supported
+ *  - socket connect to non-existent port returns error code 
+ *    ARM_SOCKET_ETIMEDOUT instead of ARM_SOCKET_ECONNREFUSED
+ *  - sometimes connection to remote host fails
+ *
+ * ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 limitations:
+ *  - firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
+ *    - module sometimes returns previous resolve result on request to 
+ *      resolve non-existing host address
+ *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
+ *      SocketListen tests are executed before it, because module stays in some 
+ *      odd state and never signals accepted client connection
+ *
+ * ISM43362 Module on ISMART43362 shield limitations:
+ *  - hardware es-WiFi SHIELD Rev. C
+ *    - module has reset line connected directly to 
+ *      header J6 pin 3 (MICRO_RST_N) together with reset line from the 
+ *      microcontroller motherboard (if reset line is activated either by SW2
+ *      on the WiFi Shield or by reset button on microcontroller motherboard, 
+ *      both the microcontroller and WiFi Shield are reset)
+ *      For testing the driver in such combination delay between 
+ *      WiFi Initialization and debugger connect has to be introduced and 
+ *      WiFi Shield has to be reset manually before starting debug session.
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    - Corrected not setting password in Activate if OPEN security is used
+ *  Version 1.2
+ *    - Corrected SocketClose functionality
+ *    - Updated Initialization function to handle unavailable reset pin
+ *  Version 1.1
+ *    - Updated functionality to comply with CMSIS WiFi Driver Validation
+ *    - Added debug of SPI traffic to Event Recorder
  *  Version 1.0
- *    Initial version
+ *    - Initial version
  */
 
 
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "RTE_Components.h"
 
 #include "cmsis_os2.h"
 #include "cmsis_compiler.h"
@@ -67,18 +103,27 @@
 
 #include "Driver_SPI.h"
 
-#include "WiFi_ISM43362_Config.h"       // Driver configuration settings
+#ifdef   RTE_Compiler_EventRecorder
+#include "EventRecorder.h"              // Keil.ARM Compiler::Compiler:Event Recorder
+#endif
 
+#include "WiFi_ISM43362_Config.h"       // Driver configuration settings
+#include "WiFi_ISM43362_HW.h"           // Driver hardware specific function prototypes
+#include "WiFi_ISM43362_Buf.h"
+
+#ifndef  WIFI_ISM43362_DEBUG_EVR
+#define  WIFI_ISM43362_DEBUG_EVR    0
+#endif
+#if ((WIFI_ISM43362_DEBUG_EVR == 1) && !defined(RTE_Compiler_EventRecorder))
+#error For driver debugging enable RTE: Compiler: Event Recorder!
+#endif
+
+// Legacy compatibility defines
+#ifndef WIFI_ISM43362_SPI_BUS_SPEED
+#define WIFI_ISM43362_SPI_BUS_SPEED    (20000000)
+#endif
 
 // Hardware dependent functions --------
-
-// Externally provided hardware dependent handling callback functions
-
-extern void    WiFi_ISM43362_Pin_Initialize   (void);
-extern void    WiFi_ISM43362_Pin_Uninitialize (void);
-extern void    WiFi_ISM43362_Pin_RSTN         (uint8_t rstn);
-extern void    WiFi_ISM43362_Pin_SSN          (uint8_t ssn);
-extern uint8_t WiFi_ISM43362_Pin_DATARDY      (void);
 
 // Exported hardware dependent function called by user code
 
@@ -98,7 +143,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -131,16 +176,15 @@ typedef struct {                        // Socket structure
   uint32_t keepalive;                   // Keep-alive
   uint16_t local_port;                  // Local       port number
   uint16_t remote_port;                 // Remote host port number
+  uint8_t  bound_ip[4];                 // Bound       IP
   uint8_t  remote_ip[4];                // Remote host IP
                                         // Module specific socket variables
-  void    *data_to_recv;                // Pointer to where data should be received
-  uint32_t len_to_recv;                 // Number of bytes to receive
-  uint32_t len_recv;                    // Number of bytes received
   uint32_t recv_time_left;              // Receive Time left until Timeout
+  uint32_t start_tick_count;            // Receive start Kernel Tick Count
   uint8_t  client;                      // Socket client running
   uint8_t  server;                      // Socket server running
   uint8_t  bound;                       // Socket bound (server)
-  uint8_t  reserved1;                   // Reserved
+  uint8_t  poll_recv;                   // Poll for reception
 } socket_t;
 
 // Operating mode
@@ -161,8 +205,14 @@ typedef struct {                        // Socket structure
 #define EVENT_SPI_XFER_DONE             (1U     )
 #define EVENT_SPI_READY                 (1U << 1)
 #define EVENT_ASYNC_POLL                (1U << 2)
-#define EVENT_ACCEPT                    (1U << 3)
-#define EVENT_SOCKET                    (1U << 4)
+#define EVENT_SOCK_RECV                 (1U     )       // Something was received
+#define EVENT_SOCK_RECV_TIMEOUT         (1U << 1)       // Reception has timed-out
+#define EVENT_SOCK_RECV_DISCON_REMOTE   (1U << 2)       // Remote host closed socket
+#define EVENT_SOCK_RECV_CLOSE           (1U << 3)       // Socket close requested locally
+#define EVENT_SOCK_RECV_CLOSE_DONE      (1U << 4)       // Socket closed locally
+#define EVENT_SOCK_ACCEPTED             (1U << 5)       // Socket accepted new connection
+#define EVENT_SOCK_ACCEPTING_CLOSE      (1U << 6)       // Socket accepting close requested locally
+#define EVENT_SOCK_ACCEPTING_CLOSE_DONE (1U << 7)       // Socket accepting closed locally
 
 // Local macros
 #define SPI_Driver_(n)                  Driver_SPI##n
@@ -170,13 +220,16 @@ typedef struct {                        // Socket structure
 extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define ptrSPI                        (&SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM))
 
+#define MAX_DATA_SIZE                  (1460U)
+
 #define TRANSPORT_START                (1U)
 #define TRANSPORT_STOP                 (0U)
+#define TRANSPORT_RESTART              (2U)
 #define TRANSPORT_SERVER               (1U)
 #define TRANSPORT_CLIENT               (0U)
 
 // Mutex responsible for protecting SPI media access
-const osMutexAttr_t mutex_spi_attr = {
+static const osMutexAttr_t mutex_spi_attr = {
   "Mutex_SPI",                          // Mutex name
   osMutexPrioInherit,                   // attr_bits
   NULL,                                 // Memory for control block
@@ -184,7 +237,7 @@ const osMutexAttr_t mutex_spi_attr = {
 };
 
 // Mutex responsible for protecting socket local variables access
-const osMutexAttr_t mutex_socket_attr = {
+static const osMutexAttr_t mutex_socket_attr = {
   "Mutex_Socket",                       // Mutex name
   osMutexPrioInherit,                   // attr_bits
   NULL,                                 // Memory for control block
@@ -192,7 +245,7 @@ const osMutexAttr_t mutex_socket_attr = {
 };
 
 // Thread for polling and processing asynchronous messages
-const osThreadAttr_t thread_async_poll_attr = {
+static const osThreadAttr_t thread_async_poll_attr = {
   .name       = "Thread_Async_Poll",    // Thread name
   .stack_size = 1024,                   // Required thread stack size
   .priority   = WIFI_ISM43362_ASYNC_PRIORITY    // Initial thread priority
@@ -200,10 +253,11 @@ const osThreadAttr_t thread_async_poll_attr = {
 
 
 // Local variables and structures
+static uint8_t                          module_initialized = 0U;
 static uint8_t                          driver_initialized = 0U;
 
 static osEventFlagsId_t                 event_flags_id;
-static osEventFlagsId_t                 event_flags_sockets_id;
+static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
 static osMutexId_t                      mutex_id_spi;
 static osMutexId_t                      mutex_id_sockets;
 static osThreadId_t                     thread_id_async_poll;
@@ -213,9 +267,16 @@ static ARM_WIFI_SignalEvent_t           signal_event_fn;
 static uint8_t                          spi_datardy_irq;
 
 static uint8_t                          oper_mode;
+static uint32_t                         kernel_tick_freq_in_ms;
+static uint8_t                          kernel_tick_freq_shift_to_ms;
 
-static char                             cmd_buf [64   + 1] __ALIGNED(4);
-static uint8_t                          resp_buf[1210 + 1] __ALIGNED(4);
+static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4);
+static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4);
+static uint32_t                         spi_recv_len;
+static int32_t                          resp_code;
+
+static uint8_t                          recv_buf [WIFI_ISM43362_SOCKETS_NUM][MAX_DATA_SIZE] __ALIGNED(4);
+static uint32_t                         recv_len [WIFI_ISM43362_SOCKETS_NUM];
 
 static uint32_t                         sta_lp_time;
 static uint8_t                          sta_dhcp_client;
@@ -229,7 +290,18 @@ static uint8_t                          ap_mac     [8][6];
 
 static socket_t                         socket_arr[2 * WIFI_ISM43362_SOCKETS_NUM];
 
+#if    (WIFI_ISM43362_DEBUG_EVR == 1)
+#define EVR_DEBUG_SPI_MAX_LEN          (128)    // Maximum number of bytes of SPI debug message
+
+#define EVR_SPI_ERROR                  (0x3F00 + 0x00)
+#define EVR_SPI_DETAIL                 (0x3F00 + 0x01)
+
+static char                             dbg_spi[EVR_DEBUG_SPI_MAX_LEN + 64];
+#endif
+
 // Function prototypes
+static int32_t SPI_SendReceive     (uint8_t *ptr_send, uint32_t send_len, uint8_t *ptr_recv, uint32_t *ptr_recv_len, int32_t *ptr_resp_code, uint32_t timeout);
+
 static int32_t WiFi_Uninitialize   (void);
 static int32_t WiFi_SocketRecvFrom (int32_t socket,       void *buf, uint32_t len,       uint8_t *ip, uint32_t *ip_len, uint16_t *port);
 static int32_t WiFi_SocketSendTo   (int32_t socket, const void *buf, uint32_t len, const uint8_t *ip, uint32_t  ip_len, uint16_t  port);
@@ -243,17 +315,40 @@ static int32_t WiFi_SocketClose    (int32_t socket);
   \brief         Function that resets to all local variables to default values.
 */
 static void ResetVariables (void) {
+  uint32_t i;
 
-  sta_dhcp_client       = 1U;           // DHCP client is enabled by default
+  sta_dhcp_client         = 1U;         // DHCP client is enabled by default
 
-  signal_event_fn       = NULL;
+  signal_event_fn         = NULL;
 
-  spi_datardy_irq       = 0U;
+  spi_datardy_irq         = 0U;
 
-  oper_mode             = 0U;
+  oper_mode               = 0U;
 
-  memset((void *)cmd_buf , 0, sizeof(cmd_buf));
-  memset((void *)resp_buf, 0, sizeof(resp_buf));
+  kernel_tick_freq_in_ms  = osKernelGetTickFreq () / 1000U;
+  i                       = kernel_tick_freq_in_ms;
+  kernel_tick_freq_shift_to_ms = 0U;
+  if (kernel_tick_freq_in_ms > 1U) {
+    while(i >= 1U) {
+      if (i == 1U) {
+        break;
+      }
+      if((i & 1U) != 0U) {
+        kernel_tick_freq_shift_to_ms = 0U;
+        break;
+      }
+      i >>= 1;
+      kernel_tick_freq_shift_to_ms++;
+    }
+  }
+
+  memset((void *)spi_send_buf, 0, sizeof(spi_send_buf));
+  memset((void *)spi_recv_buf, 0, sizeof(spi_recv_buf));
+  memset((void *)recv_buf, 0, sizeof(recv_buf));
+  memset((void *)recv_len, 0, sizeof(recv_len));
+
+  spi_recv_len          = 0U;
+  resp_code             = 0U;
 
   sta_lp_time           = 0U;
   ap_beacon_interval    = 0U;
@@ -307,19 +402,21 @@ static void Wait_us (uint32_t us) {
 }
 
 /**
-  \fn            uint8_t *SkipCommas (uint8_t const *ptr, uint8_t num)
+  \fn            const uint8_t *SkipCommas (uint8_t const *ptr, uint8_t num)
   \brief         Skip requested number of commas in character buffer.
   \param[in]     ptr      Pointer to character buffer
   \param[in]     num      Number of commas to skip
   \return        pointer to first character after requested number of commas, NULL in case of failure
 */
-static uint8_t *SkipCommas (uint8_t const *ptr, uint8_t num) {
-  char ch;
+static const uint8_t *SkipCommas (const uint8_t *ptr, uint8_t num) {
+  const uint8_t *ptr_tmp;
+        char     ch;
 
-  if (ptr != NULL) {
+  ptr_tmp = (const uint8_t *)ptr;
+  if (ptr_tmp != NULL) {
     while (num > 0U) {
       do {
-        ch = (char)*ptr++;
+        ch = (char)*ptr_tmp++;
       } while ((ch != ',') && (ch != 0));
       if (ch == 0) {
         return NULL;
@@ -328,7 +425,7 @@ static uint8_t *SkipCommas (uint8_t const *ptr, uint8_t num) {
     }
   }
 
-  return (uint8_t *)ptr;
+  return ptr_tmp;
 }
 
 /**
@@ -364,195 +461,160 @@ static uint8_t SPI_WaitReady (uint32_t timeout) {
   \brief         Wait for SPI transfer to finish.
   \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
   \return        SPI transfer finished state
-                   - 0: SPI transfer finished successfully
-                   - 1: SPI transfer did not finish successfully
+                   - true: SPI transfer finished successfully
+                   - false: SPI transfer did not finish successfully
 */
-static uint8_t SPI_WaitTransferDone (uint32_t timeout) {
-  return (uint8_t)((osEventFlagsWait(event_flags_id, EVENT_SPI_XFER_DONE, osFlagsWaitAll, timeout) & EVENT_SPI_XFER_DONE) == EVENT_SPI_XFER_DONE);
+static bool SPI_WaitTransferDone (uint32_t timeout) {
+  uint32_t event_flags;
+
+  event_flags = osEventFlagsWait(event_flags_id, EVENT_SPI_XFER_DONE, osFlagsWaitAll, timeout);
+
+  if ((event_flags & EVENT_SPI_XFER_DONE) != 0U) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
-  \fn            int32_t SPI_AT_SendCommandAndData (const char *cmd, const uint8_t *data, uint32_t data_len, uint32_t timeout)
-  \brief         Send AT command and data.
-  \param[in]     cmd      Pointer to command null-terminated string
-  \param[in]     data     Pointer to data to be sent after command
-  \param[in]     data_len Number of bytes of data to be sent
-  \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
+  \fn            int32_t SPI_SendReceive (const uint8_t *ptr_send, uint32_t send_len, uint8_t *ptr_recv, uint32_t *ptr_recv_len, int32_t *ptr_resp_code, uint32_t timeout)
+  \brief         Send command and data over SPI interface and receive SPI response on SPI interface. Reception is done in blocks (default 32 bytes).
+  \param[in]     ptr_send       Pointer to single buffer containing command and data to be sent
+                                Buffer must be 2-byte aligned and size must be multiple of 2 bytes
+  \param[in]     send_len       Number of bytes to be sent over the SPI
+  \param[in]     ptr_recv       Pointer to buffer where response received over the SPI will be returned
+                                Buffer must be 2-byte aligned
+  \param[in]     ptr_recv_len   Pointer to value of maximum bytes to be received, updated with actually number of received bytes
+  \param[in]     ptr_resp_code  Pointer to where response code will be returned (number of sent bytes, 0 = OK, or error code)
+  \param[in]     timeout        Timeout in milliseconds (0 = no timeout)
   \return        execution status
-                   - ARM_DRIVER_OK                : Command and data sent successfully
+                   - ARM_DRIVER_OK                : Command and data sent successfully and response received
                    - ARM_DRIVER_ERROR             : Operation failed
                    - ARM_DRIVER_ERROR_TIMEOUT     : Operation timed out
 */
-static int32_t SPI_AT_SendCommandAndData (const char *cmd, const uint8_t *data, uint32_t data_len, uint32_t timeout) {
-  int32_t        ret;
-  const uint8_t *ptr_data;
-  uint32_t       cmd_len;
-  uint8_t        tmp[2], wait_cmd;
+static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *ptr_recv, uint32_t *ptr_recv_len, int32_t *ptr_resp_code, uint32_t timeout) {
+  int32_t  ret;
+  uint32_t len_to_recv, len_recv, len, i, j;
+  uint32_t dummy_buf[4];
+#if (WIFI_ISM43362_DEBUG_EVR == 1)
+  uint32_t dbg_tot_len, dbg_len, ticks, time_in_ms;
 
-  if (cmd == NULL) {                            // If cmd pointer is invalid
-    return ARM_DRIVER_ERROR_PARAMETER;
+  ticks = osKernelGetSysTimerCount();
+#endif
+
+  if ((ptr_send == NULL) || (((uint32_t)ptr_send & 1U) == 1U)) {
+    // If pointer to send is invalid or not 2-byte aligned
+    return ARM_DRIVER_ERROR;
   }
-  cmd_len = strlen(cmd);
-  if (cmd_len == 0U) {                          // If length of command is 0
-    return ARM_DRIVER_ERROR_PARAMETER;
+  if ((ptr_recv == NULL) || (((uint32_t)ptr_recv & 1U) == 1U) || (ptr_recv_len == NULL)) {
+    // If pointer to receive is invalid or not 2-byte aligned, or pointer to receive length is invalid
+    return ARM_DRIVER_ERROR;
+  }
+  if (send_len == 0U) {
+    // If number of bytes to send is 0 or not multiple of 2
+    return ARM_DRIVER_ERROR;
+  }
+  if (*ptr_recv_len == 0U) {
+    // If maximum bytes to receive is 0
+    return ARM_DRIVER_ERROR;
+  }
+  if (timeout == 0U) {
+    // If timeout is 0, nothing can be sent/received immediately
+    return ARM_DRIVER_ERROR;
   }
 
-  ret = ARM_DRIVER_OK;
-  WiFi_ISM43362_Pin_SSN(false);                 // Deactivate slave select line
-  Wait_us(4U);                                  // Wait 4 us
+  if ((send_len & 1U) == 1U) {
+    // If number of bytes to send is odd, add trailing padding of '\n' byte
+    ptr_send[send_len] = '\n';
+    send_len++;
+  }
 
-  if (SPI_WaitReady(timeout) != 0U) {           // If SPI is ready
+  ret         = ARM_DRIVER_OK;
+  len_to_recv = *ptr_recv_len;
+  len_recv    = 0U;
+
+  // Send command and data on SPI
+  if (SPI_WaitReady(timeout) == 1U) {           // If SPI is ready
+    Wait_us(4U);                                // Wait 4 us
     WiFi_ISM43362_Pin_SSN(true);                // Activate slave select line
     Wait_us(15U);                               // Wait 15 us
-
-    if (cmd_len > 2U) {
-      // If command contains more than 2 bytes send even number of bytes first
-      if (ptrSPI->Send(cmd, cmd_len / 2) != ARM_DRIVER_OK) {    // If SPI transfer failed
-        ret = ARM_DRIVER_ERROR;
-      } else {
-        if (SPI_WaitTransferDone(timeout) == 0U) {              // If SPI transfer timed out
-          ret = ARM_DRIVER_ERROR_TIMEOUT;
-        }
+    if (ptrSPI->Send(ptr_send, send_len / 2) == ARM_DRIVER_OK) {
+      // If SPI send started successfully
+      if (SPI_WaitTransferDone(timeout)) {      // If SPI transfer finished
+        WiFi_ISM43362_Pin_SSN(false);           // Deactivate slave select line
+        Wait_us(3U);                            // Wait 3 us
+      } else {                                  // If SPI transfer timed-out
+        ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);
+        ret = ARM_DRIVER_ERROR_TIMEOUT;
       }
-    }
-    if ((ret == ARM_DRIVER_OK) && ((cmd_len & 1U) == 1U)) {
-      // If command contains odd number of bytes, append 1 byte of data to the last byte
-      // of command if there is data to be sent, otherwise append 1 byte of value 0x0A
-      // and send those 2 bytes
-      tmp[0] = (uint8_t)cmd[cmd_len - 1U];
-      if ((data != NULL) && (data_len != 0U)) {
-        tmp[1] = data[0];
-        data_len--;
-        data++;
-      } else {
-        tmp[1] = '\n';
-      }
-      if (ptrSPI->Send(tmp, 1U) != ARM_DRIVER_OK) {             // If SPI transfer failed
-        ret = ARM_DRIVER_ERROR;
-      } else {
-        if (SPI_WaitTransferDone(timeout) == 0U) {              // If SPI transfer timed out
-          ret = ARM_DRIVER_ERROR_TIMEOUT;
-        }
-      }
-    }
-    if ((ret == ARM_DRIVER_OK) && (data != NULL) && ((data_len / 2) > 0U)) {
-      // As SPI is used in 16-bit mode data must be aligned to 2 byte address,
-      // if it is not we copy data to resp_buf, which we reuse for this purpose
-      if ((((uint32_t)data) & 1) == 0) {    // If data buffer is correctly aligned
-        ptr_data = data;
-      } else {                              // If data buffer is not correctly aligned
-        memcpy((void *)resp_buf, (void *)data, data_len);
-        ptr_data = (const uint8_t *)resp_buf;
-      }
-
-      // Send even number of bytes of remaining data
-      if (ptrSPI->Send(ptr_data, data_len / 2)!=ARM_DRIVER_OK){ // If SPI transfer failed
-        ret = ARM_DRIVER_ERROR;
-      } else {
-        if (SPI_WaitTransferDone(timeout) == 0U) {              // If SPI transfer timed out
-          ret = ARM_DRIVER_ERROR_TIMEOUT;
-        }
-      }
-    }
-    if ((ret == ARM_DRIVER_OK) && (data != NULL) && ((data_len & 1U) == 1U)) {
-      // If remaining data contains odd number of bytes, append 1 byte of value 0x0A
-      // and send those 2 bytes
-      tmp[0] = data[data_len - 1U];
-      tmp[1] = 0x0AU;
-      if (ptrSPI->Send(tmp, 1U) != ARM_DRIVER_OK) {             // If SPI transfer failed
-        ret = ARM_DRIVER_ERROR;
-      } else {
-        if (SPI_WaitTransferDone(timeout) == 0U) {              // If SPI transfer timed out
-          ret = ARM_DRIVER_ERROR_TIMEOUT;
-        }
-      }
-    }
-
-    if (ret == ARM_DRIVER_ERROR_TIMEOUT) {                      // If SPI transfer has timed out
-      ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);               // abort the SPI transfer
-    }
-
-    WiFi_ISM43362_Pin_SSN(false);               // Deactivate slave select line
-    if (spi_datardy_irq != 0U) {                // If events are generated by WiFi_ISM43362_Pin_DATARDY_IRQ function
-      // IRQ detects edge so it is not necessary to wait for DATARDY to go to inactive state
-      Wait_us(3U);                              // Wait 3 us
-    } else {
-      // Wait max 1 ms for DATARDY line to go to inactive state signaling end of command
-      wait_cmd = 100U;
-      do {
-        if (WiFi_ISM43362_Pin_DATARDY() == 0U) {
-          break;
-        }
-        Wait_us(10U);                           // Wait 10 us
-        wait_cmd--;
-      } while (wait_cmd > 0U);
+    } else {                                    // If SPI send start failed
+      ret = ARM_DRIVER_ERROR;
     }
   } else {
     ret = ARM_DRIVER_ERROR_TIMEOUT;
   }
 
-  return ret;
-}
-
-/**
-  \fn            int32_t SPI_AT_ReceiveData (uint8_t *data, uint32_t data_len, uint32_t timeout)
-  \brief         Receive data.
-  \param[out]    data     Pointer to memory where data will be received
-  \param[in]     data_len Maximum number of bytes of data that memory is prepared to receive
-  \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
-  \return        number of bytes received or error code
-                   - > 0                          : Number of bytes received
-                   - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_TIMEOUT     : Operation timed out
-*/
-static int32_t SPI_AT_ReceiveData (uint8_t *data, uint32_t data_len, uint32_t timeout) {
-  int32_t  ret;
-  uint32_t total_len, len;
-  int32_t  i;
-
-  if ((data == NULL) && (data_len == 0U)) {     // If data pointer is invalid or data_len is 0
-    return ARM_DRIVER_ERROR;
-  }
-
-  WiFi_ISM43362_Pin_SSN(false);                 // Deactivate slave select line
-  Wait_us(3U);                                  // Wait 3 us
-
-  if (SPI_WaitReady(timeout) != 0U) {           // If SPI is ready
-    ret       = ARM_DRIVER_OK;
-    total_len = 0U;
-
+  // Receive response on SPI
+  if (SPI_WaitReady(timeout) == 1U) {           // If SPI is ready
+    Wait_us(4U);                                // Wait 4 us
     WiFi_ISM43362_Pin_SSN(true);                // Activate slave select line
     Wait_us(15U);                               // Wait 15 us
-
     do {
-      len = data_len;
+      len = len_to_recv;
       if (len > WIFI_ISM43362_SPI_RECEIVE_SIZE) {
         len = WIFI_ISM43362_SPI_RECEIVE_SIZE;
       }
-      if (ptrSPI->Receive(data + total_len, (len + 1U) / 2) == ARM_DRIVER_OK) {
-        if (SPI_WaitTransferDone(timeout) != 0U) {
-          total_len += len;
-          data_len  -= len;
-        } else {                                // If SPI transfer timed out
+      if (ptrSPI->Receive(ptr_recv + len_recv, (len + 1) / 2) == ARM_DRIVER_OK) {
+        // If SPI receive started successfully
+        if (SPI_WaitTransferDone(timeout)) {    // If SPI transfer finished
+          len_to_recv -= len;
+          len_recv    += len;
+        } else {                                // If SPI transfer timed-out
+          ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);
           ret = ARM_DRIVER_ERROR_TIMEOUT;
         }
-      } else {                                  // If SPI transfer failed
+      } else {                                  // If SPI receive start failed
+        ret = ARM_DRIVER_ERROR;
+      }
+    } while ((ret == ARM_DRIVER_OK) && (len_to_recv > 0U) && (WiFi_ISM43362_Pin_DATARDY() != 0U));
+
+    // Sometimes module does not deactivate DATARDY line after all expected data was read-out
+    // so we keep reading dummy data (0x15) untill DATARDY signals chip has finished
+    while (WiFi_ISM43362_Pin_DATARDY() != 0U) {
+      if (ptrSPI->Receive(dummy_buf, sizeof(dummy_buf) / 2) == ARM_DRIVER_OK) {
+        if (SPI_WaitTransferDone(WIFI_ISM43362_CMD_TIMEOUT) == 0U) {
+          ret = ARM_DRIVER_ERROR_TIMEOUT;       // If SPI transfer timed out
+        }
+      } else {                                  // If SPI receive start failed
         ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);
         ret = ARM_DRIVER_ERROR;
       }
-    } while ((ret == ARM_DRIVER_OK) && (data_len > 0U) && (WiFi_ISM43362_Pin_DATARDY()));
+    }
 
+    // If reception ended with DATARDY line inactive we need to remove trailing 0x15 bytes
     if ((ret == ARM_DRIVER_OK) && (WiFi_ISM43362_Pin_DATARDY() == 0U)) {
-      // If reception ended with DATARDY line inactive
-      // correct number of received bytes to reduce the trailing 0x15 bytes
-      for (i = total_len; i > 0; i--) {
-        if (data[i - 1U] != 0x15U) {            // If non 0x15 value from end was found
+      for (i = len_recv; i != 0U; i--) {
+        if (ptr_recv[i-1] != 0x15U) {           // If non 0x15 value from end was found
           break;
         }
       }
-      total_len = i;
+      len_recv = i;                             // Correct number of received bytes without trailing 0x15 bytes
     }
 
+    // If first character in received buffer is 0x15 then this is a not expected situation 
+    // in which module returns no data but only pre-padded 0x15 with terminating "\r\nOK\r\n> "
+    if (ptr_recv[0] == 0x15U) {
+      for (i = 1U; i < len_recv; i++) {
+        if (ptr_recv[i] != 0x15U) {             // If non 0x15 value from begining was found
+          break;
+        }
+      }
+      len_recv -= i;
+      // Copy all data after last leading 0x15 byte to beginning of the buffer
+      for (j = 0U; j < len_recv; j++, i++) {
+        ptr_recv[j] = ptr_recv[i];
+      }
+    }
     WiFi_ISM43362_Pin_SSN(false);               // Deactivate slave select line
     Wait_us(3U);                                // Wait 3 us
   } else {
@@ -560,123 +622,70 @@ static int32_t SPI_AT_ReceiveData (uint8_t *data, uint32_t data_len, uint32_t ti
   }
 
   if (ret == ARM_DRIVER_OK) {
-    ret = total_len;
+    *ptr_recv_len = len_recv;
   }
 
-  return ret;
-}
-
-/**
-  \fn            int32_t SPI_AT_SendCommandReceiveResponse (const char *cmd, uint8_t *resp, uint32_t *resp_len, uint32_t timeout)
-  \brief         Send AT command, receive response and check that response is OK.
-  \param[in]     cmd      Pointer to command null-terminated string
-  \param[out]    resp     Buffer where response will be received
-  \param[in,out] resp_len Pointer to a number
-                   - input: number of bytes that can be received in response
-                   - output: number of bytes actually received in response
-  \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
-  \return        execution status
-                   - ARM_DRIVER_OK                : Command sent successfully
-                   - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_TIMEOUT     : Operation timed out
-*/
-static int32_t SPI_AT_SendCommandReceiveResponse (const char *cmd, uint8_t *resp, uint32_t *resp_len, uint32_t timeout) {
-  int32_t ret, rece_num;
-
-  ret = SPI_AT_SendCommandAndData(cmd, NULL, 0U, timeout);
-  if (ret == ARM_DRIVER_OK) {
-    rece_num = SPI_AT_ReceiveData(resp, *resp_len, timeout);
-    if (rece_num < 0) {
-      ret = rece_num;
-    } else if ((rece_num < 8) || (memcmp((const void *)(resp + rece_num - 8), (const void *)"\r\nOK\r\n> ", 8) != 0)) {
-      ret = ARM_DRIVER_ERROR;
-    } else {
-      resp[rece_num] = 0;               // Terminate response string
-    }
-    *resp_len = rece_num;
-  }
-
-  return ret;
-}
-
-/**
-  \fn            int32_t SPI_AT_SendCommandAndDataReceiveResponse (const char *cmd, const uint8_t *data, uint32_t data_len, uint8_t *resp, uint32_t *resp_len, uint32_t timeout)
-  \brief         Send AT command and data, receive response and check that response is OK.
-  \param[in]     cmd      Pointer to command null-terminated string
-  \param[in]     data     Pointer to data to be sent after command
-  \param[in]     data_len Number of bytes of data to be sent
-  \param[out]    resp     Buffer where response will be received
-  \param[in,     
-         out]    resp_len Pointer to a number
-                   - input: number of bytes that can be received in response
-                   - output: number of bytes actually received in response
-  \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
-  \return        number of data bytes sent or error code
-                   - > 0                          : Number of data bytes sent
-                   - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_TIMEOUT     : Operation timed out
-*/
-static int32_t SPI_AT_SendCommandAndDataReceiveResponse (const char *cmd, const uint8_t *data, uint32_t data_len, uint8_t *resp, uint32_t *resp_len, uint32_t timeout) {
-  int32_t ret, rece_num;
-
-  ret = SPI_AT_SendCommandAndData(cmd, data, data_len, timeout);
-  if (ret == ARM_DRIVER_OK) {
-    rece_num = SPI_AT_ReceiveData(resp, *resp_len, timeout);
-    if (rece_num < 0) {
-      ret = rece_num;
-    } else if ((rece_num < 8) || (memcmp((const void *)(resp + rece_num - 8), (const void *)"\r\nOK\r\n> ", 8) != 0)) {
-      ret = ARM_DRIVER_ERROR;
-    } else {
-      resp[rece_num] = 0;               // Terminate response string
-      // Parse how many data bytes were sent from response
-      if (sscanf((const char *)(resp + 2), "%d", &ret) != 1) {
-        ret = ARM_DRIVER_ERROR;
-      }
-    }
-  }
-
-  return ret;
-}
-
-/**
-  \fn            int32_t SPI_AT_SendCommandReceiveDataAndResponse (const char *cmd, uint8_t *data, uint32_t data_len, uint8_t *resp, uint32_t *resp_len, uint32_t timeout)
-  \brief         Send AT command, receive data and response and check that response is OK.
-  \param[in]     cmd      Pointer to command null-terminated string
-  \param[in]     data     Pointer to memory where data will be received
-  \param[in]     data_len Maximum number of bytes of data that memory is prepared to receive
-  \param[out]    resp     Buffer where response will be received
-  \param[in,     
-         out]    resp_len Pointer to a number
-                   - input: number of bytes that can be received in response
-                   - output: number of bytes actually received in response
-  \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
-  \return        number of bytes received or error code
-                   - > 0                          : Number of bytes received
-                   - ARM_DRIVER_ERROR             : Operation failed
-                   - ARM_DRIVER_ERROR_TIMEOUT     : Operation timed out
-*/
-static int32_t SPI_AT_SendCommandReceiveDataAndResponse (const char *cmd, uint8_t *data, uint32_t data_len, uint8_t *resp, uint32_t *resp_len, uint32_t timeout) {
-  int32_t ret, rece_num;
-
-  ret = SPI_AT_SendCommandAndData(cmd, NULL, 0U, timeout);
-  if (ret == ARM_DRIVER_OK) {
-    rece_num = SPI_AT_ReceiveData(resp, *resp_len, timeout);
-    if (rece_num < 0) {
-      ret = rece_num;
-    } else if ((rece_num < 10) || (memcmp((const void *)(resp + rece_num - 8), (const void *)"\r\nOK\r\n> ", 8) != 0)) {
-      ret = ARM_DRIVER_ERROR;
-    } else {
-      resp[rece_num] = 0;               // Terminate response string
-      // Data was read successfully
-      if (data_len >= (rece_num - 10)) {
-        memcpy(data, resp + 2, rece_num - 10);
-        ret = rece_num - 10;
+  // Parse response
+  if (ptr_resp_code != NULL) {
+    if (*ptr_recv_len > 4) {
+      if (memcmp((const void *)&ptr_recv[len_recv-8U], (const void *)"\r\nOK\r\n> ", 8) == 0) {
+        *ptr_resp_code = 0;                     // OK
       } else {
-        memcpy(data, resp + 2, data_len);
-        ret = data_len;
+        for (i = 0U; i < (len_recv - 1U); i++) {
+          if (ptr_recv[i] == '\r') {
+            if (ptr_recv[i+1] == '\n') {
+              break;
+            }
+          }
+        }
+        if (i != (len_recv - 1U)) {
+          // "\r\n" was found before end extract error code
+          if (sscanf((const char *)&ptr_recv[i], "%d", ptr_resp_code) != 1) {
+            // Error but we did not extract error code we force value -2
+            *ptr_resp_code = -2;                // Error
+          }
+        } else {
+          *ptr_resp_code = -2;                  // Error
+        }
       }
     }
   }
+
+#if (WIFI_ISM43362_DEBUG_EVR == 1)
+  if (ret == ARM_DRIVER_OK) {
+    // Prepare debug data that was sent
+    dbg_len = send_len;
+    if (dbg_len >= (EVR_DEBUG_SPI_MAX_LEN / 2)) {
+      dbg_len = (EVR_DEBUG_SPI_MAX_LEN / 2) - 1U;
+    }
+    dbg_tot_len = 0U;
+    memcpy(&dbg_spi[dbg_tot_len], "Sent[",   5);       dbg_tot_len += 5U;
+    memcpy(&dbg_spi[dbg_tot_len], ptr_send,  dbg_len); dbg_tot_len += dbg_len;
+    memcpy(&dbg_spi[dbg_tot_len], "],Recv[", 7);       dbg_tot_len += 7U;
+
+    dbg_len = *ptr_recv_len;
+    if (dbg_len >= (EVR_DEBUG_SPI_MAX_LEN / 2)) {
+      dbg_len = (EVR_DEBUG_SPI_MAX_LEN / 2) - 1U;
+    }
+    memcpy(&dbg_spi[dbg_tot_len], ptr_recv,  dbg_len); dbg_tot_len += dbg_len;
+    if (ptr_resp_code != NULL) {
+      memcpy(&dbg_spi[dbg_tot_len], "],Resp[", 7);     dbg_tot_len += 7U;
+      dbg_tot_len += (uint32_t)snprintf((char *)&dbg_spi[dbg_tot_len], 11U, "%i]", *ptr_resp_code);
+    } else {
+      dbg_spi[dbg_tot_len] = ']';                      dbg_tot_len += 1U;
+    }
+
+    time_in_ms = (osKernelGetSysTimerCount() - ticks) / (osKernelGetSysTimerFreq() / 1000);
+    dbg_tot_len += (uint32_t)snprintf((char *)&dbg_spi[dbg_tot_len], 28U, " [spi recv=%i,%ims]", len_recv, time_in_ms);
+
+    dbg_tot_len++;
+    dbg_spi[dbg_tot_len] = 0;   // Terminate string just in case
+
+    EventRecordData(EVR_SPI_DETAIL, dbg_spi, dbg_tot_len);
+  } else {
+    EventRecord2(EVR_SPI_ERROR, (uint32_t)ret, 0U);
+  }
+#endif
 
   return ret;
 }
@@ -690,69 +699,103 @@ static int32_t SPI_AT_SendCommandReceiveDataAndResponse (const char *cmd, uint8_
   \param[in]     local_port   Local port number
   \param[in]     remote_ip    Pointer to remote IP4 address
   \param[in]     remote_port  Remote port number
-  \param[in]     start        Start/stop request (0 = stop, 1 = start)
+  \param[in]     start        Start/stop request (0 = stop, 1 = start, 2 = restart (only server))
   \param[in]     server       Server/client (0 = client, 1 = server)
   \return        status information
                    - 0                            : Operation successful
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t SPI_StartStopTransportServerClient (int32_t socket, uint8_t protocol, uint16_t local_port, const uint8_t *remote_ip, uint16_t remote_port, uint8_t start, uint8_t server) {
-  int32_t  ret;
-  uint32_t resp_len;
+  int32_t  ret, spi_ret;
 
   ret = 0;
 
   // Set communication socket number
-  snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", socket); resp_len = sizeof(resp_buf) - 1U;
-  if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+  snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+  spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+  if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
     ret = ARM_SOCKET_ERROR;
   }
 
-  // Select transport protocol
-  if (ret == 0) {
-    memcpy((void *)cmd_buf, (void *)"P1=1\r", 6);
+  if ((ret == 0) && (start == TRANSPORT_START)) {
+    // Select transport protocol
+    memcpy((void *)spi_send_buf, (void *)"P1=1\r\n", 6); spi_recv_len = sizeof(spi_recv_buf);
     if (protocol == ARM_SOCKET_IPPROTO_TCP) {
-      cmd_buf[3] = '0';
+      spi_send_buf[3] = '0';
     }
-    resp_len = sizeof(resp_buf) - 1U;
-    if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+    spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
       ret = ARM_SOCKET_ERROR;
     }
-  }
 
-  if ((ret == 0) && (start != 0U)) {
     if (server != 0U) {
       // Set transport local port number
-      snprintf(cmd_buf, sizeof(cmd_buf), "P2=%d\r", local_port); resp_len = sizeof(resp_buf) - 1U;
-      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P2=%d\r", local_port); spi_recv_len = sizeof(spi_recv_buf);
+      spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
       }
     } else {
       // Set transport remote host IP address
-      snprintf(cmd_buf, sizeof(cmd_buf), "P3=%d.%d.%d.%d\r", remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]); resp_len = sizeof(resp_buf) - 1U;
-      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P3=%d.%d.%d.%d\r", remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]); spi_recv_len = sizeof(spi_recv_buf);
+      spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
       }
       // Set transport remote port number
-      snprintf(cmd_buf, sizeof(cmd_buf), "P4=%d\r", remote_port); resp_len = sizeof(resp_buf) - 1U;
-      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P4=%d\r", remote_port); spi_recv_len = sizeof(spi_recv_buf);
+      spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
       }
+    }
+    // Set read transport packet size
+    snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "R1=%d\r", MAX_DATA_SIZE); spi_recv_len = sizeof(spi_recv_buf);
+    spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
+      ret = ARM_SOCKET_ERROR;
+    }
+    // Set read transport timeout
+    memcpy((void *)spi_send_buf, (void *)"R2=1\r\n", 6); spi_recv_len = sizeof(spi_recv_buf);
+    spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
+      ret = ARM_SOCKET_ERROR;
     }
   }
 
   // Server/Client Start/Stop
   if (ret == 0) {
     if (server != 0U) {
-      memcpy((void *)cmd_buf, (void *)"P5=0\r", 6);
+      if (protocol == ARM_SOCKET_IPPROTO_TCP) {
+        switch (start) {
+          case TRANSPORT_START:           // Start multi-accept server
+            memcpy((void *)spi_send_buf, (void *)"P5=11\r",  6);
+            break;
+          case TRANSPORT_STOP:            // Stop server
+            memcpy((void *)spi_send_buf, (void *)"P5=0\r\n", 6);
+            break;
+          case TRANSPORT_RESTART:         // Close and wait for next connection on multi-accept server
+            memcpy((void *)spi_send_buf, (void *)"P5=10\r",  6);
+            break;
+          default:
+            memcpy((void *)spi_send_buf, (void *)"P5=0\r\n", 6);
+            break;
+        }
+      } else {
+        memcpy((void *)spi_send_buf, (void *)"P5=0\r\n", 6);
+        if (start == TRANSPORT_START) {
+          spi_send_buf[3] = '1';
+        }
+      }
     } else {
-      memcpy((void *)cmd_buf, (void *)"P6=0\r", 6);
+      memcpy((void *)spi_send_buf, (void *)"P6=0\r\n", 6);
+      if (start == TRANSPORT_START) {
+        spi_send_buf[3] = '1';
+      }
     }
-    if (start != 0U) {
-      cmd_buf[3] = '1';
-    }
-    resp_len = sizeof(resp_buf) - 1U;
-    if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+    spi_recv_len = sizeof(spi_recv_buf);
+    spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
       ret = ARM_SOCKET_ERROR;
     }
   }
@@ -766,14 +809,19 @@ static int32_t SPI_StartStopTransportServerClient (int32_t socket, uint8_t proto
   \return        none
 */
 __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
-  uint8_t *ptr_resp_buf;
-  uint32_t event_accept, event_recv;
-  uint32_t resp_len, len_req;
-  int32_t  len_read;
-  uint8_t  u8_arr[6];
-  uint8_t  poll_async, poll_recv, repeat, event_signal;
-  uint16_t u16_val;
-  int8_t   i, hw_socket;
+  const uint8_t *ptr_resp_buf;
+        uint32_t event_socket[WIFI_ISM43362_SOCKETS_NUM];
+        uint32_t ticks, time_in_ms;
+        int32_t  spi_ret;
+        uint8_t  u8_arr[6];
+        uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
+        uint8_t  async_prescaler;
+        uint16_t u16_val;
+        uint8_t  i, hw_socket;
+
+  (void)arg;
+
+  async_prescaler = 1U;
 
   for (;;) {
     if ((osEventFlagsWait(event_flags_id, EVENT_ASYNC_POLL, osFlagsWaitAny, osWaitForever) & EVENT_ASYNC_POLL) == EVENT_ASYNC_POLL) {
@@ -783,13 +831,21 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         }
 
         // Check if thread should poll for asynchronous messages or receive in long blocking
-        poll_async = 0U;
-        poll_recv  = 0U;
+        poll_async  = 0U;
+        poll_recv   = 0U;
+        check_async = 0U;
         for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
-          if  (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
+          if (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
             poll_async = 1U;
+            if (async_prescaler > 0U) {
+              async_prescaler --;
+              if (async_prescaler == 0U) {
+                async_prescaler = 16U;
+                check_async     = 1U;
+              }
+            }
           }
-          if ((socket_arr[i].data_to_recv != NULL) && (socket_arr[i].recv_time_left != 0U)){
+          if (socket_arr[i].poll_recv != 0U){
             poll_recv = 1U;
           }
         }
@@ -797,19 +853,21 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
           poll_async = 1U;
         }
 
+        repeat = 0U;
+
         if ((poll_async != 0U) || (poll_recv != 0U)) {
           event_signal = 0U;
-          event_accept = 0U;
-          event_recv   = 0U;
+          memset(event_socket, 0, sizeof(event_socket));
 
           if (osMutexAcquire(mutex_id_sockets, WIFI_ISM43362_ASYNC_INTERVAL) == osOK) { // Lock socket variables
             if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {      // Lock access to SPI interface (acquire mutex)
-              if (poll_async != 0U) {
+              if (check_async != 0U) {
                 // Send command to read asynchronous message
-                memcpy((void *)cmd_buf, (void *)"MR\r", 4); resp_len = sizeof(resp_buf) - 1U;
-                if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+                memcpy((void *)spi_send_buf, (void *)"MR\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+                spi_ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+                if (spi_ret == ARM_DRIVER_OK) {
                   // If message is asynchronous Accept
-                  ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Accepted ");
+                  ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "Accepted ");
                   if (ptr_resp_buf != NULL) {
                     // If message contains "Accepted " string, parse it and extract ip and port
                     ptr_resp_buf += 9U;
@@ -818,7 +876,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       // IP and port read from response correctly
                       // Find which socket is listening on accepted port
                       for (i = 0; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-                        if (socket_arr[i].local_port == u16_val) {
+                        if (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
                           socket_arr[i].remote_ip[0] = u8_arr[0];
                           socket_arr[i].remote_ip[1] = u8_arr[1];
                           socket_arr[i].remote_ip[2] = u8_arr[2];
@@ -826,13 +884,15 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
 
                           // Read remote port by P? command as it is not available in asynchronous response
                           // Select socket
-                          snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", i); resp_len = sizeof(resp_buf) - 1U;
-                          if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+                          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", i); spi_recv_len = sizeof(spi_recv_buf);
+                          spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+                          if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
                             // Show Transport Settings
-                            memcpy((void *)cmd_buf, (void *)"P?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-                            if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+                            memcpy((void *)spi_send_buf, (void *)"P?\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+                            spi_ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+                            if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
                               // Skip protocol, client IP, local port and host IP (4 ',') from response
-                              ptr_resp_buf = SkipCommas(resp_buf, 4U);
+                              ptr_resp_buf = SkipCommas(spi_recv_buf, 4U);
                               if (ptr_resp_buf != NULL) {
                                 sscanf((const char *)ptr_resp_buf, "%hu", &socket_arr[i].remote_port);
                               }
@@ -843,13 +903,13 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       }
                       if (i != WIFI_ISM43362_SOCKETS_NUM) {
                         // Socket 'i' has accepted connection
-                        event_accept |= 1U << i;
+                        event_socket[i] |= EVENT_SOCK_ACCEPTED;
                       }
                     }
                   }
 
                   // If message is asynchronous Assign
-                  ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Assigned ");
+                  ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "Assigned ");
                   if (ptr_resp_buf != NULL) {
                     if (ptr_resp_buf != NULL) {
                       // If message contains "Assigned " string, parse it and extract MAC
@@ -858,7 +918,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       if (sscanf((const char *)ptr_resp_buf, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3], &u8_arr[4], &u8_arr[5]) == 6) {
                         // Check if MAC already exists in mac_ip4 array, if it does ignore it, otherwise add it to array
                         for (i = 0; i < 8; i++) {
-                          if (memcmp((void *)&ap_mac[i][0], (void *)u8_arr, 6) == 0) {
+                          if (memcmp((const void *)&ap_mac[i][0], (const void *)u8_arr, 6) == 0) {
                             break;
                           }
                         }
@@ -880,40 +940,71 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                   if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
                     hw_socket -= WIFI_ISM43362_SOCKETS_NUM;     // Actually used socket of module
                   }
-                  if ((socket_arr[i].data_to_recv != NULL) && (socket_arr[i].len_to_recv != 0U) && (socket_arr[i].recv_time_left != 0U)) {
-                    // Send command to read data from remote client if socket is using receive in long blocking
-                    snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-                    if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
-                      len_req = socket_arr[i].len_to_recv;
-                      if (len_req > 1200U) {
-                        len_req = 1200U;
-                      }
-                      // Set read data packet size
-                      snprintf(cmd_buf, sizeof(cmd_buf), "R1=%04d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
-                      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
-                        // Receive data
-                        memcpy((void *)cmd_buf, (void *)"R0\r", 3); resp_len = sizeof(resp_buf) - 1U;
-                        len_read = SPI_AT_SendCommandReceiveDataAndResponse(cmd_buf, (uint8_t *)socket_arr[i].data_to_recv + socket_arr[i].len_recv, len_req, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-                        if (len_read == 0) {            // No data was read
-                          if (socket_arr[i].recv_time_left != 0xFFFFFFFFU) {    // If long blocking (not infinite)
-                            if (socket_arr[i].recv_time_left >= WIFI_ISM43362_ASYNC_INTERVAL) {
-                              // Decrement time left to timeout
-                              socket_arr[i].recv_time_left -= WIFI_ISM43362_ASYNC_INTERVAL;
-                            }
-                          }
-                        } else {
+                  if (socket_arr[i].poll_recv != 0U) {
+                    if (recv_len[hw_socket] != 0U) {
+                      // If there is data that was already received but did not fit into 
+                      // the buffer, try to fit it now
+                      if (WiFi_ISM43362_BufferPut (hw_socket, &recv_buf[hw_socket][0], recv_len[hw_socket]) == true) {
+                        recv_len[hw_socket] = 0U;
+                        if (socket_arr[i].recv_time_left != 0U) {
+                          event_socket[hw_socket] |= EVENT_SOCK_RECV;
                           socket_arr[i].recv_time_left = 0U;
-                          if (len_read > 0) {      // Some data was read
-                            socket_arr[i].len_recv = len_read;
-                            event_recv |= (1U << i);
-                          } else {                      // If there was error during reception
-                            if ((len_read == ARM_DRIVER_ERROR) && (memcmp(resp_buf + 2, "-1", 2) == 0)) {
-                              // "-1" : Connection lost
-                              event_recv |= ((1U << 8) << i);
-                            } else if (len_read == ARM_DRIVER_ERROR_TIMEOUT) {
-                              event_recv |= (1U << i);
+                        }
+                      }
+                    } else {
+                      // Send command to read data from remote client if socket is using receive in long blocking
+                      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", hw_socket); spi_recv_len = sizeof(spi_recv_buf);
+                      spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+                      if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
+                        // Receive data
+                        memcpy((void *)spi_send_buf, (void *)"R0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+                        spi_ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+                        if (spi_ret == ARM_DRIVER_OK) {
+                          if (resp_code == 0) {                 // If response code is OK
+                            if (spi_recv_len <= 10U) {          // No data was received
+                              if ((socket_arr[i].recv_time_left != 0U) &&           // If recv was called
+                                  (socket_arr[i].recv_time_left != 0xFFFFFFFFU)) {  // If not infinite, check for timeout or lost connection
+                                ticks = osKernelGetTickCount () - socket_arr[i].start_tick_count;
+                                if (kernel_tick_freq_in_ms == 1U) {
+                                  time_in_ms = ticks;
+                                } else if (kernel_tick_freq_shift_to_ms != 0U) {
+                                  time_in_ms = ticks >> kernel_tick_freq_shift_to_ms;
+                                } else {
+                                  time_in_ms = ticks / kernel_tick_freq_in_ms;
+                                }
+                                if (time_in_ms >= socket_arr[i].recv_time_left) {
+                                  socket_arr[i].recv_time_left = 0U;
+                                  event_socket[hw_socket] |= EVENT_SOCK_RECV_TIMEOUT;
+                                }
+                              }
+                            } else {                            // Some data was received
+                              // In response first 2 bytes are "\r\n", so these need to be skipped
+                              recv_len[hw_socket] = spi_recv_len - 10U;
+                              if (WiFi_ISM43362_BufferPut (hw_socket, &spi_recv_buf[2], spi_recv_len - 10U) == true) {
+                                recv_len[hw_socket] = 0U;
+                                if (socket_arr[i].recv_time_left != 0U) {
+                                  socket_arr[i].recv_time_left = 0U;
+                                  event_socket[hw_socket] |= EVENT_SOCK_RECV;
+                                }
+                                repeat = 1U;
+                              } else {
+                                // If data did not fit into buffer, keep it in intermediate buffer
+                                memcpy((void *)&recv_buf[hw_socket][2], (const void *)spi_recv_buf, spi_recv_len - 10U);
+                              }
                             }
+                          } else if (resp_code == -1) {         // If response code is -1, connection was lost
+                            socket_arr[i].poll_recv = 0U;
+                            socket_arr[i].recv_time_left = 0U;
+                            event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
+                          } else {                              // If unknown error happened
+                            socket_arr[i].poll_recv = 0U;
+                            socket_arr[i].recv_time_left = 0U;
+                            event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
                           }
+                        } else {                                // If error on SPI happened
+                          socket_arr[i].poll_recv = 0U;
+                          socket_arr[i].recv_time_left = 0U;
+                          event_socket[hw_socket] |= EVENT_SOCK_RECV_DISCON_REMOTE;
                         }
                       }
                     }
@@ -928,18 +1019,18 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
           if ((event_signal != 0U) && (signal_event_fn != NULL)) {
             signal_event_fn(ARM_WIFI_EVENT_AP_CONNECT, (void *)&ap_mac[ap_num_connected-1][0]);
           }
-          if (event_accept != 0U) {
-            osEventFlagsSet(event_flags_sockets_id, event_accept);
-          }
-          if (event_recv != 0U) {
-            osEventFlagsSet(event_flags_sockets_id, event_recv);
+          for (i = 0; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
+            if (event_socket[i] != 0U) {
+              osEventFlagsSet(event_flags_sockets_id[i], event_socket[i]);
+            }
           }
         }
 
         // Wait async interval unless new event was signaled to process
-        repeat = 0U;
-        if ((osEventFlagsWait(event_flags_id, EVENT_ASYNC_POLL, osFlagsWaitAny, WIFI_ISM43362_ASYNC_INTERVAL) & (0x80000000U | EVENT_ASYNC_POLL)) == EVENT_ASYNC_POLL) {
-          repeat = 1U;
+        if (repeat == 0U) {
+          if ((osEventFlagsWait(event_flags_id, EVENT_ASYNC_POLL, osFlagsWaitAny, WIFI_ISM43362_ASYNC_INTERVAL) & (0x80000000U | EVENT_ASYNC_POLL)) == EVENT_ASYNC_POLL) {
+            repeat = 1U;
+          }
         }
       } while ((poll_async != 0U) || (poll_recv != 0U) || (repeat != 0U));
     }
@@ -973,6 +1064,7 @@ static ARM_WIFI_CAPABILITIES WiFi_GetCapabilities (void) { return driver_capabil
 static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
   int32_t  ret;
   uint32_t timeout, flags;
+  uint8_t  i;
 
   signal_event_fn = cb_event;           // Update pointer to callback function
 
@@ -988,13 +1080,19 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
   mutex_id_spi           = osMutexNew(&mutex_spi_attr);
   mutex_id_sockets       = osMutexNew(&mutex_socket_attr);
   event_flags_id         = osEventFlagsNew(NULL);
-  event_flags_sockets_id = osEventFlagsNew(NULL);
-  if ((mutex_id_spi           == NULL) || 
-      (mutex_id_sockets       == NULL) || 
-      (event_flags_id         == NULL) || 
-      (event_flags_sockets_id == NULL)) {
-    // If any of mutex or flag creation failed
+  if ((mutex_id_spi      == NULL) || 
+      (mutex_id_sockets  == NULL) || 
+      (event_flags_id    == NULL)) { 
+    // If any of mutex creation has failed
     ret = ARM_DRIVER_ERROR;
+  }
+  for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
+    event_flags_sockets_id[i] = osEventFlagsNew(NULL);
+    if (event_flags_sockets_id[i] == NULL) {
+      // If flag creation has failed
+      ret = ARM_DRIVER_ERROR;
+      break;
+    }
   }
 
   // Initialize additional pins (Reset, Slave Select, Data Ready)
@@ -1011,21 +1109,54 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
     ret = ptrSPI->Control     (ARM_SPI_SET_DEFAULT_TX_VALUE, 0x0A0AU);
   }
   if (ret == ARM_DRIVER_OK) {
-    ret = ptrSPI->Control     (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0 | ARM_SPI_DATA_BITS(16), 10000000U);
+    ret = ptrSPI->Control     (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0 | ARM_SPI_DATA_BITS(16), WIFI_ISM43362_SPI_BUS_SPEED);
   }
 
   if (ret == ARM_DRIVER_OK) {
-    // Reset WiFi Module
-    WiFi_ISM43362_Pin_RSTN(true);
-    osDelay(50U);
-    WiFi_ISM43362_Pin_RSTN(false);
-    osDelay(100U);
-
-    // Wait for initial SPI ready and detect if user IRQ is provided for SPI ready detection
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-      // Initial SPI ready wait and determine if SPI ready is signaled by IRQ
-      WiFi_ISM43362_Pin_SSN(false);
-      Wait_us(4U);
+
+      if (module_initialized == 0U) {
+
+        // Reset WiFi Module
+        WiFi_ISM43362_Pin_RSTN(true);
+        osDelay(50U);
+        WiFi_ISM43362_Pin_RSTN(false);
+        osDelay(100U);
+
+        // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
+        // Do a read independent of return data
+        WiFi_ISM43362_Pin_SSN(true);
+        Wait_us(15U);
+        memset((void *)spi_recv_buf, 0x55, sizeof(spi_recv_buf));
+        if (ptrSPI->Receive(spi_recv_buf, 3U) == ARM_DRIVER_OK) {
+          if (!SPI_WaitTransferDone(1000U)) {
+            ret = ARM_DRIVER_ERROR;       // If transfer timed out
+          }
+        }
+        WiFi_ISM43362_Pin_SSN(false);
+        Wait_us(3U);
+
+        module_initialized = 1U;
+      }
+
+      // Do a dummy SPI communication so we can determine if event is used for DATARDY state change
+      memcpy((void *)spi_send_buf, (void *)"Z?\r\n", 4);
+      WiFi_ISM43362_Pin_SSN(true);              // Activate slave select line
+      Wait_us(15U);                             // Wait 15 us
+      if (ptrSPI->Send(spi_send_buf, 2U) == ARM_DRIVER_OK) {
+        // If SPI send started successfully
+        if (SPI_WaitTransferDone(100U)) {       // If SPI transfer finished
+          WiFi_ISM43362_Pin_SSN(false);         // Deactivate slave select line
+          Wait_us(3U);                          // Wait 3 us
+        } else {                                // If SPI transfer timed-out
+          ptrSPI->Control(ARM_SPI_ABORT_TRANSFER, 0);
+          ret = ARM_DRIVER_ERROR_TIMEOUT;
+        }
+      } else {                                  // If SPI send start failed
+        ret = ARM_DRIVER_ERROR;
+      }
+
+      // Determine if SPI ready is signaled by IRQ
       for (timeout = WIFI_ISM43362_SPI_TIMEOUT; timeout != 0U; timeout --) {
         if (WiFi_ISM43362_Pin_DATARDY()) {
           flags = osEventFlagsWait(event_flags_id, EVENT_SPI_READY, osFlagsWaitAll, 10U);
@@ -1040,20 +1171,12 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         ret = ARM_DRIVER_ERROR;
       }
 
-      // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
-      if (ret == ARM_DRIVER_OK) {
-        WiFi_ISM43362_Pin_SSN(true);
-        Wait_us(15U);
-        memset((void *)resp_buf, 0, sizeof(resp_buf));
-        if (ptrSPI->Receive(resp_buf, 3U) == ARM_DRIVER_OK) {
-          if (SPI_WaitTransferDone(1000U)) {
-            if (memcmp(resp_buf, "\x15\x15\r\n> ", 6) != 0) {
-              // If initial cursor is not as expected
-              ret = ARM_DRIVER_ERROR;
-            }
-          } else {                      // If transfer timed out
-            ret = ARM_DRIVER_ERROR;
-          }
+      // Receive data requested by 'Z?' command
+      WiFi_ISM43362_Pin_SSN(true);
+      Wait_us(15U);
+      if (ptrSPI->Receive(spi_recv_buf, 64U)  == ARM_DRIVER_OK) {
+        if (!SPI_WaitTransferDone(1000U)) {
+          ret = ARM_DRIVER_ERROR;       // If transfer timed out
         }
       }
       WiFi_ISM43362_Pin_SSN(false);
@@ -1092,7 +1215,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
                    - ARM_DRIVER_ERROR             : Operation failed
 */
 static int32_t WiFi_Uninitialize (void) {
-  int32_t ret;
+  int32_t ret, ret_sc;
   uint8_t i;
 
   if (driver_initialized == 0U) {       // If driver is already uninitialized
@@ -1103,11 +1226,13 @@ static int32_t WiFi_Uninitialize (void) {
 
   // Close all open sockets
   for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-    if (WiFi_SocketClose(i + WIFI_ISM43362_SOCKETS_NUM) != 0) {
+    ret_sc = WiFi_SocketClose(i + WIFI_ISM43362_SOCKETS_NUM);
+    if ((ret_sc != 0) && (ret_sc != ARM_SOCKET_ESOCK)) {
       ret = ARM_DRIVER_ERROR;
       break;
     }
-    if (WiFi_SocketClose(i) != 0) {
+    ret_sc = WiFi_SocketClose(i);
+    if ((ret_sc != 0) && (ret_sc != ARM_SOCKET_ESOCK)) {
       ret = ARM_DRIVER_ERROR;
       break;
     }
@@ -1119,9 +1244,12 @@ static int32_t WiFi_Uninitialize (void) {
       thread_id_async_poll = NULL;
     }
   }
-  if (event_flags_sockets_id != NULL) {
-    if (osEventFlagsDelete(event_flags_sockets_id) == osOK) {
-      event_flags_sockets_id = NULL;
+  for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
+    if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
+      event_flags_sockets_id[i] = NULL;
+    } else {
+      ret = ARM_DRIVER_ERROR;
+      break;
     }
   }
   if (event_flags_id != NULL) {
@@ -1142,7 +1270,6 @@ static int32_t WiFi_Uninitialize (void) {
 
   if ((ret == ARM_DRIVER_OK)           &&
      ((thread_id_async_poll   != NULL) ||
-      (event_flags_sockets_id != NULL) ||
       (event_flags_id         != NULL) ||
       (mutex_id_sockets       != NULL) ||
       (mutex_id_spi           != NULL))){
@@ -1176,7 +1303,6 @@ static int32_t WiFi_Uninitialize (void) {
 */
 static int32_t WiFi_PowerControl (ARM_POWER_STATE state) {
   int32_t  ret;
-  uint32_t resp_len;
 
   if (driver_initialized == 0U) {
     return ARM_DRIVER_ERROR;
@@ -1193,27 +1319,32 @@ static int32_t WiFi_PowerControl (ARM_POWER_STATE state) {
 
       case ARM_POWER_LOW:
         if ((sta_lp_time != 0U) && (oper_mode == OPER_MODE_STATION)) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "ZP=6,%d\r", sta_lp_time);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "ZP=6,%d\r", sta_lp_time);
         } else if (ap_beacon_interval != 0U) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "ZP=2,%d\r", ap_beacon_interval);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "ZP=2,%d\r", ap_beacon_interval);
         } else {
-          memcpy((void *)cmd_buf, (void *)"ZP=1,1\r", 8);
+          memcpy((void *)spi_send_buf, (void *)"ZP=1,1\r\n", 9);
         }
         break;
 
       case ARM_POWER_FULL:
-        memcpy((void *)cmd_buf, (void *)"ZP=1,0\r", 8);
+        memcpy((void *)spi_send_buf, (void *)"ZP=1,0\r\n", 9);
         break;
 
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
       default:
         ret = ARM_DRIVER_ERROR_PARAMETER;
         break;
+#endif
     }
 
     // Execute command and receive response
     if (ret == ARM_DRIVER_OK) {
-      resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+      spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+        ret = ARM_DRIVER_ERROR;
+      }
     }
     osMutexRelease(mutex_id_spi);
   } else {
@@ -1236,7 +1367,7 @@ static int32_t WiFi_PowerControl (ARM_POWER_STATE state) {
 */
 static int32_t WiFi_GetModuleInfo (char *module_info, uint32_t max_len) {
   int32_t  ret;
-  uint32_t resp_len, copy_len;
+  uint32_t copy_len;
 
   if ((module_info == NULL) || (max_len == 0U)) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -1246,21 +1377,27 @@ static int32_t WiFi_GetModuleInfo (char *module_info, uint32_t max_len) {
   }
 
   // Show Applications Information
-  memcpy((void *)cmd_buf, (void *)"I?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-  ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-  if (ret == ARM_DRIVER_OK) {
-    if (resp_len > 10U) {
-      // Remove starting "\r\n" and trailing "\r\nOK\r\n> "
-      resp_len -= 10U;
+  // Correct response looks like: "\r\nMODULE INFO\r\nOK\r\n> "
+  if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
+    memcpy((void *)spi_send_buf, "I?\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+    ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if (ret == ARM_DRIVER_OK) {
+      if ((resp_code == 0U) && (spi_recv_len > 10U)) {
+        copy_len = spi_recv_len - 10U;
+        if (copy_len >= max_len) {
+          copy_len = max_len - 1U;
+        }
+        if (copy_len > 0) {
+          memcpy ((void *)module_info, (void *)&spi_recv_buf[2], copy_len);
+        }
+        module_info[copy_len+1] = 0;
+      } else {
+        ret = ARM_DRIVER_ERROR;
+      }
     }
-    copy_len = resp_len + 1U;
-    if (copy_len > max_len) {
-      copy_len = max_len;
-    }
-    if (copy_len >= 1) {
-      memcpy ((void *)module_info, (void *)(resp_buf + 2U), copy_len - 1U);
-    }
-    module_info[copy_len] = 0;
+    osMutexRelease(mutex_id_spi);
+  } else {
+    ret = ARM_DRIVER_ERROR;
   }
 
   return ret;
@@ -1282,7 +1419,6 @@ static int32_t WiFi_GetModuleInfo (char *module_info, uint32_t max_len) {
 static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *data, uint32_t len) {
         int32_t  ret;
   const uint8_t *ptr_u8_data;
-        uint32_t resp_len;
         uint32_t u32;
         uint8_t  exec_cmd;
 
@@ -1295,12 +1431,12 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
   ret = ARM_DRIVER_OK;
   exec_cmd = 1U;
-  ptr_u8_data = (uint8_t *)data;
+  ptr_u8_data = (const uint8_t *)data;
 
   switch (option) {
     case ARM_WIFI_LP_TIMER:                 // Station    Set low-power deep-sleep time;              data = &time,     len =  4, uint32_t [seconds]: 0 = disable (default)
       if (interface == 0U) {
-        u32 = *((uint32_t *)data);
+        u32 = *((const uint32_t *)data);
         if (u32 <= 3600000U) {
           sta_lp_time = u32;
         } else {
@@ -1314,7 +1450,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_BEACON:                   //         AP Set beacon interval;                        data = &interval, len =  4, uint32_t [ms]
       if (interface == 1U) {
-        u32 = *((uint32_t *)data);
+        u32 = *((const uint32_t *)data);
         if ((u32 >= 1000U) && (u32 <= 60000U)) {
           // Convert to seconds
           ap_beacon_interval = (uint8_t)(u32 / 1000);
@@ -1329,20 +1465,22 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_MAC:                      // Station/AP Set MAC;                                    data = &mac,      len =  6, uint8_t[6]
       if (len >= 6U) {
-        snprintf(cmd_buf, sizeof(cmd_buf), "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "Z4=%02X:%02X:%02X:%02X:%02X:%02X\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3], ptr_u8_data[4], ptr_u8_data[5]);
+      } else {
+        ret = ARM_DRIVER_ERROR_PARAMETER;
       }
       break;
 
     case ARM_WIFI_IP:                       // Station/AP Set IPv4 static/assigned address;           data = &ip,       len =  4, uint8_t[4]
-      snprintf(cmd_buf, sizeof(cmd_buf), "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C6=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       if (interface == 1U) {
-        cmd_buf[0] = 'Z';
+        spi_send_buf[0] = 'Z';
       }
       break;
 
     case ARM_WIFI_IP_SUBNET_MASK:           // Station/AP Set IPv4 subnet mask;                       data = &mask,     len =  4, uint8_t[4]
       if (interface == 0U) {
-        snprintf(cmd_buf, sizeof(cmd_buf), "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C7=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       } else {
         // Not supported for AP interface
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1351,7 +1489,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_IP_GATEWAY:               // Station/AP Set IPv4 gateway address;                   data = &ip,       len =  4, uint8_t[4]
       if (interface == 0U) {
-        snprintf(cmd_buf, sizeof(cmd_buf), "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C8=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       } else {
         // Not supported for AP interface
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1360,7 +1498,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_IP_DNS1:                  // Station/AP Set IPv4 primary   DNS address;             data = &ip,       len =  4, uint8_t[4]
       if (interface == 0U) {
-        snprintf(cmd_buf, sizeof(cmd_buf), "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C9=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       } else {
         // Not supported for AP interface
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1369,7 +1507,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_IP_DNS2:                  // Station/AP Set IPv4 secondary DNS address;             data = &ip,       len =  4, uint8_t[4]
       if (interface == 0U) {
-        snprintf(cmd_buf, sizeof(cmd_buf), "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "CA=%d.%d.%d.%d\r", ptr_u8_data[0], ptr_u8_data[1], ptr_u8_data[2], ptr_u8_data[3]);
       } else {
         // Not supported for AP interface
         ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1377,14 +1515,14 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
       break;
 
     case ARM_WIFI_IP_DHCP:                  // Station/AP Set IPv4 DHCP client/server enable/disable; data = &dhcp,     len =  4, uint32_t: 0 = disable, non-zero = enable (default)
-      u32 = *((uint32_t *)data);
+      u32 = *((const uint32_t *)data);
       if (interface == 0U) {
-        memcpy((void *)cmd_buf, (void *)"C4=0\r", 6);
+        memcpy((void *)spi_send_buf, "C4=0\r\n", 7);
         if (u32 != 0U) {
-          cmd_buf[3] += 1;
+          spi_send_buf[3] = '1';
         }
         // Store set value to local variable
-        sta_dhcp_client = u32;
+        sta_dhcp_client = (uint8_t)u32;
       } else {  // For AP interface
         if (u32 == 0U) {
           // DHCP server cannot be disabled
@@ -1396,10 +1534,10 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
     case ARM_WIFI_IP_DHCP_LEASE_TIME:       //         AP Set IPv4 DHCP lease time;                   data = &time,     len =  4, uint32_t [seconds]
       if (interface == 1U) {
-        u32 = *((uint32_t *)data);
+        u32 = *((const uint32_t *)data);
         if ((u32 >= (30U * 60U)) &&         // If more then 30 minutes
             (u32 <= (254U * 60U * 60U))) {  // If less then 254 hours
-          snprintf(cmd_buf, sizeof(cmd_buf), "AL=%d\r", u32/(60U*60U));
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "AL=%d\r", u32/(60U*60U));
           // Store set value to local variable
           ap_dhcp_lease_time = (u32/(60U*60U))*60U*60U;
         } else {
@@ -1418,8 +1556,8 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
 
   if ((ret == ARM_DRIVER_OK) && (exec_cmd != 0U)) {     // If command should be sent through SPI
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-      resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+      spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
       osMutexRelease(mutex_id_spi);
     } else {
       ret = ARM_DRIVER_ERROR;
@@ -1445,11 +1583,10 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, NULL data or len pointer, or *len less than option specifies)
 */
 static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, uint32_t *len) {
-  int32_t   ret;
-  uint8_t  *ptr_resp_buf;
-  uint8_t  *ptr_u8_data;
-  uint32_t  resp_len;
-  uint8_t   mutex_acquired;
+        int32_t   ret;
+  const uint8_t  *ptr_resp_buf;
+        uint8_t  *ptr_u8_data;
+        uint8_t   mutex_acquired;
 
   if ((interface > 1U) ||  (data == NULL) || (len == NULL) || (*len < 4U)) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -1468,14 +1605,14 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
       mutex_acquired = 1U;
       if        (option == ARM_WIFI_MAC) {
-        memcpy((void *)cmd_buf, (void *)"Z5\r", 4);     // Get MAC Address
+        memcpy((void *)spi_send_buf, "Z5\r\n", 4);   // Get MAC Address
       } else if ((interface == 1U) && (option == ARM_WIFI_IP)) {
-        memcpy((void *)cmd_buf, (void *)"A?\r", 4);     // Show Access Point Settings
+        memcpy((void *)spi_send_buf, "A?\r\n", 4);   // Show Access Point Settings
       } else {
-        memcpy((void *)cmd_buf, (void *)"C?\r", 4);     // Show Network Settings
+        memcpy((void *)spi_send_buf, "C?\r\n", 4);   // Show Network Settings
       }
-      resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+      spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
     } else {
       ret = ARM_DRIVER_ERROR;
     }
@@ -1514,7 +1651,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       if (*len >= 6U) {
         // Extract MAC from response on "Z5" command
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)resp_buf + 2U, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3], &ptr_u8_data[4], &ptr_u8_data[5]) == 6) {
+        if (sscanf((const char *)&spi_recv_buf[2], "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3], &ptr_u8_data[4], &ptr_u8_data[5]) == 6) {
           *len = 6U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1527,10 +1664,10 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
     case ARM_WIFI_IP:                       // Station/AP Get IPv4 static/assigned address;           data = &ip,       len =  4, uint8_t[4]
       if (interface == 0U) {                // For Station interface
         // Skip ssid, password, security, DHCP, IP version (5 ',') from response on "C?" command
-        ptr_resp_buf = SkipCommas(resp_buf, 5U);
+        ptr_resp_buf = SkipCommas(spi_recv_buf, 5U);
       } else {                              // For AP interface
         // Skip ssid (1 ',') from response on "A?" command
-        ptr_resp_buf = SkipCommas(resp_buf, 1U);
+        ptr_resp_buf = SkipCommas(spi_recv_buf, 1U);
       }
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
@@ -1546,7 +1683,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
 
     case ARM_WIFI_IP_SUBNET_MASK:           // Station/AP Get IPv4 subnet mask;                       data = &mask,     len =  4, uint8_t[4]
       // Skip ssid, password, security, DHCP, IP version, IP address (6 ',') from response on "C?" command
-      ptr_resp_buf = SkipCommas(resp_buf, 6U);
+      ptr_resp_buf = SkipCommas(spi_recv_buf, 6U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
         if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
@@ -1561,7 +1698,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
 
     case ARM_WIFI_IP_GATEWAY:               // Station/AP Get IPv4 gateway address;                   data = &ip,       len =  4, uint8_t[4]
       // Skip ssid, password, security, DHCP, IP version, IP address, IP subnet mask (7 ',') from response on "C?" command
-      ptr_resp_buf = SkipCommas(resp_buf, 7U);
+      ptr_resp_buf = SkipCommas(spi_recv_buf, 7U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
         if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
@@ -1577,7 +1714,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
     case ARM_WIFI_IP_DNS1:                  // Station/AP Get IPv4 primary   DNS address;             data = &ip,       len =  4, uint8_t[4]
       // Skip ssid, password, security, DHCP, IP version, IP address, IP subnet mask, gateway IP 
       // (8 ',') from response on "C?" command
-      ptr_resp_buf = SkipCommas(resp_buf, 8U);
+      ptr_resp_buf = SkipCommas(spi_recv_buf, 8U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
         if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
@@ -1593,7 +1730,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
     case ARM_WIFI_IP_DNS2:                  // Station/AP Get IPv4 secondary DNS address;             data = &ip,       len =  4, uint8_t[4]
       // Skip ssid, password, security, DHCP, IP version, IP address, IP subnet mask, gateway IP, primary DNS IP 
       // (9 ',') from response on "C?" command
-      ptr_resp_buf = SkipCommas(resp_buf, 9U);
+      ptr_resp_buf = SkipCommas(spi_recv_buf, 9U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
         if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
@@ -1652,10 +1789,11 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (NULL scan_info pointer or max_num equal to 0)
 */
 static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
-  int32_t  ret;
-  uint8_t *ptr_resp_buf;
-  uint32_t resp_len;
-  int      i, int_val;
+        int32_t  ret;
+  const uint8_t *ptr_resp_buf;
+        int32_t  i, int_val;
+
+  i = 0;
 
   if ((scan_info == NULL) || (max_num == 0U)) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -1671,13 +1809,27 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
     memset((void *)scan_info, 0, sizeof(ARM_WIFI_SCAN_INFO_t) * max_num);
 
     // Scan for network access points
-    memcpy((void *)cmd_buf, (void *)"F0\r", 4); resp_len = sizeof(resp_buf) - 1U;
-    ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+    memcpy((void *)spi_send_buf, "F0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+    ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+      ret = ARM_DRIVER_ERROR;
+    }
 
     // Extract scan data
     if (ret == ARM_DRIVER_OK) {
-      ptr_resp_buf = resp_buf + 2;
-      while ((ret == ARM_DRIVER_OK) && (ptr_resp_buf != NULL) && (sscanf((const char *)ptr_resp_buf, "#%d", &i) == 1) && (i > 0) && (i <= (int32_t)max_num)) {
+      ptr_resp_buf = &spi_recv_buf[2];
+      while ((ret == ARM_DRIVER_OK) && (ptr_resp_buf != NULL)) {
+        if (sscanf((const char *)ptr_resp_buf, "#%d", &i) != 1) {
+          break;
+        }
+        if (i < 0) {
+          i = 0;
+          break;
+        }
+        if (i > (int32_t)max_num) {
+          i = (int32_t)max_num;
+          break;
+        }
         i--;
         // Position pointer 1 character after next ',' (skip ",C")
         // Parse SSID
@@ -1767,6 +1919,9 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
           ptr_resp_buf = NULL;
         }
       }
+      if (i < (int32_t)max_num) {
+        i++;
+      }
     }
     osMutexRelease(mutex_id_spi);
   } else {
@@ -1774,7 +1929,7 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
   }
 
   if (ret == ARM_DRIVER_OK) {
-    ret = i + 1;
+    ret = i;
   }
 
   return ret;
@@ -1793,9 +1948,8 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, NULL config pointer or invalid configuration)
 */
 static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *config) {
-  int32_t  ret;
-  uint8_t *ptr_resp_buf;
-  uint32_t resp_len;
+        int32_t  ret;
+  const uint8_t *ptr_resp_buf;
 
   if ((interface > 1U) || (config == NULL)) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -1860,8 +2014,11 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
           case ARM_WIFI_WPS_METHOD_PBC:
             break;
           case ARM_WIFI_WPS_METHOD_PIN:
-            snprintf(cmd_buf, sizeof(cmd_buf), "Z7=%s\r", config->wps_pin); resp_len = sizeof(resp_buf) - 1U;
-            ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+            snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "Z7=%s\r", config->wps_pin); spi_recv_len = sizeof(spi_recv_buf);
+            ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+            if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+              ret = ARM_DRIVER_ERROR;
+            }
             break;
           default:
             ret = ARM_DRIVER_ERROR_PARAMETER;
@@ -1870,15 +2027,15 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
 
         // Prepare WPS command
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"CW= \r", 6);
+          memcpy((void *)spi_send_buf, (void *)"CW= \r\n", 6);
           switch (config->wps_method) {
             case ARM_WIFI_WPS_METHOD_PBC:
               // Prepare WPS push-button connection command
-              cmd_buf[3] = '1';
+              spi_send_buf[3] = '1';
               break;
             case ARM_WIFI_WPS_METHOD_PIN:
               // Prepare WPS PIN connection command
-              cmd_buf[3] = '0';
+              spi_send_buf[3] = '0';
               break;
             default:
               ret = ARM_DRIVER_ERROR_PARAMETER;
@@ -1887,15 +2044,18 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
         }
         // Execute command
         if (ret == ARM_DRIVER_OK) {
-          resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, 250000U);
+          spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Check if WPS connection has succeeded
         if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "WPS ");
+          ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "WPS ");
           if (ptr_resp_buf != NULL) {
-            if (strstr((const char *)resp_buf, "No access point found") != NULL) {
+            if (strstr((const char *)spi_recv_buf, "No access point found") != NULL) {
               // Check if WPS connection failed
               ret = ARM_DRIVER_ERROR_TIMEOUT;
             } else {
@@ -1923,64 +2083,81 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
 
         // Set network SSID
         if (ret == ARM_DRIVER_OK) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "C1=%s\r", config->ssid); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C1=%s\r", config->ssid); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set network passphrase
-        if (ret == ARM_DRIVER_OK) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "C2=%s\r", config->pass); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+        if ((ret == ARM_DRIVER_OK) && (config->security != ARM_WIFI_SECURITY_OPEN)) {
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "C2=%s\r", config->pass); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set network security mode
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"C3= \r", 6);
+          memcpy((void *)spi_send_buf, "C3= \r\n", 6);
           switch (config->security) {
             case ARM_WIFI_SECURITY_OPEN:
-              cmd_buf[3] = '0';
+              spi_send_buf[3] = '0';
               break;
             case ARM_WIFI_SECURITY_WEP:
-              cmd_buf[3] = '1';
+              spi_send_buf[3] = '1';
               break;
             case ARM_WIFI_SECURITY_WPA:
-              cmd_buf[3] = '2';
+              spi_send_buf[3] = '2';
               break;
             case ARM_WIFI_SECURITY_WPA2:
-              cmd_buf[3] = '3';
+              spi_send_buf[3] = '3';
               break;
             default:
               ret = ARM_DRIVER_ERROR_UNSUPPORTED;
               break;
           }
           if (ret == ARM_DRIVER_OK) {
-            resp_len = sizeof(resp_buf) - 1U;
-            ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+            spi_recv_len = sizeof(spi_recv_buf);
+            ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+            if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+              ret = ARM_DRIVER_ERROR;
+            }
           }
         }
 
         // Send command to join a network
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"C0\r", 4); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          // If IP that we got is 0.0.0.0 then try again for max 3 times to get valide IP
+          memcpy((void *)spi_send_buf, "C0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
           
           // Check if connection has succeeded
           if (ret == ARM_DRIVER_OK) {
-            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "JOIN ");
+            ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "JOIN ");
             if (ptr_resp_buf != NULL) {
               // If message contains "JOIN " string, parse it and extract IP
               // Skip 1 comma
               ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
               if (ptr_resp_buf != NULL) {
                 // Extract IP Address
-                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
+                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) == 4) {
+                  if ((sta_local_ip[0] == 0) && (sta_local_ip[1] == 0) && (sta_local_ip[2] == 0) && (sta_local_ip[3] == 0)) {
+                    ret = ARM_DRIVER_ERROR;
+                  }
+                } else {
                   ret = ARM_DRIVER_ERROR;
                 }
               }
             }
           } else if (ret == ARM_DRIVER_ERROR) {
             // Check if connection is already established
-            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Already connected!");
+            ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "Already connected!");
             if (ptr_resp_buf != NULL) {
               ret = ARM_DRIVER_OK;
             }
@@ -2000,19 +2177,19 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
       } else {                                                  // If WPS is not configured
         // Set AP security mode
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"A1= \r", 6);
+          memcpy((void *)spi_send_buf, "A1= \r\n", 6);
           switch (config->security) {
             case ARM_WIFI_SECURITY_OPEN:
-              cmd_buf[3] = '0';
+              spi_send_buf[3] = '0';
               break;
             case ARM_WIFI_SECURITY_WEP:
               ret = ARM_DRIVER_ERROR_UNSUPPORTED;
               break;
             case ARM_WIFI_SECURITY_WPA:
-              cmd_buf[3] = '2';
+              spi_send_buf[3] = '2';
               break;
             case ARM_WIFI_SECURITY_WPA2:
-              cmd_buf[3] = '3';
+              spi_send_buf[3] = '3';
               break;
             default:
               ret = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -2020,42 +2197,60 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
           }
         }
         if (ret == ARM_DRIVER_OK) {
-          resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set AP security key (password)
         if (ret == ARM_DRIVER_OK) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "A2=%s\r", config->pass); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "A2=%s\r", config->pass); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set AP channel (0 = autoselect)
         if (ret == ARM_DRIVER_OK) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "AC=%d\r", config->ch); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "AC=%d\r\n", config->ch); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set AP SSID
         if (ret == ARM_DRIVER_OK) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "AS=0,%s\r", config->ssid); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "AS=0,%s\r", config->ssid); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Set AP maximum number of clients to maximum which is 4
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"AT=4\r", 6); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          memcpy((void *)spi_send_buf, "AT=4\r\n", 6); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         // Activate AP direct connect mode
         if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"AD\r", 4); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          memcpy((void *)spi_send_buf, "AD\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
 
           // Check if AP has started and extract IP address from response
           if (ret == ARM_DRIVER_OK) {
-            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "[AP ");
+            ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "[AP ");
             if (ptr_resp_buf != NULL) {
               // Skip 2 commas
               ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 2U);
@@ -2072,7 +2267,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
             }
           } else if (ret == ARM_DRIVER_ERROR) {
             // Check if AP is already running
-            ptr_resp_buf = (uint8_t *)strstr((const char *)resp_buf, "Already running");
+            ptr_resp_buf = (uint8_t *)strstr((const char *)spi_recv_buf, "Already running");
             if (ptr_resp_buf != NULL) {
               ret = ARM_DRIVER_OK;
             }
@@ -2083,8 +2278,11 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
         // module returns "[WEB SVR] Failed to listen on server socket"
         if (ret == ARM_DRIVER_OK) {
           osDelay(300U);    // Allow time for WEB SVR to start
-          memcpy((void *)cmd_buf, (void *)"A?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-          SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          memcpy((void *)spi_send_buf, "A?\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+          ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+            ret = ARM_DRIVER_ERROR;
+          }
         }
 
         if (ret == ARM_DRIVER_OK) {
@@ -2114,8 +2312,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface)
 */
 static int32_t WiFi_Deactivate (uint32_t interface) {
-  int32_t  ret;
-  uint32_t resp_len;
+  int32_t ret;
 
   if (driver_initialized == 0U) {
     return ARM_DRIVER_ERROR;
@@ -2126,23 +2323,29 @@ static int32_t WiFi_Deactivate (uint32_t interface) {
 
     if ((interface == 0U) && (oper_mode == OPER_MODE_STATION)) {
       // Disconnect from network
-      memcpy((void *)cmd_buf, (void *)"CD\r", 4); resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-
+      memcpy((void *)spi_send_buf, "CD\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
       if (ret == ARM_DRIVER_OK) {
-        oper_mode = 0U;
-        memset((void *)sta_local_ip, 0, 4);
+        if (resp_code == 0) {
+          oper_mode = 0U;
+          memset((void *)sta_local_ip, 0, 4);
+        } else {
+          ret = ARM_DRIVER_ERROR;
+        }
       }
     }
 
     if ((interface == 1U) && (oper_mode == OPER_MODE_AP)) {
       // Exit AP direct connect mode
-      memcpy((void *)cmd_buf, (void *)"AE\r", 4); resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-
+      memcpy((void *)spi_send_buf, "AE\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
       if (ret == ARM_DRIVER_OK) {
-        oper_mode = 0U;
-        memset((void *)ap_local_ip, 0, 4);
+        if (resp_code == 0) {
+          oper_mode = 0U;
+          memset((void *)ap_local_ip, 0, 4);
+        } else {
+          ret = ARM_DRIVER_ERROR;
+        }
       }
     }
 
@@ -2163,27 +2366,26 @@ static int32_t WiFi_Deactivate (uint32_t interface) {
 */
 static uint32_t WiFi_IsConnected (void) {
   int32_t  status;
-  uint32_t num;
-  uint32_t resp_len;
+  uint32_t con;
 
   if (driver_initialized == 0U) {
     return 0U;
   }
 
+  con = 0U;
+
   if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-    num    = 0U;
     status = ARM_DRIVER_OK;
 
     // Check station connection status
-    memcpy((void *)cmd_buf, (void *)"CS\r", 4); resp_len = sizeof(resp_buf) - 1U;
-    status = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-    if ((status == ARM_DRIVER_OK) && (resp_len >= 3U)) {
-      if (resp_buf[2] == '1') {
-        num = 1U;
+    memcpy((void *)spi_send_buf, "CS\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+    status = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((status == ARM_DRIVER_OK) && (resp_code == 0)) {
+      if (spi_recv_buf[2] == '1') {
+        con = 1U;
       }
     }
-
-    if (num == 0U) {
+    if (con == 0U) {
       if (oper_mode == OPER_MODE_STATION) {
         oper_mode = 0U;
       }
@@ -2193,7 +2395,7 @@ static uint32_t WiFi_IsConnected (void) {
     osMutexRelease(mutex_id_spi);
   }
 
-  return num;
+  return con;
 }
 
 /**
@@ -2207,10 +2409,9 @@ static uint32_t WiFi_IsConnected (void) {
                    - ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface or NULL net_info pointer)
 */
 static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
-  int32_t  ret;
-  uint8_t *ptr_resp_buf;
-  uint32_t resp_len;
-  int      int_val;
+        int32_t  ret;
+  const uint8_t *ptr_resp_buf;
+        int      int_val;
 
   if (net_info == NULL) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -2223,82 +2424,87 @@ static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
     ret = ARM_DRIVER_OK;
 
     // Show Network Settings
-    memcpy((void *)cmd_buf, (void *)"C?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-    ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+    memcpy((void *)spi_send_buf, "C?\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+    ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((ret == ARM_DRIVER_OK) && (resp_code == 0)) {
+      ptr_resp_buf = SkipCommas(spi_recv_buf, 14U);
+      if (ptr_resp_buf != NULL) {
+        if (*ptr_resp_buf == '1') {     // If station is connected
+          // Channel is not available so clear it
+          net_info->ch = 0U;
 
-    ptr_resp_buf = SkipCommas(resp_buf, 14U);
-    if (ptr_resp_buf != NULL) {
-      if (*ptr_resp_buf == '1') {       // If station is connected
-        // Channel is not available so clear it
-        net_info->ch = 0U;
-
-        // Extract ssid
-        if (ret == ARM_DRIVER_OK) {
-          if (sscanf((const char *)resp_buf + 2U, "%32[^,]s", net_info->ssid) != 1) {
-            ret = ARM_DRIVER_ERROR;
-          }
-        }
-
-        // Extract password
-        // Skip ssid (1 ',')
-        if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = SkipCommas(resp_buf, 1U);
-          if (ptr_resp_buf != NULL) {
-            if (sscanf((const char *)ptr_resp_buf, "%64[^,]s", net_info->pass) != 1) {
+          // Extract ssid
+          if (ret == ARM_DRIVER_OK) {
+            if (sscanf((const char *)&spi_recv_buf[2], "%32[^,]s", net_info->ssid) != 1) {
               ret = ARM_DRIVER_ERROR;
             }
-          } else {
-            ret = ARM_DRIVER_ERROR;
           }
-        }
 
-        // Extract security and cipher
-        // Skip password (1 ',')
-        if (ret == ARM_DRIVER_OK) {
-          ptr_resp_buf = SkipCommas(ptr_resp_buf, 1U);
-          if (ptr_resp_buf != NULL) {
-            switch (*ptr_resp_buf) {
-              case '0':
-                net_info->security = ARM_WIFI_SECURITY_OPEN;
-                break;
-              case '1':
-                net_info->security = ARM_WIFI_SECURITY_UNKNOWN;
-                break;
-              case '2':
-                net_info->security = ARM_WIFI_SECURITY_WPA;
-                break;
-              case '3':
-                net_info->security = ARM_WIFI_SECURITY_WPA2;
-                break;
-              case '4':
-                net_info->security = ARM_WIFI_SECURITY_WPA2;
-                break;
-              default:
-                net_info->security = ARM_WIFI_SECURITY_UNKNOWN;
-                break;
-            }
-          } else {
-            ret = ARM_DRIVER_ERROR;
-          }
-        }
-
-        // Get RSSI of Associated Access Point
-        if (ret == ARM_DRIVER_OK) {
-          memcpy((void *)cmd_buf, (void *)"CR\r", 4); resp_len = sizeof(resp_buf) - 1U;
-          ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
+          // Extract password
+          // Skip ssid (1 ',')
           if (ret == ARM_DRIVER_OK) {
-            if (sscanf((const char *)resp_buf + 2U, "%d", &int_val) == 1) {
-              net_info->rssi = (uint8_t)(int_val + 256);
+            ptr_resp_buf = SkipCommas(spi_recv_buf, 1U);
+            if (ptr_resp_buf != NULL) {
+              if (sscanf((const char *)ptr_resp_buf, "%64[^,]s", net_info->pass) != 1) {
+                ret = ARM_DRIVER_ERROR;
+              }
             } else {
               ret = ARM_DRIVER_ERROR;
             }
           }
+
+          // Extract security and cipher
+          // Skip password (1 ',')
+          if (ret == ARM_DRIVER_OK) {
+            ptr_resp_buf = SkipCommas(ptr_resp_buf, 1U);
+            if (ptr_resp_buf != NULL) {
+              switch (*ptr_resp_buf) {
+                case '0':
+                  net_info->security = ARM_WIFI_SECURITY_OPEN;
+                  break;
+                case '1':
+                  net_info->security = ARM_WIFI_SECURITY_UNKNOWN;
+                  break;
+                case '2':
+                  net_info->security = ARM_WIFI_SECURITY_WPA;
+                  break;
+                case '3':
+                  net_info->security = ARM_WIFI_SECURITY_WPA2;
+                  break;
+                case '4':
+                  net_info->security = ARM_WIFI_SECURITY_WPA2;
+                  break;
+                default:
+                  net_info->security = ARM_WIFI_SECURITY_UNKNOWN;
+                  break;
+              }
+            } else {
+              ret = ARM_DRIVER_ERROR;
+            }
+          }
+
+          // Get RSSI of Associated Access Point
+          if (ret == ARM_DRIVER_OK) {
+            memcpy((void *)spi_send_buf, "CR\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+            ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+            if (ret == ARM_DRIVER_OK) {
+              if (resp_code == 0) {
+                if (sscanf((const char *)&spi_recv_buf[2], "%d", &int_val) == 1) {
+                  net_info->rssi = (uint8_t)(int_val + 256);
+                } else {
+                  ret = ARM_DRIVER_ERROR;
+                }
+              } else {
+                ret = ARM_DRIVER_ERROR;
+              }
+            }
+          }
+        } else {                        // If station is not connected
+          ret = ARM_DRIVER_ERROR;
         }
-      } else {                          // If station is not connected
+      } else {
         ret = ARM_DRIVER_ERROR;
       }
-    } else {
-      ret = ARM_DRIVER_ERROR;
     }
 
     osMutexRelease(mutex_id_spi);
@@ -2323,7 +2529,8 @@ static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
-  int32_t ret, i;
+  int32_t ret;
+  uint8_t i;
 
   switch (af) {
     case ARM_SOCKET_AF_INET:
@@ -2372,6 +2579,10 @@ static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
     }
 
     if (ret >= 0) {
+      osEventFlagsClear(event_flags_sockets_id[ret], 0xFFU);
+
+      WiFi_ISM43362_BufferInitialize (i);
+
       // If socket creation succeeded
       memset((void *)&socket_arr[i], 0, sizeof(socket_t));
       socket_arr[i].protocol = (uint8_t)protocol;
@@ -2406,21 +2617,27 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
   if ((socket < 0) || (socket >= WIFI_ISM43362_SOCKETS_NUM)) {
     return ARM_SOCKET_ESOCK;
   }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
+    return ARM_SOCKET_ESOCK;
+  }
   if ((ip == NULL) || (ip_len != 4U) || (port == 0U)) {
     return ARM_SOCKET_EINVAL;
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
   }
-  if (                         (memcmp((void *)ip, "\x00\x00\x00\x00", 4U) != 0)  &&
-     ((oper_mode == OPER_MODE_STATION) && (memcmp((void *)ip, sta_local_ip, 4U) != 0)) &&
-     ((oper_mode == OPER_MODE_AP)      && (memcmp((void *)ip, ap_local_ip,  4U) != 0))) {
+  if ((socket_arr[socket].state == SOCKET_STATE_CONNECTED) || (socket_arr[socket].state == SOCKET_STATE_CONNECTING)) {
+    return ARM_SOCKET_EISCONN;
+  }
+  if ((socket_arr[socket].bound != 0U) || (socket_arr[socket].state != SOCKET_STATE_CREATED)) {
+    return ARM_SOCKET_EINVAL;
+  }
+  if (                                    (memcmp((const void *)ip, (const void *)"\x00\x00\x00\x00", 4U) != 0)   &&
+     ((oper_mode == OPER_MODE_STATION) && (memcmp((const void *)ip, (const void *)sta_local_ip, 4U)       != 0))  &&
+     ((oper_mode == OPER_MODE_AP)      && (memcmp((const void *)ip, (const void *)ap_local_ip,  4U)       != 0)))  {
     // If IP is different then 0.0.0.0 (accept all) or 
     // if station is active and requested IP is different then station's IP or 
     // if AP is running and requested IP is different then AP's IP
-    return ARM_SOCKET_EINVAL;
-  }
-  if ((socket_arr[socket].bound != 0U) || (socket_arr[socket].state != SOCKET_STATE_CREATED)) {
     return ARM_SOCKET_EINVAL;
   }
 
@@ -2428,10 +2645,9 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
     ret = 0;
 
     for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
-      if ((                         (memcmp((void *)ip, "\x00\x00\x00\x00", 4U) == 0)   ||
-          ((oper_mode == OPER_MODE_STATION) && (memcmp((void *)ip, sta_local_ip, 4U) == 0))  ||
-          ((oper_mode == OPER_MODE_AP)      && (memcmp((void *)ip, ap_local_ip,  4U) == 0))) &&
-           (socket_arr[i].local_port == port)) {
+      if ((socket_arr[i].bound != 0U) &&
+          (memcmp((const void *)ip, (const void *)socket_arr[i].bound_ip, 4U) == 0) && 
+          (socket_arr[i].local_port == port)) {
         // If IP and port is already used by another socket
         ret = ARM_SOCKET_EADDRINUSE;
         break;
@@ -2439,17 +2655,28 @@ static int32_t WiFi_SocketBind (int32_t socket, const uint8_t *ip, uint32_t ip_l
     }
 
     if (ret == 0) {
+      // Execute functionality on the module through SPI commands
       if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) && (socket_arr[socket].server == 0U)) {
-        // UDP server not running on this socket
-        ret = SPI_StartStopTransportServerClient (socket, ARM_SOCKET_IPPROTO_UDP, port, NULL, 0U, TRANSPORT_START, TRANSPORT_SERVER);
-        if (ret == 0) {
-          socket_arr[socket].server = 1U;
+        // For UDP bind sets up filter and in server mode UDP can be received
+        if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
+          ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, port, NULL, 0U, TRANSPORT_START, TRANSPORT_SERVER);
+          if (ret == 0) {
+            socket_arr[socket].server = 1U;
+
+            // Start polling for reception
+            socket_arr[socket].poll_recv = 1U;
+            osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread read
+          }
+          osMutexRelease(mutex_id_spi);
+        } else {
+          ret = ARM_SOCKET_ERROR;
         }
       }
     }
 
     if (ret == 0) {
       // If socket bind succeeded
+      memcpy((void *)socket_arr[socket].bound_ip, (const void *)ip, 4);
       socket_arr[socket].local_port = port;
       socket_arr[socket].bound      = 1U;
     }
@@ -2480,14 +2707,14 @@ static int32_t WiFi_SocketListen (int32_t socket, int32_t backlog) {
   if ((socket < 0) || (socket >= WIFI_ISM43362_SOCKETS_NUM)) {
     return ARM_SOCKET_ESOCK;
   }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
+    return ARM_SOCKET_ESOCK;
+  }
   if (backlog != 1) {
     // Only backlog 1 is supported
     return ARM_SOCKET_EINVAL;
   }
-  if (driver_initialized == 0U) {
-    return ARM_SOCKET_ERROR;
-  }
-  if ((socket_arr[socket].state == SOCKET_STATE_FREE) || (socket_arr[socket].state == SOCKET_STATE_LISTENING)) {
+  if (socket_arr[socket].state == SOCKET_STATE_LISTENING) {
     return ARM_SOCKET_EINVAL;
   }
   if (socket_arr[socket].protocol != ARM_SOCKET_IPPROTO_TCP) {
@@ -2500,6 +2727,9 @@ static int32_t WiFi_SocketListen (int32_t socket, int32_t backlog) {
       return ARM_SOCKET_EINVAL;
     }
   }
+  if (driver_initialized == 0U) {
+    return ARM_SOCKET_ERROR;
+  }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
@@ -2507,13 +2737,11 @@ static int32_t WiFi_SocketListen (int32_t socket, int32_t backlog) {
     // Execute functionality on the module through SPI commands
     if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (socket_arr[socket].server == 0U)) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-        if (socket_arr[socket].server == 0U) {
-          ret = SPI_StartStopTransportServerClient (socket, ARM_SOCKET_IPPROTO_TCP, socket_arr[socket].local_port, NULL, 0U, TRANSPORT_START, TRANSPORT_SERVER);
-          if (ret == 0) {
-            socket_arr[socket].server = 1U;
-          }
-          osMutexRelease(mutex_id_spi);
+        ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, socket_arr[socket].local_port, NULL, 0U, TRANSPORT_START, TRANSPORT_SERVER);
+        if (ret == 0) {
+          socket_arr[socket].server = 1U;
         }
+        osMutexRelease(mutex_id_spi);
       } else {
         ret = ARM_SOCKET_ERROR;
       }
@@ -2552,17 +2780,17 @@ static int32_t WiFi_SocketListen (int32_t socket, int32_t backlog) {
 */
 static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
   int32_t  ret;
-  uint32_t flags, other_flags, timeout;
+  uint32_t flags, timeout;
   uint8_t  virtual_socket, non_blocking, trigger_async_polling;
 
   if ((socket < 0) || (socket >= WIFI_ISM43362_SOCKETS_NUM)) {
     return ARM_SOCKET_ESOCK;
   }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
+    return ARM_SOCKET_ESOCK;
+  }
   if (((ip != NULL) && (ip_len == NULL)) || ((ip_len != NULL) && (*ip_len < 4U))) {
     return ARM_SOCKET_EINVAL;
-  }
-  if (driver_initialized == 0U) {
-    return ARM_SOCKET_ERROR;
   }
   if (socket_arr[socket].protocol != ARM_SOCKET_IPPROTO_TCP) {
     return ARM_SOCKET_ENOTSUP;
@@ -2570,12 +2798,19 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
   if ((socket_arr[socket].state != SOCKET_STATE_LISTENING) && (socket_arr[socket].state != SOCKET_STATE_ACCEPTING)) {
     return ARM_SOCKET_EINVAL;
   }
+  if (driver_initialized == 0U) {
+    return ARM_SOCKET_ERROR;
+  }
+
+  trigger_async_polling = 0U;
+  non_blocking          = 0U;
+
+  virtual_socket = (uint8_t)socket + WIFI_ISM43362_SOCKETS_NUM;
   if (socket_arr[virtual_socket].state != SOCKET_STATE_FREE) {
     // ISM43362 module limitation: only one socket can be processed at a time
     return ARM_SOCKET_ERROR;
   }
 
-  virtual_socket = socket + WIFI_ISM43362_SOCKETS_NUM;
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
@@ -2600,29 +2835,30 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
     } else {                            // If blocking mode
       timeout = osWaitForever;
     }
-    flags = osEventFlagsWait(event_flags_sockets_id, (0x10001U << socket), osFlagsWaitAny, timeout);
-    other_flags = flags & (~0x80000000UL) & (~(0x10000U << socket));
-    if (other_flags != 0U) {
-      // Set flags relating to other events/sockets
-      osEventFlagsSet(event_flags_sockets_id, other_flags);
-    }
-    if ((flags & 0x80000000UL) != 0U) {                 // If error
+    flags = osEventFlagsWait(event_flags_sockets_id[socket],    EVENT_SOCK_ACCEPTED | EVENT_SOCK_ACCEPTING_CLOSE, osFlagsWaitAny | osFlagsNoClear, timeout);
+    osEventFlagsClear (event_flags_sockets_id[socket], flags & (EVENT_SOCK_ACCEPTED | EVENT_SOCK_ACCEPTING_CLOSE));
+    if ((flags & 0x80000000UL) != 0U) { // If error
       if (flags == osFlagsErrorTimeout) {
         ret = ARM_SOCKET_EAGAIN;
       } else {
         ret = ARM_SOCKET_ERROR;
       }
-    } else if ((flags & (0x10000U << socket)) != 0U) {  // If abort signaled from SocketClose
-      ret = ARM_SOCKET_ERROR;
+    } else {
+      if ((flags & EVENT_SOCK_ACCEPTING_CLOSE) != 0U) { // If abort requested from SocketClose
+        ret = ARM_SOCKET_ECONNABORTED;
+        osEventFlagsSet(event_flags_sockets_id[socket], EVENT_SOCK_ACCEPTING_CLOSE_DONE);
+      }
     }
-    // If ret == 0, then accept was signaled from async thread
 
+    // If ret == 0, then accept was signaled from async thread
     if (ret == 0) {
       if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
         // If socket accept succeeded, copy all variables to new (virtual) socket
         memcpy((void *)&socket_arr[virtual_socket], (void *)&socket_arr[socket], sizeof(socket_t));
-        socket_arr[socket].state         = SOCKET_STATE_ACCEPTED;
-        socket_arr[virtual_socket].state = SOCKET_STATE_CONNECTED;
+        socket_arr[socket].state          = SOCKET_STATE_ACCEPTED;
+        socket_arr[virtual_socket].state  = SOCKET_STATE_CONNECTED;
+        socket_arr[virtual_socket].client = 0U;
+        socket_arr[virtual_socket].server = 0U;
         osMutexRelease(mutex_id_sockets);
         if (ip != NULL) {
           ip[0] = socket_arr[virtual_socket].remote_ip[0];
@@ -2634,6 +2870,10 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
         if (port != NULL) {
           *port = socket_arr[virtual_socket].remote_port;
         }
+
+        // Start polling for reception
+        socket_arr[virtual_socket].poll_recv = 1U;
+        osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread read
 
         // Because on ISM when accept succeeds same socket is used for communication, 
         // to comply with BSD we return different socket id (virtual) which is used for 
@@ -2670,46 +2910,97 @@ static int32_t WiFi_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_len,
 */
 static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t ip_len, uint16_t port) {
   int32_t ret;
+  uint8_t dissolve_udp;
 
   if ((socket < 0) || (socket >= WIFI_ISM43362_SOCKETS_NUM)) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((ip == NULL) || (memcmp((const void *)ip, "\0\0\0\0", 4) == 0) || (ip_len != 4U) || (port == 0U)) {
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if ((ip == NULL) || (ip_len != 4U) || (port == 0U)) {
+    return ARM_SOCKET_EINVAL;
+  }
+  if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (memcmp((const void *)ip, (const void *)"\0\0\0\0", 4) == 0)) {
     return ARM_SOCKET_EINVAL;
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
   }
+
+  dissolve_udp = 0U;
+
+  if ((ip_len == 4U) && (memcmp((const void *)ip, (const void *)"\0\0\0\0", 4) == 0) && (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP)) {
+    // If request to connect to IP 0.0.0.0 for UDP meaning dissolve the connection
+    dissolve_udp = 1U;
+  }
   switch (socket_arr[socket].state) {
     case SOCKET_STATE_CONNECTED:
+      if (dissolve_udp) {
+        break;
+      }
       return ARM_SOCKET_EISCONN;
     case SOCKET_STATE_CREATED:
+      break;
+    case SOCKET_STATE_DISCONNECTED:
       break;
     default:
       return ARM_SOCKET_EINVAL;
   }
 
-  // This module does not support setting of local port it only supports 
-  // 0 value and generates the local port randomly
+  // This module does not support setting of local port for client connection 
+  // it only supports 0 value and selects the local port randomly
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
     if (socket_arr[socket].state != SOCKET_STATE_CONNECTING) {      // If first call of connect
-      if (socket_arr[socket].client == 0U) {
-        if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-          ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
+      if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
+        if ((socket_arr[socket].bound != 0U) && (socket_arr[socket].server == 1U)) {
+          ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, NULL, 0U, TRANSPORT_STOP, TRANSPORT_SERVER);
           if (ret == 0) {
-            socket_arr[socket].client = 1U;
-            socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
-            if (socket_arr[socket].non_blocking != 0U) {          // If non-blocking mode
-              ret = ARM_SOCKET_EINPROGRESS;
+            socket_arr[socket].bound  = 0U;
+            socket_arr[socket].server = 0U;
+          }
+        }
+
+        if (ret == 0) { 
+          if (dissolve_udp) {
+            if (socket_arr[socket].client == 0U) {
+              // Only auto-assigned local port is supported by module
+              if ((socket_arr[socket].bound == 0U) || ((socket_arr[socket].bound != 0U) && (socket_arr[socket].local_port == 0U))) {
+                ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_STOP, TRANSPORT_CLIENT);
+                if (ret == 0) {
+                  socket_arr[socket].client = 0U;
+                }
+              } else {
+                ret = ARM_SOCKET_ERROR;
+              }
+            }
+          } else {
+            if (socket_arr[socket].client == 0U) {
+              // Only auto-assigned local port is supported by module
+              if ((socket_arr[socket].bound == 0U) || ((socket_arr[socket].bound != 0U) && (socket_arr[socket].local_port == 0U))) {
+                ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
+                if (ret == 0) {
+                  socket_arr[socket].client = 1U;
+                  socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
+                  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
+                    ret = ARM_SOCKET_EINPROGRESS;
+                  }
+                }
+                if (ret == ARM_SOCKET_ERROR) {
+                  ret = ARM_SOCKET_ETIMEDOUT;
+                }
+              } else {
+                ret = ARM_SOCKET_ERROR;
+              }
             }
           }
-          osMutexRelease(mutex_id_spi);
-        } else {
-          ret = ARM_SOCKET_ETIMEDOUT;
         }
+        osMutexRelease(mutex_id_spi);
+      } else {
+        ret = ARM_SOCKET_ETIMEDOUT;
       }
     }
     // Only for first call of connect in non-blocking mode we return ARM_SOCKET_EINPROGRESS, 
@@ -2717,12 +3008,29 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
     // consider that connect was successful and return 0
 
     if (ret == 0) {
-      // Store remote host IP and port for UDP (datagram)
-      memcpy((void *)socket_arr[socket].remote_ip, (void *)ip, 4);
-      socket_arr[socket].remote_port = port;
+      if (dissolve_udp) {
+        // Stop polling for reception
+        socket_arr[socket].poll_recv = 0U;
 
-      // If socket connect succeeded
-      socket_arr[socket].state = SOCKET_STATE_CONNECTED;
+        // Clear remote host IP and port for UDP (datagram)
+        memset((void *)socket_arr[socket].remote_ip, 0, 4);
+        socket_arr[socket].remote_port = 0U;
+
+        socket_arr[socket].bound = 0U;
+        socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
+      } else {
+        // Start polling for reception
+        socket_arr[socket].poll_recv = 1U;
+        osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread read
+
+        // Store remote host IP and port for UDP (datagram)
+        memcpy((void *)socket_arr[socket].remote_ip, (const void *)ip, 4);
+        socket_arr[socket].remote_port = port;
+
+        // If socket connect succeeded
+        socket_arr[socket].bound = 1U;
+        socket_arr[socket].state = SOCKET_STATE_CONNECTED;
+      }
     }
     osMutexRelease(mutex_id_sockets);
   } else {
@@ -2749,17 +3057,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
-  uint8_t  ip_udp[4];
-  uint32_t ip_udp_len;
-  uint16_t udp_port;
-
-  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
-    // For UDP reception SocketRecvFrom has to be used valid ip, ip_len and port pointers
-    ip_udp_len = 4U;
-    return (WiFi_SocketRecvFrom(socket, buf, len, ip_udp, &ip_udp_len, &udp_port));
-  } else {
-    return (WiFi_SocketRecvFrom(socket, buf, len, NULL, NULL, NULL));
-  }
+  return (WiFi_SocketRecvFrom(socket, buf, len, NULL, NULL, NULL));
 }
 
 /**
@@ -2785,164 +3083,77 @@ static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
 */
 static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
   int32_t  ret;
-  int32_t  len_read;
-  uint32_t timeout, flags, other_flags;
-  uint32_t resp_len;
-  uint32_t len_req;
+  uint32_t flags;
   uint8_t  hw_socket;
-  uint8_t  long_timeout;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
   if ((buf == NULL) || (len == 0U)) {
     return ARM_SOCKET_EINVAL;
   }
+  if ((socket_arr[socket].protocol == ARM_SOCKET_SOCK_STREAM) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
+    return ARM_SOCKET_ENOTCONN;
+  }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
   }
-  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return ARM_SOCKET_EINVAL;
-  }
-  if ((socket_arr[socket].protocol == ARM_SOCKET_SOCK_STREAM) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
-    return ARM_SOCKET_ENOTCONN;
+
+  hw_socket = (uint8_t)socket;
+  if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
+    hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
-    hw_socket = socket;
-    if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
-      hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
-    }
+    // Handle if data was already received, and just return data immediately
+    ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
 
-    long_timeout = 0U;
-    if (socket_arr[socket].non_blocking != 0U) {            // If non-blocking
-      timeout = 1U;
-    } else {                                                // If blocking
-      if ((socket_arr[socket].recv_timeout == 0U) ||        // If infinite or longer than async interval
-          (socket_arr[socket].recv_timeout > WIFI_ISM43362_ASYNC_INTERVAL)) {
-        timeout = 20U;
-        long_timeout = 1U;
-      } else if (socket_arr[socket].recv_timeout <= WIFI_ISM43362_ASYNC_INTERVAL) {
-                                                            // If short blocking, set timeout to requested
-        timeout = socket_arr[socket].recv_timeout;
-      }
-    }
-
-    if (socket_arr[socket].data_to_recv == NULL) {
-      // Setup receive parameters on socket of the module
-      // Execute functionality on the module through SPI commands
-      if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-        if (ret == 0) {
-          // Set communication socket number
-          snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-          if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-            ret = ARM_SOCKET_ERROR;
-          }
-        }
-        // Set receive timeout (ms)
-        if (ret == 0) {
-          snprintf(cmd_buf, sizeof(cmd_buf), "R2=%d\r", timeout); resp_len = sizeof(resp_buf) - 1U;
-          if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-            ret = ARM_SOCKET_ERROR;
-          }
-        }
-        osMutexRelease(mutex_id_spi);
-      } else {
-        ret = ARM_SOCKET_ERROR;
-      }
-
-      if (ret == 0) {
-        // Execute functionality on the module through SPI commands
-        // also for long wait try to read if there is data already available 
-        // before starting polling for data in aync thread
-        if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-          len_req  = len;
-
-          if (len_req > 1200U) {
-            len_req = 1200U;
-          }
-          // Set read data packet size
-          snprintf(cmd_buf, sizeof(cmd_buf), "R1=%04d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
-          if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-            ret = ARM_SOCKET_ERROR;
-          }
-          // Receive data
-          if (ret == 0) {
-            memcpy((void *)cmd_buf, (void *)"R0\r", 3); resp_len = sizeof(resp_buf) - 1U;
-            len_read = SPI_AT_SendCommandReceiveDataAndResponse(cmd_buf, (uint8_t *)buf, len_req, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-            if (len_read > 0) {
-              ret = len_read;
-            } else if (len_read == 0) {
-            } else {
-              if ((len_read == ARM_DRIVER_ERROR) && (memcmp(resp_buf + 2, "-1", 2) == 0)) {
-                // "-1" : Connection lost
-                socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
-                ret = ARM_SOCKET_ECONNRESET;
-              } else if (len_read == ARM_DRIVER_ERROR_TIMEOUT) {
-                ret = ARM_SOCKET_ETIMEDOUT;
-              } else {
-                ret = ARM_SOCKET_ERROR;
-              }
-            }
-          }
-
-          if ((ret == 0) && (long_timeout != 0U)) {
-            // If no data was received in first try and long timeout is specified, activate reception in async thread
-
-            if (socket_arr[socket].data_to_recv == NULL) {              // If long blocking receive is not yet active
-              // Store information for reception to be done from async thread
-              socket_arr[socket].data_to_recv = buf;
-              socket_arr[socket].len_to_recv  = len;
-              socket_arr[socket].len_recv     = 0U;
-              if (socket_arr[socket].recv_timeout == 0U) {
-                // 0 means infinite
-                socket_arr[socket].recv_time_left = 0xFFFFFFFFU;
-              } else {
-                // other values increment for 11 ms to catch last async interval also
-                socket_arr[socket].recv_time_left = socket_arr[socket].recv_timeout + 21U;
-              }
-              osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);        // Trigger asynchronous polling
-            }
-          }
-          osMutexRelease(mutex_id_spi);
+    if (ret == 0) {
+      if (socket_arr[socket].non_blocking != 0U) {            // If non-blocking
+        socket_arr[socket].recv_time_left = 1U;
+      } else {                                                // If blocking
+        if (socket_arr[socket].recv_timeout == 0U) {          // If timeout is 0, it means indefinite
+          socket_arr[socket].recv_time_left = 0xFFFFFFFFUL;
+        } else {                                              // Else set timeout to requested
+          socket_arr[socket].recv_time_left = socket_arr[socket].recv_timeout;
         }
       }
+      // Store Kernel Tick Count when reception is starting
+      socket_arr[socket].start_tick_count = osKernelGetTickCount ();
     }
     osMutexRelease(mutex_id_sockets);
   } else {
     ret = ARM_SOCKET_ERROR;
   }
 
-  if ((ret == 0) && (long_timeout != 0U)) {
-    // Wait for reception or timeout or disconnect signaled from asynchronous thread
-    flags = osEventFlagsWait(event_flags_sockets_id, (0x00010101U << socket), osFlagsWaitAny, socket_arr[socket].recv_time_left);
-    other_flags = flags & (~0x80000000UL) & (~(0x00010101U << socket));
-    if (other_flags != 0U) {
-      // Set flags relating to other events/sockets
-      osEventFlagsSet(event_flags_sockets_id, other_flags);
-    }
+  if (ret == 0) {
+    osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread read
+
+    // Wait for reception/timeout or disconnect signaled from asynchronous thread
+    // or abort signaled form SocketClose
+    flags = osEventFlagsWait(event_flags_sockets_id[hw_socket],    EVENT_SOCK_RECV | EVENT_SOCK_RECV_TIMEOUT | EVENT_SOCK_RECV_CLOSE | EVENT_SOCK_RECV_DISCON_REMOTE, osFlagsWaitAny | osFlagsNoClear, osWaitForever);
+    osEventFlagsClear (event_flags_sockets_id[hw_socket], flags & (EVENT_SOCK_RECV | EVENT_SOCK_RECV_TIMEOUT | EVENT_SOCK_RECV_CLOSE | EVENT_SOCK_RECV_DISCON_REMOTE));
+
     if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
       if ((flags & 0x80000000UL) != 0U) {                       // If error
-        if (flags != osFlagsErrorTimeout) {
-          ret = ARM_SOCKET_ERROR;
-        }
-      } else if ((flags & ((1U << 16) << socket)) != 0U) {      // If reception was aborted locally by closing socket
+        ret = ARM_SOCKET_ERROR;
+      } else if ((flags & EVENT_SOCK_RECV_CLOSE) != 0U) {       // If reception was aborted locally by closing socket
         ret = ARM_SOCKET_ECONNABORTED;
-      } else if ((flags & ((1U <<  8) << socket)) != 0U) {      // If reception was aborted by remote host closing socket
+        osEventFlagsSet(event_flags_sockets_id[hw_socket], EVENT_SOCK_RECV_CLOSE_DONE);
+      } else if ((flags & EVENT_SOCK_RECV_DISCON_REMOTE)!=0U) { // If reception was aborted by remote host closing socket
         socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
         ret = ARM_SOCKET_ECONNRESET;
-      } else if ((flags & ((1U      ) << socket)) != 0U) {      // If reception has finished (by received all requested bytes or by timeout)
-        ret = socket_arr[socket].len_recv;
-      } else {                                                  // If still nothing was received
+      } else if ((flags & EVENT_SOCK_RECV) != 0U) {             // If reception has finished and some data was received
+        ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+      } else if ((flags & EVENT_SOCK_RECV_TIMEOUT) != 0U) {     // If reception has timed-out and nothing was received
         ret = ARM_SOCKET_EAGAIN;
-      }
-      if (ret != ARM_SOCKET_EAGAIN) {
-        // Clear information for receiving to be done from async thread, as it has finished for last receive operation
-        socket_arr[socket].data_to_recv = NULL;
-        socket_arr[socket].len_to_recv  = 0U;
-        socket_arr[socket].len_recv     = 0U;
+      } else {                                                  // Should never happen
+        ret = ARM_SOCKET_EAGAIN;
       }
       osMutexRelease(mutex_id_sockets);
     } else {
@@ -2984,31 +3195,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
-  uint8_t   ip_udp[4];
-  uint32_t  ip_udp_len;
-  uint16_t  udp_port;
-
-  if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
-    return ARM_SOCKET_ESOCK;
-  }
-  if ((buf == NULL) || (len == 0U)) {
-    return ARM_SOCKET_EINVAL;
-  }
-  if (driver_initialized == 0U) {
-    return ARM_SOCKET_ERROR;
-  }
-
-  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
-    // For UDP send SocketSendTo has to be used with ip, ip_len and port parameters 
-    // that were provided on SocketConnect
-    ip_udp_len = 4U;
-    udp_port   = socket_arr[socket].remote_port;
-    memcpy((void *)ip_udp, (void *)socket_arr[socket].remote_ip, ip_udp_len);
-
-    return (WiFi_SocketSendTo(socket, buf, len, (const uint8_t *)ip_udp, ip_udp_len, udp_port));
-  } else {
-    return (WiFi_SocketSendTo(socket, buf, len, NULL, 0U, 0U));
-  }
+  return (WiFi_SocketSendTo(socket, buf, len, NULL, 0U, 0U));
 }
 
 /**
@@ -3031,13 +3218,16 @@ static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len, const uint8_t *ip, uint32_t ip_len, uint16_t port) {
-  int32_t  ret;
-  int32_t  len_sent;
-  uint32_t resp_len, timeout;
-  uint32_t len_to_send, len_tot_sent, len_req;
-  uint8_t  hw_socket;
+        int32_t  ret, spi_ret;
+        int32_t  len_sent;
+        uint32_t len_to_send, len_tot_sent, len_req;
+  const uint8_t *ptr_buf;
+        uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
   if ((buf == NULL) || (len == 0U)) {
@@ -3046,20 +3236,32 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   if ((ip != NULL) && (ip_len != 4U)) {
     return ARM_SOCKET_EINVAL;
   }
+  if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
+    return ARM_SOCKET_ENOTCONN;
+  }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
   }
-  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return ARM_SOCKET_EINVAL;
-  }
-  if ((socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_TCP) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
-    return ARM_SOCKET_ENOTCONN;
+
+  len_tot_sent = 0U;
+
+  if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {
+    // For UDP send parameters ip, ip_len and port are used as they were provided on SocketConnect
+    if (ip == NULL) {
+      ip = socket_arr[socket].remote_ip;
+    }
+    if (ip_len != 4U) {
+      ip_len = 4U;
+    }
+    if (port == 0U) {
+      port = socket_arr[socket].remote_port;
+    }
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
-    hw_socket = socket;
+    hw_socket = (uint8_t)socket;
     if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
       hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
     }
@@ -3068,79 +3270,68 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
     // Execute functionality on the module through SPI commands
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
       // Set communication socket number
-      snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", hw_socket); spi_recv_len = sizeof(spi_recv_buf);
+      spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
       }
 
-      if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {      // If UDP socket
-        if (socket_arr[socket].bound != 0U) {                           // Socket bound (server)
-          if (socket_arr[socket].server == 0U) {                      // UDP server is running on this socket -> set remote ip and port
-            ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, socket_arr[socket].local_port, (const uint8_t *)ip, port, 1U, 0U);
-            if (ret == 0) {
-              socket_arr[socket].server = 1U;
-            }
-            // Set transport remote host IP address
-            snprintf(cmd_buf, sizeof(cmd_buf), "P3=%d.%d.%d.%d\r", ip[0], ip[1], ip[2], ip[3]); resp_len = sizeof(resp_buf) - 1U;
-            if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-              ret = ARM_SOCKET_ERROR;
-            }
-            if (ret == 0) {
-              // Set transport remote port number
-              snprintf(cmd_buf, sizeof(cmd_buf), "P4=%d\r", port); resp_len = sizeof(resp_buf) - 1U;
-              if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-                ret = ARM_SOCKET_ERROR;
-              }
-            }
-          }
-        } else {                                                        // Socket not bound
+      if (ret == 0) {
+        if (socket_arr[socket].protocol == ARM_SOCKET_IPPROTO_UDP) {    // If UDP socket
           if (socket_arr[socket].client == 0U) {                        // UDP client not running on this socket
+            // If call to SendTo for UDP and socket is not bound, do implicit binding
             ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, (const uint8_t *)ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
             if (ret == 0) {
               socket_arr[socket].client = 1U;
+
+              // Start polling for reception
+              socket_arr[socket].poll_recv = 1U;
+              osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);        // Trigger asynchronous thread read
             }
           }
         }
-      } else {
       }
+
       // Set transmit timeout (ms)
-      if (ret == 0) {
-        timeout = socket_arr[socket].send_timeout;
-        if ((timeout == 0U) || (timeout > 25000U)) {
-          timeout = 25000U;
-        }
-        snprintf(cmd_buf, sizeof(cmd_buf), "S2=%d\r", timeout); resp_len = sizeof(resp_buf) - 1U;
-        if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
-          ret = ARM_SOCKET_ERROR;
-        }
-      }
       if (ret == 0) {
         len_to_send  = len;
         len_tot_sent = 0U;
 
         while ((ret == 0) && (len_tot_sent < len_to_send)) {
           len_req = len_to_send - len_tot_sent;
-          if (len_req > 1200U) {
-            len_req = 1200U;
+          if (len_req > MAX_DATA_SIZE) {
+            len_req = MAX_DATA_SIZE;
           }
+          ptr_buf  = (const uint8_t *)buf;
+          ptr_buf += len_tot_sent;
 
           // Send data
-          snprintf(cmd_buf, sizeof(cmd_buf), "S3=%04d\r", len_req); resp_len = sizeof(resp_buf) - 1U;
-          len_sent = SPI_AT_SendCommandAndDataReceiveResponse(cmd_buf, (uint8_t *)buf + len_tot_sent, len_req, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-          if (len_sent > 0) {
-            len_tot_sent += len_sent;
-          } else if (len_sent == 0) {
-            ret = ARM_SOCKET_EAGAIN;
-          } else {
-            if ((len_sent == ARM_DRIVER_ERROR) && (memcmp(resp_buf + 2, "-1", 2) == 0)) {
-              // "-1" : Connection lost
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "S3=%04d\r", len_req); spi_recv_len = sizeof(spi_recv_buf);
+          memcpy((void *)(&spi_send_buf[8]), (const void *)ptr_buf, len_req);
+          spi_ret = SPI_SendReceive(spi_send_buf, len_req + 8U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if (spi_ret == ARM_DRIVER_OK) {
+            if (resp_code == 0) {
+              if (sscanf((const char *)&spi_recv_buf[2], "%d", &len_sent) == 1) {
+                if (len_sent > 0) {
+                  len_tot_sent += (uint32_t)len_sent;
+                } else if (len_sent == 0) {
+                  ret = ARM_SOCKET_EAGAIN;
+                } else {
+                  ret = ARM_SOCKET_ERROR;
+                }
+              } else {
+                ret = ARM_SOCKET_ERROR;
+              }
+            } else if (resp_code == -1) {
               socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
               ret = ARM_SOCKET_ECONNRESET;
-            } else if (len_sent == ARM_DRIVER_ERROR_TIMEOUT) {
-              ret = ARM_SOCKET_ETIMEDOUT;
             } else {
               ret = ARM_SOCKET_ERROR;
             }
+          } else if (spi_ret == ARM_DRIVER_ERROR_TIMEOUT) {
+            ret = ARM_SOCKET_ETIMEDOUT;
+          } else {
+            ret = ARM_SOCKET_ERROR;
           }
         }
       }
@@ -3154,7 +3345,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   }
 
   if (len_tot_sent > 0) {
-    ret = len_tot_sent;
+    ret = (int32_t)len_tot_sent;
   }
 
   return ret;
@@ -3176,39 +3367,40 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
-  uint8_t *ptr_resp_buf;
-  int32_t  ret;
-  uint32_t resp_len;
-  uint16_t u16_val;
-  uint8_t  hw_socket;
+        int32_t  ret, spi_ret;
+  const uint8_t *ptr_resp_buf;
+        uint16_t u16_val;
+        uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
   if (((ip != NULL) && (ip_len == NULL)) || ((ip_len != NULL) && (*ip_len < 4U))) {
     return ARM_SOCKET_EINVAL;
   }
+  if (socket_arr[socket].bound == 0U) {
+    return ARM_SOCKET_EINVAL;
+  }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
-  }
-  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return ARM_SOCKET_EINVAL;
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
-    hw_socket = socket;
+    hw_socket = (uint8_t)socket;
     if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
       hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
     }
 
     if (ip != NULL) {
-      if (oper_mode == OPER_MODE_STATION) {
-        memcpy((void *)ip, (void *)sta_local_ip, 4);
-      } else if (oper_mode == OPER_MODE_AP) {
-        memcpy((void *)ip, (void *)ap_local_ip, 4);
-      }
+      ip[0] = socket_arr[socket].bound_ip[0];
+      ip[1] = socket_arr[socket].bound_ip[1];
+      ip[2] = socket_arr[socket].bound_ip[2];
+      ip[3] = socket_arr[socket].bound_ip[3];
       if (ip_len != NULL) {
         *ip_len = 4U;
       }
@@ -3218,28 +3410,30 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
     if (port != NULL) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
         // Set communication socket number
-        snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-        if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+        spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+        if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
           ret = ARM_SOCKET_ERROR;
         }
 
         if (ret == 0) {
           // Show Transport Settings
-          memcpy((void *)cmd_buf, (void *)"P?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-          if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+          memcpy((void *)spi_send_buf, "P?\r\n", 4U); spi_recv_len = sizeof(spi_recv_buf);
+          spi_ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+          if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
             // Skip protocol and client IP (2 ',') from response
-            ptr_resp_buf = SkipCommas(resp_buf, 2U);
+            ptr_resp_buf = SkipCommas(spi_recv_buf, 2U);
             if (ptr_resp_buf != NULL) {
               if (sscanf((const char *)ptr_resp_buf, "%hu", &u16_val) == 1) {
                 *port = u16_val;
               } else {
-                ret = ARM_DRIVER_ERROR;
+                ret = ARM_SOCKET_ERROR;
               }
             } else {
-              ret = ARM_DRIVER_ERROR;
+              ret = ARM_SOCKET_ERROR;
             }
           } else {
-            ret = ARM_DRIVER_ERROR;
+            ret = ARM_SOCKET_ERROR;
           }
         }
       }
@@ -3270,47 +3464,51 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
-  uint8_t *ptr_resp_buf;
-  int32_t  ret;
-  uint32_t resp_len;
-  uint16_t u16_val;
-  uint8_t  hw_socket;
+        int32_t  ret, spi_ret;
+  const uint8_t *ptr_resp_buf;
+        uint16_t u16_val;
+        uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
   if (((ip != NULL) && (ip_len == NULL)) || ((ip_len != NULL) && (*ip_len < 4U))) {
     return ARM_SOCKET_EINVAL;
   }
-  if (driver_initialized == 0U) {
-    return ARM_SOCKET_ERROR;
-  }
   if (socket_arr[socket].state != SOCKET_STATE_CONNECTED) {
     return ARM_SOCKET_ENOTCONN;
+  }
+  if (driver_initialized == 0U) {
+    return ARM_SOCKET_ERROR;
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
-    hw_socket = socket;
+    hw_socket = (uint8_t)socket;
     if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
       hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
     }
 
     // Execute functionality on the module through SPI commands
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-      snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-      if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+      spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
       }
 
       if (ret == 0) {
         // Show Transport Settings
-        memcpy((void *)cmd_buf, (void *)"P?\r", 4); resp_len = sizeof(resp_buf) - 1U;
-        if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+        memcpy((void *)spi_send_buf, "P?\r\n", 4U); spi_recv_len = sizeof(spi_recv_buf);
+        ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+        if ((ret == ARM_DRIVER_OK) && (resp_code == 0)) {
           if (ip != NULL) {
             // Skip protocol (1 ',') from response
-            ptr_resp_buf = SkipCommas(resp_buf, 3U);
+            ptr_resp_buf = SkipCommas(spi_recv_buf, 3U);
             if (ptr_resp_buf != NULL) {
               if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) == 4) {
                 *ip_len = 4U;
@@ -3323,7 +3521,7 @@ static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip
           }
           // Skip protocol, client IP, local port and host IP (4 ',') from response
           if (port != NULL) {
-            ptr_resp_buf = SkipCommas(resp_buf, 4U);
+            ptr_resp_buf = SkipCommas(spi_recv_buf, 4U);
             if ((ptr_resp_buf != NULL) && (port != NULL)) {
               if (sscanf((const char *)ptr_resp_buf, "%hu", &u16_val) == 1) {
                 if (port != NULL) {
@@ -3374,14 +3572,14 @@ static int32_t WiFi_SocketGetOpt (int32_t socket, int32_t opt_id, void *opt_val,
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
     return ARM_SOCKET_ESOCK;
   }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
+    return ARM_SOCKET_ESOCK;
+  }
   if ((opt_val == NULL) || (opt_len == NULL) || (opt_len == NULL) || (*opt_len < 4U)) {
     return ARM_SOCKET_EINVAL;
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
-  }
-  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return ARM_SOCKET_EINVAL;
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
@@ -3441,11 +3639,14 @@ static int32_t WiFi_SocketGetOpt (int32_t socket, int32_t opt_id, void *opt_val,
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *opt_val, uint32_t opt_len) {
-  int32_t  ret;
-  uint32_t u32, resp_len;
+  int32_t  ret, spi_ret;
+  uint32_t u32;
   uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
+    return ARM_SOCKET_ESOCK;
+  }
+  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
   if ((opt_val == NULL) || (opt_len == NULL) || (opt_len != 4U)) {
@@ -3453,9 +3654,6 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
-  }
-  if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return ARM_SOCKET_EINVAL;
   }
 
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
@@ -3478,21 +3676,24 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
         }
         if (ret == 0) {
           if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-            hw_socket = socket;
+            hw_socket = (uint8_t)socket;
             if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
               hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
             }
-            snprintf(cmd_buf, sizeof(cmd_buf), "P0=%d\r", hw_socket); resp_len = sizeof(resp_buf) - 1U;
-            if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) != ARM_DRIVER_OK) {
+            snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+            spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+            if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
               ret = ARM_SOCKET_ERROR;
             }
             if (ret == 0) {
               if (u32 == 0U) {
-                memcpy((void *)cmd_buf, (void *)"PK=0,0\r", 7); resp_len = sizeof(resp_buf) - 1U;
+                memcpy((void *)spi_send_buf, (void *)"PK=0,0\r\n", 9);
               } else {
-                snprintf(cmd_buf, sizeof(cmd_buf), "PK=1,%d\r", u32); resp_len = sizeof(resp_buf) - 1U;
+                snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "PK=1,%d\r", u32);
               }
-              if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
+              spi_recv_len = sizeof(spi_recv_buf);
+              spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+              if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
                 socket_arr[socket].keepalive = u32;
               } else {
                 ret = ARM_SOCKET_ERROR;
@@ -3527,14 +3728,15 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketClose (int32_t socket) {
-  int32_t ret;
-  uint8_t hw_socket;
+  int32_t  ret;
+  uint32_t wait_flags;
+  uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
     return ARM_SOCKET_ESOCK;
   }
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
-    return 0;
+    return ARM_SOCKET_ESOCK;
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
@@ -3546,16 +3748,33 @@ static int32_t WiFi_SocketClose (int32_t socket) {
     }
   }
 
+  hw_socket = (uint8_t)socket;
+  if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
+    hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
+  }
+  wait_flags = 0U;
+
   if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
     ret = 0;
 
-    hw_socket = socket;
-    if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
-      hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
+    if (event_flags_sockets_id[hw_socket] != NULL) {
+      if (socket_arr[hw_socket].state == SOCKET_STATE_ACCEPTING) {
+        // If socket is waiting for flag in accept, send abort flag to terminate accept
+        osEventFlagsSet  (event_flags_sockets_id[hw_socket], EVENT_SOCK_ACCEPTING_CLOSE);
+        wait_flags |= EVENT_SOCK_ACCEPTING_CLOSE;
+      }
+      if (socket_arr[socket].poll_recv != 0U) {       // If reception is being polled
+        socket_arr[socket].poll_recv = 0U;            // stop polling reception
+      }
+      if (socket_arr[socket].recv_time_left != 0U) {
+        // If socket is being read (waiting in SocketRecv), send abort flag to terminate receive
+        osEventFlagsSet  (event_flags_sockets_id[hw_socket], EVENT_SOCK_RECV_CLOSE);
+        wait_flags |= EVENT_SOCK_RECV_CLOSE_DONE;
+      }
     }
 
     // Execute functionality on the module through SPI commands
-    if ((socket_arr[socket].client == 1U) || (socket_arr[socket].server == 1U)) {
+    if ((socket_arr[socket].client == 1U) || (socket_arr[hw_socket].server == 1U)) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
         if (socket_arr[socket].client == 1U) {
           ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, NULL, 0U, TRANSPORT_STOP, TRANSPORT_CLIENT);
@@ -3563,10 +3782,21 @@ static int32_t WiFi_SocketClose (int32_t socket) {
             socket_arr[socket].client = 0U;
           }
         }
-        if (socket_arr[socket].server == 1U) {
-          ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, NULL, 0U, TRANSPORT_STOP, TRANSPORT_SERVER);
-          if (ret == 0) {
-            socket_arr[socket].server = 0U;
+        if (hw_socket == socket) {      // If this is listening socket stop the server if running
+          if (socket_arr[socket].server == 1U) {
+            ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, NULL, 0U, TRANSPORT_STOP, TRANSPORT_SERVER);
+            if (ret == 0) {
+              socket_arr[socket].server = 0U;
+            }
+          }
+        } else {                        // If this is accepted socket then restart server if running on listening socket
+          if (socket_arr[hw_socket].server == 1U) {
+            ret = SPI_StartStopTransportServerClient (hw_socket, socket_arr[socket].protocol, 0U, NULL, 0U, TRANSPORT_RESTART, TRANSPORT_SERVER);
+            if (ret == 0) {
+              if (socket_arr[hw_socket].state == SOCKET_STATE_ACCEPTED) {
+                socket_arr[hw_socket].state = SOCKET_STATE_LISTENING;
+              }
+            }
           }
         }
         osMutexRelease(mutex_id_spi);
@@ -3575,24 +3805,26 @@ static int32_t WiFi_SocketClose (int32_t socket) {
       }
     }
 
-    if (ret == 0) {
-      if ((event_flags_sockets_id != NULL) && (socket_arr[socket].state == SOCKET_STATE_ACCEPTING)) {
-        // If socket is waiting for flag in accept, send flag to terminate accept
-        osEventFlagsSet(event_flags_sockets_id, (0x10000U << socket));
-      }
-      if ((event_flags_sockets_id != NULL) && (socket_arr[socket].data_to_recv != NULL) && (socket_arr[socket].recv_time_left != 0U)) {
-        // If socket is waiting for reception but has timed-out send event
-        osEventFlagsSet(event_flags_sockets_id, ((1U << 16) << socket));
-      }
+    WiFi_ISM43362_BufferFlush (hw_socket);
+    if (hw_socket == socket) {
+      // Uninitialize buffer for socket
+      WiFi_ISM43362_BufferUninitialize (hw_socket);
     }
 
-    if (ret == 0) {
-      // If socket close succeeded, clear all variables
-      memset ((void *)&socket_arr[socket], 0 , sizeof(socket_t));
-    }
+    // If socket close succeeded, clear all variables
+    memset ((void *)&socket_arr[socket], 0 , sizeof(socket_t));
+
     osMutexRelease(mutex_id_sockets);
   } else {
     ret = ARM_SOCKET_ERROR;
+  }
+
+  if (ret == 0) {
+    if (wait_flags != 0U) {           // If events were sent to terminate accept or recv, wait for them to finish
+      osEventFlagsWait (event_flags_sockets_id[hw_socket], wait_flags, osFlagsWaitAll, osWaitForever);
+    } else {
+      osEventFlagsClear(event_flags_sockets_id[hw_socket], 0xFFU);
+    }
   }
 
   return ret;
@@ -3616,10 +3848,9 @@ static int32_t WiFi_SocketClose (int32_t socket) {
                    - ARM_SOCKET_ERROR             : Unspecified error
 */
 static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *ip, uint32_t *ip_len) {
-  int32_t  ret;
-  uint32_t resp_len;
+  int32_t  ret, spi_ret;
 
-  if ((name == NULL) || (af != ARM_SOCKET_AF_INET) || (ip == NULL) || (ip_len == NULL) || (*ip_len != 4U)) {
+  if ((name == NULL) || (af != ARM_SOCKET_AF_INET) || (ip == NULL) || (ip_len == NULL) || (*ip_len < 4U)) {
     return ARM_SOCKET_EINVAL;
   }
   if (strlen(name) > 64U) {
@@ -3635,20 +3866,22 @@ static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *
     ret = 0;
 
     // Send command for DNS lookup
-    snprintf(cmd_buf, sizeof(cmd_buf), "D0=%s\r", name); resp_len = sizeof(resp_buf) - 1U;
-    if (SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT) == ARM_DRIVER_OK) {
-      if (resp_len > 0) {
-        // Parse IP Address
-        if (sscanf((const char *)resp_buf + 2, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) != 4) {
-          ret = ARM_SOCKET_ERROR;
+    snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "D0=%s\r", name); spi_recv_len = sizeof(spi_recv_buf);
+    spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
+      // Parse IP Address
+      if (sscanf((const char *)&spi_recv_buf[2], "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) == 4) {
+        if (ip_len != NULL) {
+          *ip_len = 4U;
         }
-        osDelay(100U);
+        ret = 0;
       } else {
         ret = ARM_SOCKET_ERROR;
       }
+      osDelay(100U);
     } else {
       // Check if "Host not found " string is present in response
-      if (strstr((const char *)resp_buf, "Host not found ") != NULL) {
+      if (strstr((const char *)&spi_recv_buf[2], "Host not found ") != NULL) {
         ret = ARM_SOCKET_EHOSTNOTFOUND;
       } else {
         ret = ARM_SOCKET_ERROR;
@@ -3676,7 +3909,6 @@ static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *
 */
 static int32_t WiFi_Ping (const uint8_t *ip, uint32_t ip_len) {
   int32_t  ret;
-  uint32_t resp_len;
 
   if (ip == NULL){
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -3696,15 +3928,40 @@ static int32_t WiFi_Ping (const uint8_t *ip, uint32_t ip_len) {
     ret = ARM_DRIVER_OK;
 
     // Set ping target address
-    snprintf(cmd_buf, sizeof(cmd_buf), "T1=%d.%d.%d.%d\r", ip[0], ip[1], ip[2], ip[3]); resp_len = sizeof(resp_buf) - 1U;
-    ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-    // Ping IP target address
+    memcpy((void *)spi_send_buf, "T2=0\r\n", 6); spi_recv_len = sizeof(spi_recv_buf);
+    ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+    if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+      ret = ARM_DRIVER_ERROR;
+    }
+
     if (ret == ARM_DRIVER_OK) {
-      memcpy((void *)cmd_buf, (void *)"T0\r", 3); resp_len = sizeof(resp_buf) - 1U;
-      ret = SPI_AT_SendCommandReceiveResponse(cmd_buf, resp_buf, &resp_len, WIFI_ISM43362_CMD_TIMEOUT);
-      if ((ret == ARM_DRIVER_OK) && (strstr((const char *)resp_buf, "Timeout") != NULL)) {
-        // If no response from the remote host
-        ret = ARM_DRIVER_ERROR_TIMEOUT;
+      memcpy((void *)spi_send_buf, "T3=100\r\n", 8); spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, 8U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+        ret = ARM_DRIVER_ERROR;
+      }
+    }
+
+    if (ret == ARM_DRIVER_OK) {
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "T1=%d.%d.%d.%d\r", ip[0], ip[1], ip[2], ip[3]); spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
+        ret = ARM_DRIVER_ERROR;
+      }
+    }
+
+    if (ret == ARM_DRIVER_OK) {
+      // Ping IP target address
+      memcpy((void *)spi_send_buf, "T0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
+      ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
+      if (resp_code != 0) {
+        ret = ARM_DRIVER_ERROR;
+      }
+      if (ret == ARM_DRIVER_OK) {
+        if (strstr((const char *)&spi_recv_buf[2], "Timeout") != NULL) {
+          // If no response from the remote host
+          ret = ARM_DRIVER_ERROR_TIMEOUT;
+        }
       }
     }
     osMutexRelease(mutex_id_spi);

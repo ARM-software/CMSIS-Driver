@@ -1,0 +1,18 @@
+This test report was produced with following configuration:
+ - Hardware:  NXP MIMXRT1064-EVK board with ESP32-WROOM-32D on SparkFun ESP32 Thing Plus 
+ - Firmware:  AT Command Set 1.2.0.0
+ - Interface: UART at 115200 bps
+
+Packs used for test:
+ - ARM::CMSIS                    5.6.0
+ - ARM::CMSIS-Driver             2.5.0
+ - ARM::CMSIS-Driver_Validation  1.4.0
+ - Keil::ARM_Compiler            1.6.2
+ - NXP MIMXRT1064_DFP           12.0.0
+ - NXP EVK-MIMXRT1064_BSP       12.0.0
+
+AT Version Information (AT+GMR):
+ - AT version:1.2.0.0(6fe4345 - Jun 27 2019 05:39:23)
+ - SDK version:v3.2-127-gddbce78
+ - compile time:Jun 27 2019 12:08:01
+ - Bin version:1.2.0(WROOM-32) 

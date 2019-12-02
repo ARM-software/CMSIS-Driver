@@ -1,0 +1,18 @@
+This test report was produced with following configuration:
+ - Hardware:  NXP MIMXRT1064-EVK board with ESP8266EX on SparkFun ESP8266 WiFi Shield
+ - Firmware:  AT Command Set 1.6.2.0
+ - Interface: UART at 115200 bps
+
+Packs used for test:
+ - ARM::CMSIS                    5.6.0
+ - ARM::CMSIS-Driver             2.5.0
+ - ARM::CMSIS-Driver_Validation  1.4.0
+ - Keil::ARM_Compiler            1.6.2
+ - NXP MIMXRT1064_DFP           12.0.0
+ - NXP EVK-MIMXRT1064_BSP       12.0.0
+
+AT Version Information (AT+GMR):
+ - AT version:1.6.2.0(Apr 13 2018 11:10:59)
+ - SDK version:2.2.1(6ab97e9)
+ - compile time:Jun  7 2018 19:34:26
+ - Bin version(Wroom 02):1.6.2  

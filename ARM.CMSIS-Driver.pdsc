@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.4.9" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="Utilities/PACK.xsd">
+<package schemaVersion="1.4.9" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
   <url>http://www.keil.com/pack/</url>
-  <!-- <license>LICENSE.txt</license> -->
+  <license>LICENSE.txt</license>
 
   <releases>
     <release version="2.5.0-rc0">

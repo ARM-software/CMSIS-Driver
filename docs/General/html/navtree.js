@@ -15,7 +15,10 @@ var NAVTREE =
       [ "ST802RT1", "driver_eth.html#driver_ST802RT1", null ]
     ] ],
     [ "WiFi", "driver_WiFi.html", [
-      [ "ISM43362", "driver_WiFi.html#driver_ISM43362", null ]
+      [ "ISM43362", "driver_WiFi.html#driver_ISM43362", null ],
+      [ "ESP32", "driver_WiFi.html#driver_ESP32", null ],
+      [ "ESP8266", "driver_WiFi.html#driver_ESP8266", null ],
+      [ "WizFi360", "driver_WiFi.html#driver_WizFi360", null ]
     ] ],
     [ "Flash", "driver_Flash.html", [
       [ "AM29x800BB", "driver_Flash.html#driver_AM29x800BB", null ],

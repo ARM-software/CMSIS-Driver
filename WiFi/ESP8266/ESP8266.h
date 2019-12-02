@@ -39,7 +39,7 @@
 
 /* AT command set version definition               */
 /* Version as major.minor.patch.build:  0xMMmmppbb */
-#define AT_VERSION_2_0_0_0              0x20000000
+#define AT_VERSION_2_0_0_0              0x02000000
 #define AT_VERSION_1_9_0_0              0x01090000
 #define AT_VERSION_1_8_0_0              0x01080000
 #define AT_VERSION_1_7_0_0              0x01070000

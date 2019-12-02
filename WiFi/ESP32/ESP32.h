@@ -31,7 +31,7 @@
 
 /* AT command set version and variant used */
 #ifndef AT_VERSION
-#define AT_VERSION                      0x02000000
+#define AT_VERSION                      0x01020000
 #endif
 #ifndef AT_VARIANT
 #define AT_VARIANT                      AT_VARIANT_ESP32
@@ -258,6 +258,28 @@ extern int32_t AT_Cmd_ConfigUART (uint32_t at_cmode, uint32_t baudrate, uint32_t
   \return
 */
 extern int32_t AT_Resp_ConfigUART (uint32_t *baudrate, uint32_t *databits, uint32_t *stop_par_flowc);
+
+/**
+  Configure the sleep modes.
+
+  Command: SLEEP
+
+  \note Command can be used only in Station mode. Modem-sleep is the default mode.
+
+  \param[in]  sleep_mode  sleep mode (0: disabled, 1: Light-sleep, 2: Modem-sleep)
+  \return 0: ok, -1: error
+*/
+extern int32_t AT_Cmd_Sleep (uint32_t at_cmode, uint32_t sleep_mode);
+
+/**
+  Get response to Sleep command.
+
+  \param[out]   sleep_mode  Pointer to variable where the sleep mode is stored
+  \return execution status
+          - negative: error
+          - 0: OK, response retrieved, no more data
+*/
+extern int32_t AT_Resp_Sleep (uint32_t *sleep_mode);
 
 /**
   Set maximum value of RF TX power [dBm] (set only command).

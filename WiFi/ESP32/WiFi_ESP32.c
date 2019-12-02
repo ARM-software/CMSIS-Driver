@@ -25,7 +25,7 @@
 
 /* History:
  *  Version 1.0
- *    Initial version based on AT command set version: 2.0.0.0
+ *    Initial version based on AT command set version: 1.2.0.0
  */
 
 #include "WiFi_ESP32.h"
@@ -772,6 +772,26 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
               if (ex == 0) {
                 /* Response arrived */
                 ex = AT_Resp_Generic();
+              }
+            }
+          }
+
+          if (ex == 0) {
+            /* Disable sleep */
+            ex = AT_Cmd_Sleep (AT_CMODE_SET, 0U);
+
+            if (ex == 0) {
+              /* Wait until response arrives */
+              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+              if (ex == 0) {
+                /* Response arrived */
+                ex = AT_Resp_Generic();
+                
+                if (ex == 0) {
+                  /* Wait a bit before the next command is sent out */
+                  osDelay(100);
+                }
               }
             }
           }

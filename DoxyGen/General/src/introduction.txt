@@ -45,6 +45,13 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.5.1-dev0</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.4.0):
+          - Corrected GetModuleInfo return string termination
+      </td>
+    </tr>    
+    <tr>
       <td>2.5.0</td>
       <td>
         - Added Espressif ESP32 WiFi driver

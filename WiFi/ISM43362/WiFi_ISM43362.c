@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. November 2019
- * $Revision:    V1.3
+ * $Date:        6. December 2019
+ * $Revision:    V1.4
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -77,6 +77,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.4
+ *    - Corrected GetModuleInfo return string termination
  *  Version 1.3
  *    - Corrected not setting password in Activate if OPEN security is used
  *  Version 1.2
@@ -143,7 +145,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -1390,7 +1392,7 @@ static int32_t WiFi_GetModuleInfo (char *module_info, uint32_t max_len) {
         if (copy_len > 0) {
           memcpy ((void *)module_info, (void *)&spi_recv_buf[2], copy_len);
         }
-        module_info[copy_len+1] = 0;
+        module_info[copy_len] = 0;
       } else {
         ret = ARM_DRIVER_ERROR;
       }

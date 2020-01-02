@@ -4,7 +4,7 @@ This repository contains MCU independent device driver implementations and templ
 The drivers are implemented using the [CMSIS-Driver API specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html).
 All drivers refer the API Interface header file defintions published in the CMSIS pack (https://github.com/ARM-software/CMSIS_5).
 
-## ETH - Ehternet MAC & PHY or Ethernet PHY drivers
+## ETH - Ethernet MAC & PHY or Ethernet PHY drivers
 - ETH_KSZ8851SNL
 - ETH_LAN9220
 - PHY_DP83848

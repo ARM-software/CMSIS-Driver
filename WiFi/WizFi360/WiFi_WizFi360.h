@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        12. November 2019
- * $Revision:    V1.0
+ * $Date:        3. January 2020
+ * $Revision:    V1.1
  *
  * Project:      Wiz360 WiFi Driver
  * -------------------------------------------------------------------------- */

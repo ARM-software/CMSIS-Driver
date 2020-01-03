@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        12. November 2019
- * $Revision:    V1.0
+ * $Date:        3. January 2020
+ * $Revision:    V1.1
  *
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */
@@ -211,10 +211,11 @@ int32_t Serial_SendBuf (const uint8_t *buf, uint32_t len) {
 
   memcpy (TxBuf, buf, cnt);
 
+  Com.txb = 1U;
+
   stat = Com.drv->Send (&TxBuf[0], cnt);
 
   if (stat == ARM_DRIVER_OK) {
-    Com.txb = 1U;
     n = (int32_t)cnt;
   }
   else {

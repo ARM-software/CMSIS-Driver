@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        27. November 2019
- * $Revision:    V1.0
+ * $Date:        12. November 2019
+ * $Revision:    V1.1
  *
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */

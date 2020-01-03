@@ -16,14 +16,17 @@
  * limitations under the License.
  *
  *
- * $Date:        27. November 2019
- * $Revision:    V1.0
+ * $Date:        3. January 2020
+ * $Revision:    V1.1
  *
  * Project:      ESP32 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP32_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Fixed serial tx busy flag handling
+ *    Added read of DHCP assigned IPs after station activate
  *  Version 1.0
  *    Initial version based on AT command set version: 1.2.0.0
  */
@@ -32,7 +35,7 @@
 #include "WiFi_ESP32_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 0)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 1)
 
 /* -------------------------------------------------------------------------- */
 
@@ -1626,6 +1629,15 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
                 }
               }
             }
+          }
+        }
+
+        if (ex == AT_RESP_OK) {
+          if ((pCtrl->flags & WIFI_FLAGS_STATION_STATIC_IP) == 0) {
+            /* DHCP is enabled */
+            ex = GetCurrentIpAddr (WIFI_INTERFACE_STATION, pCtrl->options.st_ip,
+                                                           pCtrl->options.st_gateway,
+                                                           pCtrl->options.st_netmask);
           }
         }
       }

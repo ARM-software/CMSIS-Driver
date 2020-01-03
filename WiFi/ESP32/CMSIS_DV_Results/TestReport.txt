@@ -1,7 +1,7 @@
-CMSIS-Driver WiFi Test Report   Dec  2 2019   09:06:28
+CMSIS-Driver WiFi Test Report   Jan  3 2020   14:11:23
 
 TEST 01: WIFI_GetVersion
-  DV_WIFI.c (284): [INFO] Driver API version 1.0, Driver version 1.0
+  DV_WIFI.c (284): [INFO] Driver API version 1.0, Driver version 1.1
                                           PASSED
 TEST 02: WIFI_GetCapabilities             PASSED
 TEST 03: WIFI_Initialize_Uninitialize     PASSED

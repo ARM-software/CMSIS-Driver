@@ -178,6 +178,44 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 
 The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
 
+\section ism43362_firmware_download Flashing a different firmware to ISM43362
+
+The ISM43362 has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
+flashed with the firmware for UART communication. To enable SPI communication, follow these steps to flash the module:
+
+\b Prepare \b the \b hardware
+- Set the power supply jumper on ISMART43362-E to connect 5V_USB and 5V_BOARD.
+- Set the SW3 switch to position 1 (factory default position).
+
+\b Prepare \b the \b software
+- Download
+  [ISM43362_M3G_L44_SPI_C6.2.1.7.zip](https://www.inventeksys.com/iwin/wp-content/uploads/ISM43362_M3G_L44_SPI_C6.2.1.7.zip)
+  and extract it locally.
+- Download [eS-WIFi_Demo](https://www.inventeksys.com/iwin/wp-content/uploads/eS-WIFi_Demo.zip)
+- Unzip the file and install the application on your PC. 
+- Start es-WiFi Demo and select <b>Menu - Install Drivers</b> and install both, CYW9WCD1EVAL1 and BCM9WCD1EVAL1:
+  \image html ISM43362_install_drivers.png
+- Connect the ISMART43362-E to the PC using the Mini-USB connector. In Device Manager, you should see WICED USB Serial Port
+  (COMx).
+- If not already done, assing a a low COM port number.
+- In the es-WiFi Demo application, execute:
+  - Go to <b>Setup - Serial Port - Configure/Open</b>:
+    \image html ISM43362_set_COM_port_conf.png
+  - Check the follwoing settings (Serial Port being the one added just now):
+    \image html ISM43362_set_COM_port.png
+  - Go to <b>Menu - Firmware - Update</b>:
+    \image html ISM43362_update_firmware.png
+  - Select the binary image file extracted in the first step (ISM43362_M3G_L44_SPI_C6.2.1.7.bin). Make sure it is an SPI
+    firmware variant:
+    \image html ISM43362_module_detected.png
+- After the firmware is updated, the console will show the message "Resetting...":
+  \image html ISM43362_update_firmware_resetting.png
+  You can now disconnect the module from the PC as it contains the new SPI firmware.
+
+  If you want to flash a different firmware later, please visit
+  [Inventek's Firmware page](https://www.inventeksys.com/iwin/firmware/) for the latest binary files.
+
+
 \section driver_ESP32 ESP32
 
 The documentation for the Espressif ESP32 can be found here: https://www.espressif.com/en/products/hardware/esp-wroom-32/overview
@@ -189,7 +227,6 @@ The documentation for the Espressif ESP8266 can be found here: https://www.espre
 \section driver_WizFi360 WizFi360
 
 The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
-
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -233,8 +270,6 @@ https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e
 
 The documentation for the S29GL064Nx2 can be found here:
 http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash
-
-
 */
 
 

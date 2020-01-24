@@ -7,6 +7,9 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.5.1-dev2">
+      Updated WizFi360 WiFi driver (API V1.1)
+    </release>
     <release version="2.5.1-dev1">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - Fixed serial tx busy flag handling
@@ -427,7 +430,7 @@
     </component>
 
     <!-- WizFi360 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.0.0" Cvariant="UART" Cversion="1.1.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.2.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>WIZnet WizFi360 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */

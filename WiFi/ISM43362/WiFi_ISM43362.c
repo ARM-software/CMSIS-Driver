@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        6. December 2019
- * $Revision:    V1.4
+ * $Date:        22. January 2020
+ * $Revision:    V1.5
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -77,6 +77,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.5
+ *    - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
  *  Version 1.4
  *    - Corrected GetModuleInfo return string termination
  *  Version 1.3
@@ -145,7 +147,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -3094,7 +3096,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((buf == NULL) || (len == 0U)) {
+  if ((buf == NULL) && (len != 0U)) {
     return ARM_SOCKET_EINVAL;
   }
   if ((socket_arr[socket].protocol == ARM_SOCKET_SOCK_STREAM) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
@@ -3113,7 +3115,11 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
     ret = 0;
 
     // Handle if data was already received, and just return data immediately
-    ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+    if (len != 0U) {
+      ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+    } else if (WiFi_ISM43362_BufferNotEmpty (hw_socket)) {
+      ret = 1;                                                // Set ret to 1, if len requested was 0 and data is available
+    }
 
     if (ret == 0) {
       if (socket_arr[socket].non_blocking != 0U) {            // If non-blocking
@@ -3151,7 +3157,11 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
         socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
         ret = ARM_SOCKET_ECONNRESET;
       } else if ((flags & EVENT_SOCK_RECV) != 0U) {             // If reception has finished and some data was received
-        ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+        if (len != 0U) {
+          ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+        } else {
+          ret = 1;                                              // Set ret to 1, if len requested was 0 and data is available
+        }
       } else if ((flags & EVENT_SOCK_RECV_TIMEOUT) != 0U) {     // If reception has timed-out and nothing was received
         ret = ARM_SOCKET_EAGAIN;
       } else {                                                  // Should never happen
@@ -3161,6 +3171,11 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
     } else {
       ret = ARM_SOCKET_ERROR;
     }
+  }
+
+  // Handling of special case read with len 0, if there was data available ret is 1 at this point
+  if ((len == 0U) && (ret == 1)) {
+    ret = 0;
   }
 
   if (ret > 0) {
@@ -3232,7 +3247,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((buf == NULL) || (len == 0U)) {
+  if ((buf == NULL) && (len != 0U)) {
     return ARM_SOCKET_EINVAL;
   }
   if ((ip != NULL) && (ip_len != 4U)) {
@@ -3299,7 +3314,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
         len_to_send  = len;
         len_tot_sent = 0U;
 
-        while ((ret == 0) && (len_tot_sent < len_to_send)) {
+        do {
           len_req = len_to_send - len_tot_sent;
           if (len_req > MAX_DATA_SIZE) {
             len_req = MAX_DATA_SIZE;
@@ -3314,7 +3329,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           if (spi_ret == ARM_DRIVER_OK) {
             if (resp_code == 0) {
               if (sscanf((const char *)&spi_recv_buf[2], "%d", &len_sent) == 1) {
-                if (len_sent > 0) {
+                if ((len_sent > 0) || ((len_sent == 0) && (len_to_send == 0U))) {
                   len_tot_sent += (uint32_t)len_sent;
                 } else if (len_sent == 0) {
                   ret = ARM_SOCKET_EAGAIN;
@@ -3335,7 +3350,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           } else {
             ret = ARM_SOCKET_ERROR;
           }
-        }
+        } while ((ret == 0) && (len_tot_sent < len_to_send));
       }
       osMutexRelease(mutex_id_spi);
     } else {

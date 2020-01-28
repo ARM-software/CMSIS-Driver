@@ -4,8 +4,8 @@ This test report was produced with following configuration:
  - Interface: SPI at 20 MHz
 
 Packs used for test:
- - ARM::CMSIS                   v5.6.0
- - ARM::CMSIS-Driver            v2.5.0
- - ARM::CMSIS-Driver_Validation v1.4.0
+ - ARM::CMSIS                   v5.7.0-dev1
+ - ARM::CMSIS-Driver            v2.5.1-dev3
+ - ARM::CMSIS-Driver_Validation v1.5.0-dev0
  - Keil::ARM_Compiler           v1.6.2
  - Keil::STM32L4xx_DFP          v2.2.0

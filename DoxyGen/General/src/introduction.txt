@@ -48,6 +48,7 @@ Revision History
       <td>2.5.1-dev3</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (API V1.1)
+        - Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
       </td>
     </tr>    
     <tr>
@@ -198,9 +199,9 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 
 The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
 
-\section ism43362_firmware_download Flashing a different firmware to ISM43362
+\subsection ismart43362_e_firmware_download Flashing a different firmware to ISMART43362-E Shield
 
-The ISM43362 has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
+The ISMART43362-E Shield has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
 flashed with the firmware for UART communication. To enable SPI communication, follow these steps to flash the module:
 
 \b Prepare \b the \b hardware
@@ -217,7 +218,7 @@ flashed with the firmware for UART communication. To enable SPI communication, f
   \image html ISM43362_install_drivers.png
 - Connect the ISMART43362-E to the PC using the Mini-USB connector. In Device Manager, you should see WICED USB Serial Port
   (COMx).
-- If not already done, assing a a low COM port number.
+- If not already done, assign a low COM port number.
 - In the es-WiFi Demo application, execute:
   - Go to <b>Setup - Serial Port - Configure/Open</b>:
     \image html ISM43362_set_COM_port_conf.png

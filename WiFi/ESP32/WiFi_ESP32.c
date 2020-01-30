@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,17 @@
  * limitations under the License.
  *
  *
- * $Date:        3. January 2020
- * $Revision:    V1.1
+ * $Date:        28. January 2020
+ * $Revision:    V1.2
  *
  * Project:      ESP32 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP32_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    Added DHCP setting before station Activate
+ *    API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
  *  Version 1.1
  *    Fixed serial tx busy flag handling
  *    Added read of DHCP assigned IPs after station activate
@@ -35,7 +38,7 @@
 #include "WiFi_ESP32_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 1)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 2)
 
 /* -------------------------------------------------------------------------- */
 
@@ -765,21 +768,6 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
           }
 
           if (ex == 0) {
-            /* Enable multiple connections */
-            ex = AT_Cmd_ConnectionMux (AT_CMODE_SET, 1U);
-
-            if (ex == 0) {
-              /* Wait until response arrives */
-              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
-
-              if (ex == 0) {
-                /* Response arrived */
-                ex = AT_Resp_Generic();
-              }
-            }
-          }
-
-          if (ex == 0) {
             /* Disable sleep */
             ex = AT_Cmd_Sleep (AT_CMODE_SET, 0U);
 
@@ -793,8 +781,23 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
                 
                 if (ex == 0) {
                   /* Wait a bit before the next command is sent out */
-                  osDelay(100);
+                  osDelay(500);
                 }
+              }
+            }
+          }
+
+          if (ex == 0) {
+            /* Enable multiple connections */
+            ex = AT_Cmd_ConnectionMux (AT_CMODE_SET, 1U);
+
+            if (ex == 0) {
+              /* Wait until response arrives */
+              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+              if (ex == 0) {
+                /* Response arrived */
+                ex = AT_Resp_Generic();
               }
             }
           }
@@ -1539,6 +1542,23 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
       else {
         /* DHCP is enabled */
         state = 1U;
+      }
+      
+      /* Configure station DHCP */
+      ex = AT_Cmd_DHCP (AT_CMODE_SET, 1U, state);
+
+      if (ex == 0) {
+        /* Wait until response arrives */
+        ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+        if (ex == 0) {
+          /* Response arrived */
+          ex = AT_Resp_Generic();
+
+          if (ex != AT_RESP_OK) {
+            state = 2U;
+          }
+        }
       }
 
       do {
@@ -2727,7 +2747,7 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
     /* Invalid socket identification number */
     rval = ARM_SOCKET_ESOCK;
   }
-  else if ((buf == NULL) || (len == 0U)) {
+  else if ((buf == NULL) && (len != 0U)) {
     /* Invalid parameters */
     rval = ARM_SOCKET_EINVAL;
   }
@@ -2900,6 +2920,9 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
           }
         }
       }
+      else if ((sock->rx_len != 0) && (len == 0)) {
+        break;
+      }
       else {
         /* Receive data */
         if (sock->type == ARM_SOCKET_SOCK_DGRAM) {
@@ -2941,7 +2964,7 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
           }
 
           cnt = (uint32_t)BufRead (&pu8[n], cnt, &sock->mem);
-          
+
           sock->rx_len -= cnt;
           n            += cnt;
 
@@ -3021,7 +3044,7 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
     /* Invalid socket identification number */
     rval = ARM_SOCKET_ESOCK;
   }
-  else if ((buf == NULL) || (len == 0U)) {
+  else if ((buf == NULL) && (len != 0U)) {
     /* Invalid parameters */
     rval = ARM_SOCKET_EINVAL;
   }
@@ -3178,80 +3201,81 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
         /* 1. Message length is less than MAX (2048 bytes) */
         /* 2. For non-blocking socket, message can fit into buffer */
         /* 3. For blocking socket, message might need to be sent using multiple AT_Send_Data calls */
-
-        /* Initiate send operation */
-        ex = AT_Cmd_SendData (AT_CMODE_SET, sock->conn_id, len, r_ip, r_port);
-
-        if (ex == 0) {
-          /* Wait until response arrives */
-          ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
-        }
-
-        if (ex == 0) {
-          /* Wait until response arrives */
-          ex = WiFi_Wait (WIFI_WAIT_TX_REQUEST, WIFI_RESP_TIMEOUT);
-        }
-
-        if (ex != 0) {
-          /* Serial driver error or device not accepting data */
-          rval = ARM_SOCKET_ERROR;
-        }
-        else {
-          /* Start sending actual data to device */
-          /* Set number of bytes sent */
-          num = 0U;
-
-          while (num < len) {
-            /* Determine amount of data to send */
-            cnt = AT_Send_GetFree();
-
-            if (cnt == 0U) {
-              /* Tx buffer full, wait until tx buffer available */
-              ex = WiFi_Wait (WIFI_WAIT_TX_DONE, WIFI_RESP_TIMEOUT);
-
-              if (ex == 0) {
-                /* Data transfer completed */
-                cnt = AT_Send_GetFree();
-              }
-              else {
-                /* Device internal error */
-                rval = ARM_SOCKET_ERROR;
-                break;
-              }
-            }
-
-            if (cnt > (len - num)) {
-              cnt = (len - num);
-            }
-
-            osEventFlagsClear (pCtrl->evflags_id, WIFI_WAIT_TX_DONE);
-
-            num += AT_Send_Data (&pu8[num], cnt);
-          }
-
-          /* Data sent, wait for SEND OK or SEND FAIL responses */
-          ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+        if (len != 0) {
+          /* Initiate send operation */
+          ex = AT_Cmd_SendData (AT_CMODE_SET, sock->conn_id, len, r_ip, r_port);
 
           if (ex == 0) {
-            /* Check response */
-            ex = AT_Resp_Generic();
+            /* Wait until response arrives */
+            ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+          }
 
-            if (ex == AT_RESP_SEND_OK) {
-              /* Packet sent, return number of bytes sent */
-              rval = (int32_t)num;
-            }
-            else if (ex == AT_RESP_SEND_FAIL) {
-              /* Send failed */
-              rval = ARM_SOCKET_ERROR;
-            }
-            else {
-              /* Should not happend */
-              rval = ARM_SOCKET_ERROR;
-            }
+          if (ex == 0) {
+            /* Wait until response arrives */
+            ex = WiFi_Wait (WIFI_WAIT_TX_REQUEST, WIFI_RESP_TIMEOUT);
+          }
+
+          if (ex != 0) {
+            /* Serial driver error or device not accepting data */
+            rval = ARM_SOCKET_ERROR;
           }
           else {
-            /* No response? */
-            rval = ARM_SOCKET_ERROR;
+            /* Start sending actual data to device */
+            /* Set number of bytes sent */
+            num = 0U;
+
+            while (num < len) {
+              /* Determine amount of data to send */
+              cnt = AT_Send_GetFree();
+
+              if (cnt == 0U) {
+                /* Tx buffer full, wait until tx buffer available */
+                ex = WiFi_Wait (WIFI_WAIT_TX_DONE, WIFI_RESP_TIMEOUT);
+
+                if (ex == 0) {
+                  /* Data transfer completed */
+                  cnt = AT_Send_GetFree();
+                }
+                else {
+                  /* Device internal error */
+                  rval = ARM_SOCKET_ERROR;
+                  break;
+                }
+              }
+
+              if (cnt > (len - num)) {
+                cnt = (len - num);
+              }
+
+              osEventFlagsClear (pCtrl->evflags_id, WIFI_WAIT_TX_DONE);
+
+              num += AT_Send_Data (&pu8[num], cnt);
+            }
+
+            /* Data sent, wait for SEND OK or SEND FAIL responses */
+            ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+            if (ex == 0) {
+              /* Check response */
+              ex = AT_Resp_Generic();
+
+              if (ex == AT_RESP_SEND_OK) {
+                /* Packet sent, return number of bytes sent */
+                rval = (int32_t)num;
+              }
+              else if (ex == AT_RESP_SEND_FAIL) {
+                /* Send failed */
+                rval = ARM_SOCKET_ERROR;
+              }
+              else {
+                /* Should not happend */
+                rval = ARM_SOCKET_ERROR;
+              }
+            }
+            else {
+              /* No response? */
+              rval = ARM_SOCKET_ERROR;
+            }
           }
         }
       }
@@ -3264,8 +3288,11 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
         num = 0U;
 
         while (rval == 0) {
+          if ((len == 0) && (AT_Send_GetFree() != 0)) {
+            break;
+          }
           /* Determine the amount of data to send */
-          if (sock->flags & SOCKET_FLAGS_NONBLOCK) {
+          else if (sock->flags & SOCKET_FLAGS_NONBLOCK) {
             /* Non-blocking socket sends as much as fits into tx buffer */
             cnt = AT_Send_GetFree();
           }

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,7 +17,6 @@
  *
  *
  * $Date:        3. January 2020
- * $Revision:    V1.1
  *
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */

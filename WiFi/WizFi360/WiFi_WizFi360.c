@@ -16,14 +16,16 @@
  * limitations under the License.
  *
  *
- * $Date:        20. January 2020
- * $Revision:    V1.2
+ * $Date:        28. January 2020
+ * $Revision:    V1.3
  *
  * Project:      WizFi360 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_WIZ360_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    Added DHCP setting before station Activate
  *  Version 1.2
  *    API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
  *  Version 1.1
@@ -37,7 +39,7 @@
 #include "WiFi_WizFi360_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 2)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 3)
 
 /* -------------------------------------------------------------------------- */
 
@@ -767,21 +769,6 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
           }
 
           if (ex == 0) {
-            /* Enable multiple connections */
-            ex = AT_Cmd_ConnectionMux (AT_CMODE_SET, 1U);
-
-            if (ex == 0) {
-              /* Wait until response arrives */
-              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
-
-              if (ex == 0) {
-                /* Response arrived */
-                ex = AT_Resp_Generic();
-              }
-            }
-          }
-
-          if (ex == 0) {
             /* Disable sleep */
             ex = AT_Cmd_Sleep (AT_CMODE_SET, 0U);
 
@@ -795,8 +782,23 @@ static int32_t ARM_WIFI_PowerControl (ARM_POWER_STATE state) {
                 
                 if (ex == 0) {
                   /* Wait a bit before the next command is sent out */
-                  osDelay(100);
+                  osDelay(500);
                 }
+              }
+            }
+          }
+
+          if (ex == 0) {
+            /* Enable multiple connections */
+            ex = AT_Cmd_ConnectionMux (AT_CMODE_SET, 1U);
+
+            if (ex == 0) {
+              /* Wait until response arrives */
+              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+              if (ex == 0) {
+                /* Response arrived */
+                ex = AT_Resp_Generic();
               }
             }
           }
@@ -1541,6 +1543,23 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
       else {
         /* DHCP is enabled */
         state = 1U;
+      }
+      
+      /* Configure station DHCP */
+      ex = AT_Cmd_DHCP (AT_CMODE_SET, 1U, state);
+
+      if (ex == 0) {
+        /* Wait until response arrives */
+        ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+        if (ex == 0) {
+          /* Response arrived */
+          ex = AT_Resp_Generic();
+
+          if (ex != AT_RESP_OK) {
+            state = 2U;
+          }
+        }
       }
 
       do {
@@ -2946,7 +2965,7 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
           }
 
           cnt = (uint32_t)BufRead (&pu8[n], cnt, &sock->mem);
-          
+
           sock->rx_len -= cnt;
           n            += cnt;
 

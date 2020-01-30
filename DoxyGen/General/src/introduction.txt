@@ -45,18 +45,26 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.5.1-dev4</td>
+      <td>
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - Added DHCP setting before station Activate
+          - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
+      </td>
+    </tr>
+    <tr>
       <td>2.5.1-dev3</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (API V1.1)
         - Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.5.1-dev2</td>
       <td>
         - Updated WizFi360 WiFi driver (API V1.1)
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.5.1-dev1</td>
       <td>
@@ -64,14 +72,14 @@ Revision History
           - Fixed serial tx busy flag handling
           - Added read of DHCP assigned IPs after station activate
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.5.1-dev0</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (version 1.4.0):
           - Corrected GetModuleInfo return string termination
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.5.0</td>
       <td>
@@ -85,7 +93,7 @@ Revision History
           - Added debug of SPI traffic with Event Recorder
           - Added CMSIS Driver Validation test results
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.4.1</td>
       <td>

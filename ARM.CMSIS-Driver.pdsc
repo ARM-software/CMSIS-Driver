@@ -7,25 +7,16 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.5.1-dev4">
+    <release version="2.6.0-dev0">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Added DHCP setting before station Activate
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
-    </release>
-    <release version="2.5.1-dev3">
-      Updated Inventek ISM43362 WiFi driver (API V1.1)
-    </release>
-    <release version="2.5.1-dev2">
-      Updated WizFi360 WiFi driver (API V1.1)
-    </release>
-    <release version="2.5.1-dev1">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      - Added DHCP setting before station Activate
       - Fixed serial tx busy flag handling
       - Added read of DHCP assigned IPs after station activate
-    </release>
-    <release version="2.5.1-dev0">
-      Updated Inventek ISM43362 WiFi driver (version 1.4.0):
+      Updated Inventek ISM43362 WiFi driver (version 1.5.0):
+      - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
       - Corrected GetModuleInfo return string termination
+      Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
     </release>
     <release version="2.5.0" date="2019-12-02">
       Added Espressif ESP32 WiFi driver
@@ -74,7 +65,7 @@
 
   <requirements>
     <packages>
-      <package vendor="ARM" name="CMSIS" version="5.6.0-0"/>
+      <package vendor="ARM" name="CMSIS" version="5.7.0-0"/>
     </packages>
   </requirements>
 

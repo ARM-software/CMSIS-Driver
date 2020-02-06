@@ -234,6 +234,10 @@ The documentation for the Espressif ESP8266 can be found here: https://www.espre
 \section driver_WizFi360 WizFi360
 
 The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
+
+The latest firmware images are available on GitHub: https://github.com/wizfi/Release. Instructions on how to flash the
+firmware onto the device can be found on the WIZnet Wiki:
+https://wizwiki.net/wiki/lib/exe/fetch.php/products:wizfi360:wizfi360ds:wizfi360fug_v124e.pdf.
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,12 +16,14 @@
  * limitations under the License.
  *
  *
- * $Date:        26. June 2019
- * $Revision:    V1.0
+ * $Date:        13. February 2020
+ * $Revision:    V1.1
  *
  * Project:      WiFi Driver Hardware specific implementation for 
  *               Inventek ISM43362-M3G-L44 WiFi Module (SPI variant)
  * -------------------------------------------------------------------------- */
+
+#include <stdint.h>
 
 // Add device specific include files here
 // <code WiFi_ISM43362_include_files>

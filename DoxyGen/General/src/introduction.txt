@@ -45,6 +45,13 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.0-dev1</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.6.0):
+          - Corrected functionality when DATARDY line is used in polling mode
+      </td>
+    </tr>
+    <tr>
       <td>2.6.0-dev0</td>
       <td>
         - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:

@@ -7,6 +7,10 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.6.0-dev1">
+      Updated Inventek ISM43362 WiFi driver (version 1.6.0):
+      - Corrected functionality when DATARDY line is used in polling mode
+    </release>
     <release version="2.6.0-dev0">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
@@ -372,7 +376,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.5.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.6.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

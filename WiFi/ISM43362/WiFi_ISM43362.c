@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        22. January 2020
- * $Revision:    V1.5
+ * $Date:        13. February 2020
+ * $Revision:    V1.6
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -77,6 +77,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    - Corrected functionality when DATARDY line is used in polling mode
  *  Version 1.5
  *    - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
  *  Version 1.4
@@ -147,7 +149,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -433,7 +435,7 @@ static const uint8_t *SkipCommas (const uint8_t *ptr, uint8_t num) {
 }
 
 /**
-  \fn            void SPI_WaitReady (uint32_t timeout)
+  \fn            uint8_t SPI_WaitReady (uint32_t timeout)
   \brief         Wait for SPI ready (DATARDY pin active).
   \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
   \return        SPI ready state
@@ -448,7 +450,7 @@ static uint8_t SPI_WaitReady (uint32_t timeout) {
   } else {
     do {
       ret = WiFi_ISM43362_Pin_DATARDY();
-      if (ret == 0U) {                  // If DATARDY is ready
+      if (ret == 0U) {                  // If DATARDY is not ready
         osDelay(1U);
         if (timeout > 0U) {
           timeout--;
@@ -556,6 +558,16 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     }
   } else {
     ret = ARM_DRIVER_ERROR_TIMEOUT;
+  }
+
+  if (spi_datardy_irq == 0U) {                  // If events are not generated on DATARDY activation
+    // Wait for DATARDY to deactivate after command was sent
+    for (timeout = WIFI_ISM43362_SPI_TIMEOUT * 16U; timeout != 0U; timeout --) {
+      if (WiFi_ISM43362_Pin_DATARDY() == 0U) {
+        break;
+      }
+      Wait_us(32U);                             // Wait 32 us
+    }
   }
 
   // Receive response on SPI
@@ -1140,6 +1152,14 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         WiFi_ISM43362_Pin_SSN(false);
         Wait_us(3U);
 
+        // Wait for DATARDY to activate
+        for (timeout = WIFI_ISM43362_SPI_TIMEOUT; timeout != 0U; timeout --) {
+          if (WiFi_ISM43362_Pin_DATARDY()) {
+            break;
+          }
+        }
+        Wait_us(4U);
+
         module_initialized = 1U;
       }
 
@@ -1176,6 +1196,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
       }
 
       // Receive data requested by 'Z?' command
+      Wait_us(4U);
       WiFi_ISM43362_Pin_SSN(true);
       Wait_us(15U);
       if (ptrSPI->Receive(spi_recv_buf, 64U)  == ARM_DRIVER_OK) {
@@ -3258,6 +3279,10 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
+  }
+
+  if (len == 0U) {
+    return 0;
   }
 
   len_tot_sent = 0U;

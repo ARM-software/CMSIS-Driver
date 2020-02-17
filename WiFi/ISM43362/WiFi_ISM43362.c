@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        13. February 2020
- * $Revision:    V1.6
+ * $Date:        17. February 2020
+ * $Revision:    V1.7
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -74,9 +74,21 @@
  *      For testing the driver in such combination delay between 
  *      WiFi Initialization and debugger connect has to be introduced and 
  *      WiFi Shield has to be reset manually before starting debug session.
+ *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.7.bin is supported
+ *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.8.bin is not supported:
+ *    - added additional "\r\n" to "OK" response (now 12 bytes instead of 10)
+ *      ("\r\n\r\n\r\nOK\r\n> " instead of previously 
+ *       "\r\n\r\nOK\r\n> ")
+ *    - added additional "\r\n" in front of "OK" in response containing
+ *      received data but just for UDP sockets
+ *      ("\r\n"DATA"\r\n\r\nOK\r\n> " instead of previously 
+ *       "\r\n"DATA"\r\nOK\r\n> ")
+ *    - does not return single byte received when requested by R0 command
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    - Added check that non-STM firmware version is 6.2.1.7, other are not supported
  *  Version 1.6
  *    - Corrected functionality when DATARDY line is used in polling mode
  *  Version 1.5
@@ -149,7 +161,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -261,6 +273,8 @@ static const osThreadAttr_t thread_async_poll_attr = {
 // Local variables and structures
 static uint8_t                          module_initialized = 0U;
 static uint8_t                          driver_initialized = 0U;
+static uint8_t                          firmware_stm       = 0U;
+static uint32_t                         firmware_version   = 0U;
 
 static osEventFlagsId_t                 event_flags_id;
 static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
@@ -322,6 +336,9 @@ static int32_t WiFi_SocketClose    (int32_t socket);
 */
 static void ResetVariables (void) {
   uint32_t i;
+
+  firmware_stm            = 0U;
+  firmware_version        = 0U;
 
   sta_dhcp_client         = 1U;         // DHCP client is enabled by default
 
@@ -1078,9 +1095,10 @@ static ARM_WIFI_CAPABILITIES WiFi_GetCapabilities (void) { return driver_capabil
                    - ARM_DRIVER_ERROR             : Operation failed
 */
 static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
-  int32_t  ret;
-  uint32_t timeout, flags;
-  uint8_t  i;
+        int32_t   ret;
+  const char     *ptr_str;
+        uint32_t  timeout, flags;
+        uint8_t   i, u8_arr[4];
 
   signal_event_fn = cb_event;           // Update pointer to callback function
 
@@ -1164,7 +1182,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
       }
 
       // Do a dummy SPI communication so we can determine if event is used for DATARDY state change
-      memcpy((void *)spi_send_buf, (void *)"Z?\r\n", 4);
+      memcpy((void *)spi_send_buf, (void *)"I?\r\n", 4);
       WiFi_ISM43362_Pin_SSN(true);              // Activate slave select line
       Wait_us(15U);                             // Wait 15 us
       if (ptrSPI->Send(spi_send_buf, 2U) == ARM_DRIVER_OK) {
@@ -1195,7 +1213,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         ret = ARM_DRIVER_ERROR;
       }
 
-      // Receive data requested by 'Z?' command
+      // Receive data requested by 'I?' command
       Wait_us(4U);
       WiFi_ISM43362_Pin_SSN(true);
       Wait_us(15U);
@@ -1210,9 +1228,30 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
       if (osMutexRelease(mutex_id_spi) != osOK) {       // If SPI mutex release has failed
         ret = ARM_DRIVER_ERROR;
       }
+
+      if (ret == ARM_DRIVER_OK) {
+        ptr_str = strstr ((const char *)spi_recv_buf, ",C");
+        if (ptr_str != NULL) {
+          if (sscanf(ptr_str + 2U, "%hhu.%hhu.%hhu.%hhu", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3]) == 4) {
+            firmware_version = ((uint32_t)u8_arr[0] << 24) | 
+                               ((uint32_t)u8_arr[1] << 16) | 
+                               ((uint32_t)u8_arr[2] <<  8) | 
+                               ((uint32_t)u8_arr[3]      );
+          }
+        }
+        ptr_str = strstr ((const char *)spi_recv_buf, "STM");
+        if (ptr_str != NULL) {
+          firmware_stm = 1U;
+        }
+      }
     } else {                            // If SPI interface is not accessible (locked by another thread)
       ret = ARM_DRIVER_ERROR;
     }
+  }
+
+  if ((firmware_stm == 0U) && (firmware_version != 0x06020107U)) {
+    // For non-STM firmware variant only firmware version 6.2.1.7 is supported
+    ret = ARM_DRIVER_ERROR;
   }
 
   // Create asynchronous message processing thread

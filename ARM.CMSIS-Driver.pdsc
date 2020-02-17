@@ -7,6 +7,10 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.6.0-dev2">
+      Updated Inventek ISM43362 WiFi driver (version 1.7.0):
+      - For non-STM firmware variant only firmware version 6.2.1.7 is supported
+    </release>
     <release version="2.6.0-dev1">
       Updated Inventek ISM43362 WiFi driver (version 1.6.0):
       - Corrected functionality when DATARDY line is used in polling mode

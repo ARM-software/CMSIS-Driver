@@ -45,6 +45,13 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.0-dev2</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.7.0):
+          - For non-STM firmware variant only firmware version 6.2.1.7 is supported
+      </td>
+    </tr>
+    <tr>
       <td>2.6.0-dev1</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (version 1.6.0):
@@ -229,6 +236,7 @@ flashed with the firmware for UART communication. To enable SPI communication, f
   If you want to flash a different firmware later, please visit
   [Inventek's Firmware page](https://www.inventeksys.com/iwin/firmware/) for the latest binary files.
 
+\note Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!
 
 \section driver_ESP32 ESP32
 

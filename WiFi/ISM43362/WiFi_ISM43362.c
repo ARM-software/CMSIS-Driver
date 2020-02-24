@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        17. February 2020
- * $Revision:    V1.7
+ * $Date:        24. February 2020
+ * $Revision:    V1.8
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -87,6 +87,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.8
+ *    - Corrected SocketConnect function never returning 0 in non-blocking mode
+ *    - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+ *    - Corrected delay after module reset
  *  Version 1.7
  *    - Added check that non-STM firmware version is 6.2.1.7, other are not supported
  *  Version 1.6
@@ -161,7 +165,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,8)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -1155,7 +1159,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         WiFi_ISM43362_Pin_RSTN(true);
         osDelay(50U);
         WiFi_ISM43362_Pin_RSTN(false);
-        osDelay(100U);
+        osDelay(350U);
 
         // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
         // Do a read independent of return data
@@ -3048,7 +3052,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                 ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
                 if (ret == 0) {
                   socket_arr[socket].client = 1U;
-                  socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
+                  socket_arr[socket].state  = SOCKET_STATE_CONNECTED;
                   if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
                     ret = ARM_SOCKET_EINPROGRESS;
                   }
@@ -3182,6 +3186,9 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
     }
 
     if (ret == 0) {
+      if (socket_arr[socket].poll_recv == 0U) {               // If reception not started with bind
+        socket_arr[socket].poll_recv = 1U;                    // start polling here
+      }
       if (socket_arr[socket].non_blocking != 0U) {            // If non-blocking
         socket_arr[socket].recv_time_left = 1U;
       } else {                                                // If blocking

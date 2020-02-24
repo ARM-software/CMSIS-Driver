@@ -7,6 +7,12 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
+    <release version="2.6.0-dev3">
+      Updated Inventek ISM43362 WiFi driver (version 1.8.0):
+      - Corrected SocketConnect function never returning 0 in non-blocking mode
+      - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+      - Corrected delay after module reset
+    </release>
     <release version="2.6.0-dev2">
       Updated Inventek ISM43362 WiFi driver (version 1.7.0):
       - For non-STM firmware variant only firmware version 6.2.1.7 is supported
@@ -380,7 +386,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.6.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

@@ -45,6 +45,23 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.0-dev4</td>
+      <td>
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - Enhanced serial communication startup procedure
+          - Fixed function AT_Resp_ConnectAP for NULL argument
+      </td>
+    </tr>
+    <tr>
+      <td>2.6.0-dev3</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.8.0):
+          - Corrected SocketConnect function never returning 0 in non-blocking mode
+          - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+          - Corrected delay after module reset
+      </td>
+    </tr>
+    <tr>
       <td>2.6.0-dev2</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (version 1.7.0):

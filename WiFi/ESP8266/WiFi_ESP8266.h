@@ -159,6 +159,7 @@ typedef struct {
 #define WIFI_FLAGS_STATION_CONNECTED  (1U << 5)
 #define WIFI_FLAGS_STATION_GOT_IP     (1U << 6)
 #define WIFI_FLAGS_STATION_STATIC_IP  (1U << 7)
+#define WIFI_FLAGS_AP_STATIC_IP       (1U << 8)
 
 #define SOCKET_INVALID                0xFF
 #define CONN_ID_INVALID               5
@@ -174,11 +175,11 @@ typedef struct {
   WIFI_OPTIONS           options;     /* Set/GetOption value storage */
   uint32_t               lp_timer;    /* Deep sleep time in seconds  */
   uint8_t                tx_power;    /* Stored TX_POWER value       */
-  uint8_t                flags;       /* Driver state flags          */
   uint8_t                conn_id;     /* Connection identifier state */
   uint8_t                ap_ecn;      /* AP encryption method        */
   char                   ap_pass[33]; /* AP password                 */
-  uint8_t                rsvd[3];     /* Reserved                    */
+  uint16_t               packdump;    /* Number of dumped rx packets */
+  uint16_t               flags;       /* Driver state flags          */
 } WIFI_CTRL;
 
 extern ARM_DRIVER_WIFI ARM_Driver_WiFi_(WIFI_DRIVER_NUMBER);

@@ -97,6 +97,8 @@
       <accept Dcore="Cortex-M7"/>
       <accept Dcore="Cortex-M23"/>
       <accept Dcore="Cortex-M33"/>
+      <accept Dcore="Cortex-M35P"/>
+      <accept Dcore="Cortex-M55"/>
       <accept Dcore="ARMV8MBL"/>
       <accept Dcore="ARMV8MML"/>
       <accept Dcore="SC000"/>

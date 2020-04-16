@@ -1,23 +1,27 @@
-CMSIS-Driver WiFi Test Report   Jan  3 2020   14:11:23
+CMSIS-Driver WiFi Test Report   Apr 16 2020   10:50:52
 
 TEST 01: WIFI_GetVersion
-  DV_WIFI.c (284): [INFO] Driver API version 1.0, Driver version 1.1
+  DV_WIFI.c (284): [INFO] Driver API version 1.1, Driver version 1.3
                                           PASSED
 TEST 02: WIFI_GetCapabilities             PASSED
 TEST 03: WIFI_Initialize_Uninitialize     PASSED
 TEST 04: WIFI_PowerControl
   DV_WIFI.c (403): [WARNING] PowerControl (ARM_POWER_LOW) is not supported
                                           PASSED
-TEST 05: WIFI_GetModuleInfo               PASSED
+TEST 05: WIFI_GetModuleInfo
+  DV_WIFI.c (452): [INFO] Module Info is AT version:1.2.0.0(6fe4345 - Jun 27 2019 05:39:23)
+SDK version:v3.2-127-gddbce78
+compile time:Jun 27 20
+                                          PASSED
 TEST 06: WIFI_SetOption_GetOption
-  DV_WIFI.c (534): [WARNING] SetOption ARM_WIFI_BSSID for Access Point is not supported
-  DV_WIFI.c (590): [WARNING] GetOption ARM_WIFI_BSSID for Access Point is not supported
-  DV_WIFI.c (867): [WARNING] SetOption ARM_WIFI_DTIM for Station is not supported
-  DV_WIFI.c (881): [WARNING] SetOption ARM_WIFI_DTIM for Access Point is not supported
-  DV_WIFI.c (909): [WARNING] GetOption ARM_WIFI_DTIM for Station is not supported
-  DV_WIFI.c (929): [WARNING] GetOption ARM_WIFI_DTIM for Access Point is not supported
-  DV_WIFI.c (995): [WARNING] SetOption ARM_WIFI_BEACON for Access Point is not supported
-  DV_WIFI.c (1027): [WARNING] GetOption ARM_WIFI_BEACON for Access Point is not supported
+  DV_WIFI.c (536): [WARNING] SetOption ARM_WIFI_BSSID for Access Point is not supported
+  DV_WIFI.c (592): [WARNING] GetOption ARM_WIFI_BSSID for Access Point is not supported
+  DV_WIFI.c (869): [WARNING] SetOption ARM_WIFI_DTIM for Station is not supported
+  DV_WIFI.c (883): [WARNING] SetOption ARM_WIFI_DTIM for Access Point is not supported
+  DV_WIFI.c (911): [WARNING] GetOption ARM_WIFI_DTIM for Station is not supported
+  DV_WIFI.c (931): [WARNING] GetOption ARM_WIFI_DTIM for Access Point is not supported
+  DV_WIFI.c (997): [WARNING] SetOption ARM_WIFI_BEACON for Access Point is not supported
+  DV_WIFI.c (1029): [WARNING] GetOption ARM_WIFI_BEACON for Access Point is not supported
                                           PASSED
 TEST 07: WIFI_Scan                        PASSED
 TEST 08: WIFI_Activate_Deactivate         PASSED
@@ -28,7 +32,7 @@ TEST 12: WIFI_SocketBind                  PASSED
 TEST 13: WIFI_SocketListen                PASSED
 TEST 14: WIFI_SocketAccept                NOT EXECUTED
 TEST 15: WIFI_SocketConnect
-  DV_WIFI.c (4337): [WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ETIMEDOUT, expected ARM_SOCKET_ECONNREFUSED)
+  DV_WIFI.c (4339): [WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ETIMEDOUT, expected ARM_SOCKET_ECONNREFUSED)
                                           PASSED
 TEST 16: WIFI_SocketRecv                  PASSED
 TEST 17: WIFI_SocketRecvFrom              PASSED
@@ -47,14 +51,13 @@ TEST 29: WIFI_Send_Fragmented             PASSED
 TEST 30: WIFI_Recv_Fragmented             PASSED
 TEST 31: WIFI_Test_Speed                  PASSED
 TEST 32: WIFI_Concurrent_Socket
-  DV_WIFI.c (8038): [WARNING] Auxiliary Transfer rate low
-  DV_WIFI.c (8114): [WARNING] Auxiliary Transfer rate low
+  DV_WIFI.c (8116): [WARNING] Auxiliary Transfer rate low
                                           PASSED
 TEST 33: WIFI_Downstream_Rate
-  DV_WIFI.c (8281): [INFO] Speed 15 KB/s
+  DV_WIFI.c (8283): [INFO] Speed 14 KB/s
                                           PASSED
 TEST 34: WIFI_Upstream_Rate
-  DV_WIFI.c (8349): [INFO] Speed 8 KB/s
+  DV_WIFI.c (8351): [INFO] Speed 8 KB/s
                                           PASSED
 
 Test Summary: 34 Tests, 33 Passed, 0 Failed.

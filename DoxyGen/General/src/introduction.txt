@@ -160,51 +160,106 @@ Revision History
 /**
 \page driver_eth Ethernet
 
-\section driver_KSZ8851SNL KSZ8851SNL/SNLI
+\section driver_eth_devices Driver Implementations
 
-The documentation for the KSZ8851SNL/SNLI can be found here: https://www.microchip.com/KSZ8851
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
 
+<table class="cmtable" summary="Ethernet Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+	\anchor driver_KSZ8851SNL
+	 <tr>
+      <td>\b KSZ8851SNL/SNLI</td>
+      <td>
+       Ethernet PHY and MAC interfaces. <a href="https://www.microchip.com/KSZ8851" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_LAN9220
+    <tr>
+	  <td>\b LAN9220</td>
+      <td>
+       Ethernet PHY and MAC interfaces. <a href="https://www.microchip.com/LAN9220" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+    \anchor driver_DP83848C
+	<tr>
+      <td>\b DP83848C</td>
+      <td>
+       Ethernet PHY interface. <a href="http://www.ti.com/product/DP83848C" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+    \anchor driver_KSZ8061RNB
+    <tr>
+      <td>\b KSZ8061RNB</td>
+      <td>
+       Ethernet PHY interface. <a href="https://www.microchip.com/KSZ8061" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_KSZ8081RNA	
+	<tr>
+      <td>\b KSZ8081RNA</td>
+      <td>
+       Ethernet PHY interface. <a href="https://www.microchip.com/KSZ8081" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_LAN8710A	
+	<tr>
+      <td>\b LAN8710A</td>
+      <td>
+       Ethernet PHY interface. <a href="https://www.microchip.com/LAN8710A" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_LAN8720	
+	<tr>
+      <td>\b LAN8720</td>
+      <td>
+       Ethernet PHY interface. <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_LAN8742A	
+	<tr>
+      <td>\b LAN8742A</td>
+      <td>
+       Ethernet PHY interface. <a href="https://www.microchip.com/LAN8742A" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>	
+	\anchor driver_ST802RT1	
+	<tr>
+      <td>\b ST802RT1</td>
+      <td>
+       Ethernet PHY interface. <a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>	
+</table>
 
-\section driver_LAN9220 LAN9220
+\section driver_eth_multiple Multiple Driver Instances
 
-The documentation for the LAN9220 can be found here: https://www.microchip.com/LAN9220
-
-
-\section driver_DP83848C DP83848C
-
-The documentation for the DP83848C can be found here: http://www.ti.com/product/DP83848C
-
-
-\section driver_KSZ8061RNB KSZ8061RNB
-
-The documentation for the KSZ8061RNB can be found here: https://www.microchip.com/KSZ8061
-
-
-\section driver_KSZ8081RNA KSZ8081RNA
-
-The documentation for the KSZ8081RNA can be found here: https://www.microchip.com/KSZ8081
-
-
-\section driver_LAN8710A LAN8710A
-
-The documentation for the LAN8710A can be found here: https://www.microchip.com/LAN8710A
-
-
-\section driver_LAN8720 LAN8720
-
-The documentation for the LAN8720 can be found here: https://www.microchip.com/LAN8720A
-
-
-\section driver_LAN8742A LAN8742A
-
-The documentation for the LAN8742A can be found here: https://www.microchip.com/LAN8742A
-
-
-\section driver_ST802RT1 ST802RT1
-
-The data brief for the ST802RT1 can be found here:
-http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf
-
+CMSIS-Driver API supports multiple driver instances. The Ethernet drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c ETH_LAN9220.c file as \c ETH2_LAN9220.c.
+ </li>
+ <li>Specify the driver parameters for the second instance. For example, in \c ETH2_LAN9220.c new values to the following parameters are needed instead of default ones:
+   \code
+    #define ETH_MAC_NUM             1  
+    #define ETH_PHY_NUM             1
+    #define LAN9220_BASE            (0x53000000UL)
+  \endcode
+ </li>
+ <li>Now both Ethernet instances can be accessed from the  application. For example:
+\code
+#include "Driver_ETH_MAC.h"
+ 
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC0;
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC1;
+  
+#define eth0    Driver_ETH_MAC0
+#define eth1    Driver_ETH_MAC1
+\endcode
+ </li>
+</ul>
 
 */
 
@@ -276,45 +331,84 @@ https://wizwiki.net/wiki/lib/exe/fetch.php/products:wizfi360:wizfi360ds:wizfi360
 /**
 \page driver_Flash Flash
 
-\section driver_AM29x800BB AM29x800BB
+\section driver_Flash_devices Driver Implementations
 
-This product is discontinued.
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__flash__interface__gr.html" target="_blank"><b>CMSIS-Flash drivers</b></a> for the following devices:
 
+<table class="cmtable" summary="Flash Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+	\anchor driver_AM29x800BB
+	 <tr>
+      <td>\b AM29x800BB</td>
+      <td> This product is discontinued.</td>
+	</tr>
+	\anchor driver_AT45DB641E
+    <tr>
+	  <td>\b AT45DB641E</td>
+      <td> Serial Flash. <a href="https://www.adestotech.com/products/data-flash/" target="_blank"><b>Device info</b></a>.</td>
+	</tr>
+    \anchor driver_AT45DB642D
+	<tr>
+      <td>\b AT45DB642D</td>
+      <td> Serial NOR Flash. <a href="https://www.adestotech.com/legacy-product-datasheets/" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+    \anchor driver_M29EW28F128
+    <tr>
+      <td>\b M29EW28F128</td>
+      <td> Serial NOR Flash. <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_M29W640FB	
+	<tr>
+      <td>\b M29W640FB</td>
+      <td> Parallel NOR Flash. <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_N25Q032A	
+	<tr>
+      <td>\b N25Q032A</td>
+      <td> Serial NOR Flash. <a href="https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e" target="_blank"><b>Device info</b></a>.
+      </td>
+	</tr>
+	\anchor driver_S29GL064Nx2	
+	<tr>
+      <td>\b S29GL064Nx2</td>
+      <td> Parallel NOR Flash. <a href="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash" target="_blank"><b>Device info</b></a>.
+      </td>
+</table>
 
-\section driver_AT45DB641E AT45DB641E
+\section driver_Flash_multiple Multiple Driver Instances
 
-The documentation for the AT45DB641E can be found here: https://www.adestotech.com/products/data-flash/
+CMSIS-Driver API supports multiple driver instances. The Flash drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c AT45DB641E.c file as \c AT45DB641E_2.c
+ </li>
+ <li>Specify the driver parameters for the second instance based on the hardware design. For example, in \c AT45DB641E_2.c the values for the flash driver number and SPI driver number need to be configured as shown below:
+   \code
+    #define DRIVER_FLASH_NUM        1
+    #define DRIVER_SPI_NUM          1
+  \endcode
+ </li>
+ <li>Now both Flash instances can be accessed from the application. For example:
+\code
+#include "Driver_Flash.h"
+ 
+/* Flash driver instances */
+extern ARM_DRIVER_FLASH Driver_Flash0;
+extern ARM_DRIVER_FLASH Driver_Flash1;
+ 
+#define flashDev0    Driver_Flash0
+#define flashDev1    Driver_Flash1
+\endcode
+ </li>
+</ul>
 
-
-\section driver_AT45DB642D AT45DB642D
-
-The documentation for the AT45DB642D can be found here: https://www.adestotech.com/legacy-product-datasheets/
-
-
-\section driver_M29EW28F128 M29EW28F128
-
-The documentation for the M29EW28F128 can be found here:
-https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf
-
-
-\section driver_M29W640FB M29W640FB
-
-The documentation for the M29W640FB can be found here:
-https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e
-
-
-\section driver_N25Q032A N25Q032A
-
-The documentation for the N25Q032A can be found here:
-https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e
-
-
-\section driver_S29GL064Nx2 S29GL064Nx2
-
-The documentation for the S29GL064Nx2 can be found here:
-http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash
 */
-
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
@@ -458,7 +552,6 @@ int main (void) {
 }
 \endcode
 */
-
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**

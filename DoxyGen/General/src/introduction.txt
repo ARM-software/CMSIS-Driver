@@ -45,47 +45,23 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
-      <td>2.6.0-dev4</td>
-      <td>
-        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-          - Enhanced serial communication startup procedure
-          - Fixed function AT_Resp_ConnectAP for NULL argument
-      </td>
-    </tr>
-    <tr>
-      <td>2.6.0-dev3</td>
-      <td>
-        - Updated Inventek ISM43362 WiFi driver (version 1.8.0):
-          - Corrected SocketConnect function never returning 0 in non-blocking mode
-          - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
-          - Corrected delay after module reset
-      </td>
-    </tr>
-    <tr>
-      <td>2.6.0-dev2</td>
-      <td>
-        - Updated Inventek ISM43362 WiFi driver (version 1.7.0):
-          - For non-STM firmware variant only firmware version 6.2.1.7 is supported
-      </td>
-    </tr>
-    <tr>
-      <td>2.6.0-dev1</td>
-      <td>
-        - Updated Inventek ISM43362 WiFi driver (version 1.6.0):
-          - Corrected functionality when DATARDY line is used in polling mode
-      </td>
-    </tr>
-    <tr>
-      <td>2.6.0-dev0</td>
+      <td>2.6.0</td>
       <td>
         - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
           - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
           - Added DHCP setting before station Activate
-          - Fixed serial tx busy flag handling
           - Added read of DHCP assigned IPs after station activate
-        - Updated Inventek ISM43362 WiFi driver (version 1.5.0):
+          - Fixed serial tx busy flag handling
+          - Fixed function AT_Resp_ConnectAP for NULL argument
+          - Enhanced serial communication startup procedure
+        - Updated Inventek ISM43362 WiFi driver (version 1.8.0):
           - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
           - Corrected GetModuleInfo return string termination
+          - Corrected functionality when DATARDY line is used in polling mode
+          - Corrected SocketConnect function never returning 0 in non-blocking mode
+          - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+          - Corrected delay after module reset
+          - For non-STM firmware variant only firmware version 6.2.1.7 is supported
         - Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
       </td>
     </tr>

@@ -7,32 +7,22 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.6.0-dev4">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers
-    </release>
-    <release version="2.6.0-dev3">
-      Updated Inventek ISM43362 WiFi driver (version 1.8.0):
-      - Corrected SocketConnect function never returning 0 in non-blocking mode
-      - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
-      - Corrected delay after module reset
-    </release>
-    <release version="2.6.0-dev2">
-      Updated Inventek ISM43362 WiFi driver (version 1.7.0):
-      - For non-STM firmware variant only firmware version 6.2.1.7 is supported
-    </release>
-    <release version="2.6.0-dev1">
-      Updated Inventek ISM43362 WiFi driver (version 1.6.0):
-      - Corrected functionality when DATARDY line is used in polling mode
-    </release>
-    <release version="2.6.0-dev0">
+    <release version="2.6.0-rc0">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
       - Added DHCP setting before station Activate
-      - Fixed serial tx busy flag handling
       - Added read of DHCP assigned IPs after station activate
-      Updated Inventek ISM43362 WiFi driver (version 1.5.0):
+      - Fixed serial tx busy flag handling
+      - Fixed function AT_Resp_ConnectAP for NULL argument
+      - Enhanced serial communication startup procedure
+      Updated Inventek ISM43362 WiFi driver (version 1.8.0):
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
       - Corrected GetModuleInfo return string termination
+      - Corrected functionality when DATARDY line is used in polling mode
+      - Corrected SocketConnect function never returning 0 in non-blocking mode
+      - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+      - Corrected delay after module reset
+      - For non-STM firmware variant only firmware version 6.2.1.7 is supported
       Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
     </release>
     <release version="2.5.0" date="2019-12-02">

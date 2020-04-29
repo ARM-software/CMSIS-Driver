@@ -4,7 +4,7 @@
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
   <url>http://www.keil.com/pack/</url>
-  <!-- <license>LICENSE.txt</license> -->
+  <license>LICENSE.txt</license>
 
   <releases>
     <release version="2.6.0" date="2020-04-29">

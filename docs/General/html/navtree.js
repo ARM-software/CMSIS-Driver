@@ -4,30 +4,20 @@ var NAVTREE =
     [ "License", "index.html#License", null ],
     [ "ARM::CMSIS-Driver Pack", "index.html#driver_pack_content", null ],
     [ "Ethernet", "driver_eth.html", [
-      [ "KSZ8851SNL/SNLI", "driver_eth.html#driver_KSZ8851SNL", null ],
-      [ "LAN9220", "driver_eth.html#driver_LAN9220", null ],
-      [ "DP83848C", "driver_eth.html#driver_DP83848C", null ],
-      [ "KSZ8061RNB", "driver_eth.html#driver_KSZ8061RNB", null ],
-      [ "KSZ8081RNA", "driver_eth.html#driver_KSZ8081RNA", null ],
-      [ "LAN8710A", "driver_eth.html#driver_LAN8710A", null ],
-      [ "LAN8720", "driver_eth.html#driver_LAN8720", null ],
-      [ "LAN8742A", "driver_eth.html#driver_LAN8742A", null ],
-      [ "ST802RT1", "driver_eth.html#driver_ST802RT1", null ]
+      [ "Driver Implementations", "driver_eth.html#driver_eth_devices", null ],
+      [ "Multiple Driver Instances", "driver_eth.html#driver_eth_multiple", null ]
     ] ],
     [ "WiFi", "driver_WiFi.html", [
-      [ "ISM43362", "driver_WiFi.html#driver_ISM43362", null ],
+      [ "ISM43362", "driver_WiFi.html#driver_ISM43362", [
+        [ "Flashing a different firmware to ISMART43362-E Shield", "driver_WiFi.html#ismart43362_e_firmware_download", null ]
+      ] ],
       [ "ESP32", "driver_WiFi.html#driver_ESP32", null ],
       [ "ESP8266", "driver_WiFi.html#driver_ESP8266", null ],
       [ "WizFi360", "driver_WiFi.html#driver_WizFi360", null ]
     ] ],
     [ "Flash", "driver_Flash.html", [
-      [ "AM29x800BB", "driver_Flash.html#driver_AM29x800BB", null ],
-      [ "AT45DB641E", "driver_Flash.html#driver_AT45DB641E", null ],
-      [ "AT45DB642D", "driver_Flash.html#driver_AT45DB642D", null ],
-      [ "M29EW28F128", "driver_Flash.html#driver_M29EW28F128", null ],
-      [ "M29W640FB", "driver_Flash.html#driver_M29W640FB", null ],
-      [ "N25Q032A", "driver_Flash.html#driver_N25Q032A", null ],
-      [ "S29GL064Nx2", "driver_Flash.html#driver_S29GL064Nx2", null ]
+      [ "Driver Implementations", "driver_Flash.html#driver_Flash_devices", null ],
+      [ "Multiple Driver Instances", "driver_Flash.html#driver_Flash_multiple", null ]
     ] ],
     [ "I2C", "driver_I2C.html", null ],
     [ "NAND", "driver_NAND.html", null ],

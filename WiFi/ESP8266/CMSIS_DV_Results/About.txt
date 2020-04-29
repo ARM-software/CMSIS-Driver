@@ -6,7 +6,7 @@ This test report was produced with following configuration:
 Packs used for test:
  - ARM::CMSIS                    5.7.0
  - ARM::CMSIS-Driver             2.6.0
- - ARM::CMSIS-Driver_Validation  1.5.0-dev1
+ - ARM::CMSIS-Driver_Validation  2.0.0
  - Keil::ARM_Compiler            1.6.2
  - NXP MIMXRT1064_DFP           12.1.0
  - NXP EVK-MIMXRT1064_BSP       12.1.0

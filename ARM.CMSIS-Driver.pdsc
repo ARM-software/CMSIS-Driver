@@ -7,7 +7,7 @@
   <!-- <license>LICENSE.txt</license> -->
 
   <releases>
-    <release version="2.6.0-rc0">
+    <release version="2.6.0" date="2020-04-29">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
       - Added DHCP setting before station Activate

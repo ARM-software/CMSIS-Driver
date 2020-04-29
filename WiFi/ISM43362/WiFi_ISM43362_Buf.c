@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        4. October 2019
- * $Revision:    V1.0
+ * $Date:        22. January 2020
+ * $Revision:    V1.1
  *
  * Project:      Variable size data block buffer 
  *               for Inventek ISM43362 WiFi Driver
@@ -182,6 +182,26 @@ uint32_t WiFi_ISM43362_BufferGet (uint8_t idx, void *ptr_data, uint32_t max_len)
   }
 
   return len;
+}
+
+/// \brief       Check if buffer contains any unread data
+/// \param[in]   idx      Index of buffer from which to get the data block (0 ..)
+/// \return      true     Buffer is not empty
+/// \return      false    Buffer is empty
+bool WiFi_ISM43362_BufferNotEmpty (uint8_t idx) {
+
+  if (idx >= WIFI_ISM43362_SOCKETS_NUM) {
+    return false;
+  }
+  if (buf_mgmt[idx].init == 0U) {
+    return false;
+  }
+  if (buf_mgmt[idx].tail == NULL) {
+    // If no message is in the buffer
+    return false;
+  }
+
+  return true;
 }
 
 /// \brief       Flush data blocks from buffer

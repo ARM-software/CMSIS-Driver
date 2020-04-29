@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        27. November 2019
- * $Revision:    V1.0
+ * $Date:        11. February 2020
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -57,21 +56,22 @@
 #define AT_VARIANT_WIZ                  2   /* WizFi360 */
 
 /* Callback events codes */
-#define AT_NOTIFY_EXECUTE               9
-#define AT_NOTIFY_CONNECTED             0  /* Local station connected to an AP      */
-#define AT_NOTIFY_GOT_IP                1  /* Local station got IP address          */
-#define AT_NOTIFY_DISCONNECTED          2  /* Local station disconnected from an AP */
-#define AT_NOTIFY_CONNECTION_OPEN       3  /* Network connection is established     */
-#define AT_NOTIFY_CONNECTION_CLOSED     4  /* Network connection is closed          */
-#define AT_NOTIFY_STATION_CONNECTED     5  /* Station connects to the local AP      */
-#define AT_NOTIFY_STATION_DISCONNECTED  6  /* Station disconnects from the local AP */
-#define AT_NOTIFY_CONNECTION_RX_INIT    7  /* Connection will start receiving data  */
-#define AT_NOTIFY_CONNECTION_RX_DATA    8  /* Connection data is ready to read      */
+#define AT_NOTIFY_EXECUTE               0  /* Serial data available, execute parser */
+#define AT_NOTIFY_CONNECTED             1  /* Local station connected to an AP      */
+#define AT_NOTIFY_GOT_IP                2  /* Local station got IP address          */
+#define AT_NOTIFY_DISCONNECTED          3  /* Local station disconnected from an AP */
+#define AT_NOTIFY_CONNECTION_OPEN       4  /* Network connection is established     */
+#define AT_NOTIFY_CONNECTION_CLOSED     5  /* Network connection is closed          */
+#define AT_NOTIFY_STATION_CONNECTED     6  /* Station connects to the local AP      */
+#define AT_NOTIFY_STATION_DISCONNECTED  7  /* Station disconnects from the local AP */
+#define AT_NOTIFY_CONNECTION_RX_INIT    8  /* Connection will start receiving data  */
+#define AT_NOTIFY_CONNECTION_RX_DATA    9  /* Connection data is ready to read      */
 #define AT_NOTIFY_REQUEST_TO_SEND       10 /* Request to load data to transmit      */
 #define AT_NOTIFY_RESPONSE_GENERIC      11 /* Received generic command response     */
 #define AT_NOTIFY_TX_DONE               12 /* Serial transmit completed             */
 #define AT_NOTIFY_OUT_OF_MEMORY         13 /* Serial parser is out of memory        */
 #define AT_NOTIFY_ERR_CODE              14 /* Received "ERR_CODE" response          */
+#define AT_NOTIFY_READY                 15 /* The AT firmware is ready              */
 
 /**
   AT parser notify callback function.
@@ -150,6 +150,15 @@ typedef struct {
   uint16_t local_port;    /* Local port number */
 } AT_DATA_LINK_CONN;
 
+/* Device communication interface */
+typedef struct {
+  uint32_t baudrate;      /* Configured baud rate */
+  uint8_t  databits;      /* 5:5-bit data, 6:6-bit data, 7:7-bit data, 8:8-bit data */
+  uint8_t  stopbits;      /* 1:1-stop bit, 2:2-stop bits */
+  uint8_t  parity;        /* 0:none, 1:odd, 2:even */
+  uint8_t  flow_control;  /* 0:none, 1:RTS, 2:CTS, 3:RTS/CTS */
+} AT_PARSER_COM_SERIAL;
+
 /* Device control block */
 typedef struct {
   BUF_LIST mem;         /* Parser memory buffer */
@@ -157,6 +166,7 @@ typedef struct {
   uint8_t  state;       /* Parser state */
   uint8_t  cmd_sent;    /* Last command sent     */
   uint8_t  gen_resp;    /* Generic response */
+  uint8_t  msg_code;    /* Message code          */
   uint8_t  ctrl_code;   /* Control code          */
   uint8_t  resp_code;   /* Response command code */
   uint8_t  resp_len;    /* Response length */
@@ -174,11 +184,13 @@ typedef struct {
 #define AT_STATE_RECV_DATA   6
 #define AT_STATE_SEND_DATA   7
 #define AT_STATE_RESP_CTRL   8
+#define AT_STATE_RESP_ECHO   9
 
 /* AT parser functions */
 extern int32_t AT_Parser_Initialize   (void);
 extern int32_t AT_Parser_Uninitialize (void);
-extern int32_t AT_Parser_SetBaudrate  (uint32_t baudrate);
+extern int32_t AT_Parser_GetSerialCfg (AT_PARSER_COM_SERIAL *info);
+extern int32_t AT_Parser_SetSerialCfg (AT_PARSER_COM_SERIAL *info);
 extern void    AT_Parser_Execute      (void);
 extern void    AT_Parser_Reset        (void);
 

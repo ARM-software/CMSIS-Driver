@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        4. October 2019
- * $Revision:    V1.0
+ * $Date:        22. January 2020
+ * $Revision:    V1.1
  *
  * Project:      Message buffer for Inventek ISM43362 WiFi Driver
  *               header file
@@ -70,6 +70,12 @@ extern bool WiFi_ISM43362_BufferPut (uint8_t idx, const void *ptr_data, uint32_t
 /// \param[in]   max_len  Maximum length of data to be returned
 /// \return               Number of bytes returned
 extern uint32_t WiFi_ISM43362_BufferGet (uint8_t idx, void *ptr_data, uint32_t max_len);
+
+/// \brief       Check if buffer contains any unread data
+/// \param[in]   idx      Index of buffer from which to get the data block (0 ..)
+/// \return      true     Buffer is not empty
+/// \return      false    Buffer is empty
+extern bool WiFi_ISM43362_BufferNotEmpty (uint8_t idx);
 
 /// \brief       Flush data blocks from buffer
 /// \param[in]   idx      Index of buffer from which to flush data blocks (0 ..)

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        12. November 2019
- * $Revision:    V1.0
+ * $Date:        11. February 2020
  *
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */
@@ -54,12 +53,14 @@ extern ARM_DRIVER_USART           CMSIS_USART_DRIVER;
 static void UART_Callback (uint32_t event);
 
 typedef struct {
-  ARM_DRIVER_USART *drv;  /* UART driver */
-  uint32_t rxc;           /* Rx buffer count */
-  uint32_t rxi;           /* Rx buffer index */
-  uint32_t txi;           /* Tx buffer index */
-  uint8_t  txb;           /* Tx busy flag    */
-  uint8_t  r[3];          /* Reserved        */
+  ARM_DRIVER_USART *drv;  /* UART driver       */
+  uint32_t mode;          /* UART driver mode  */
+  uint32_t baudrate;      /* UART driver speed */
+  uint32_t rxc;           /* Rx buffer count   */
+  uint32_t rxi;           /* Rx buffer index   */
+  uint32_t txi;           /* Tx buffer index   */
+  uint8_t  txb;           /* Tx busy flag      */
+  uint8_t  r[3];          /* Reserved          */
 } SERIAL_COM;
 
 static uint8_t RxBuf[SERIAL_RXBUF_SZ];
@@ -73,9 +74,8 @@ static SERIAL_COM Com;
   \return 0:ok, 1:error
 */
 int32_t Serial_Initialize (void) {
-  int32_t err;
-
-  err = 1;
+  int32_t stat;
+  ARM_USART_CAPABILITIES capab;
 
   /* Initialize serial control structure */
   Com.drv = pDrvUART;
@@ -84,31 +84,72 @@ int32_t Serial_Initialize (void) {
   Com.txi = 0U;
   Com.txb = 0U;
 
+  /* Setup standard UART mode: 8 bits, no parity, 1 stop bit */
+  Com.mode = ARM_USART_MODE_ASYNCHRONOUS | ARM_USART_DATA_BITS_8 |
+                                           ARM_USART_PARITY_NONE |
+                                           ARM_USART_STOP_BITS_1 ;
+
+  /* Set initial baud rate to 115200 */
+  Com.baudrate = 115200;
+
+  /* Check CMSIS-USART capabilities */
+  capab = Com.drv->GetCapabilities();
+
+  if ((capab.flow_control_cts == 1U) && (capab.flow_control_rts == 1U)) {
+    /* Enable RTS/CTS flow control */
+    Com.mode |= ARM_USART_FLOW_CONTROL_RTS_CTS;
+  }
+  else if (capab.flow_control_cts == 1U) {
+    /* Enable CTS flow control */
+    Com.mode |= ARM_USART_FLOW_CONTROL_CTS;
+  }
+  else if (capab.flow_control_rts == 1U) {
+    /* Enable RTS flow control */
+    Com.mode |= ARM_USART_FLOW_CONTROL_RTS;
+  }
+  else {
+    /* No flow control */
+    Com.mode |= ARM_USART_FLOW_CONTROL_NONE;
+  }
+
   /* Initialize serial driver */
-  if (Com.drv->Initialize (&UART_Callback) == ARM_DRIVER_OK) {
-
-    Com.drv->PowerControl (ARM_POWER_FULL);
-
-    /* Configure UART mode: 8 bits, no parity, 1 stop bit, no flow control, 9600 bps */
-    Com.drv->Control (ARM_USART_MODE_ASYNCHRONOUS |
-                      ARM_USART_DATA_BITS_8       |
-                      ARM_USART_PARITY_NONE       |
-                      ARM_USART_STOP_BITS_1       |
-                      ARM_USART_FLOW_CONTROL_NONE, 9600);
-
-    /* Enable TX output */
-    Com.drv->Control(ARM_USART_CONTROL_TX, 1);
-
-    /* Enable RX output */
-    Com.drv->Control(ARM_USART_CONTROL_RX, 1);
-
-    /* Start serial receive */
-    if (Com.drv->Receive (&RxBuf[0], SERIAL_RXBUF_SZ) == ARM_DRIVER_OK) {
-      err = 0U;
+  if (Com.drv->Initialize (&UART_Callback) != ARM_DRIVER_OK) {
+    /* CMSIS-USART initialize failed */
+    stat = -1;
+  }
+  else if (Com.drv->PowerControl (ARM_POWER_FULL) != ARM_DRIVER_OK) {
+    /* CMSIS-USART power full failed */
+    stat = -2;
+  }
+  else if (Com.drv->Control (Com.mode, Com.baudrate) != ARM_DRIVER_OK) {
+    /* CMSIS-USART mode configuration failed */
+    stat = -3;
+  }
+  else if (Com.drv->Control(ARM_USART_CONTROL_TX, 1U) != ARM_DRIVER_OK) {
+    /* CMSIS-USART transmitter enable failed */
+    stat = -4;
+  }
+  else if (Com.drv->Control(ARM_USART_CONTROL_RX, 1U) != ARM_DRIVER_OK) {
+    /* CMSIS-USART receiver enable failed */
+    stat = -5;
+  }
+  else if (Com.drv->Receive (&RxBuf[0], SERIAL_RXBUF_SZ) != ARM_DRIVER_OK) {
+    /* CMSIS-USART receive operation failed */
+    stat = -6;
+  }
+  else {
+    /* Check if receive timeout signal event is available */
+    if (capab.event_rx_timeout == 1U) {
+      /* Serial setup complete, full event driven mode */
+      stat = 1;
+    }
+    else {
+      /* Serial setup complete, application might require pooling GetRxCount */
+      stat = 0;
     }
   }
 
-  return (err);
+  return (stat);
 }
 
 
@@ -128,46 +169,110 @@ int32_t Serial_Uninitialize (void) {
   return (0);
 }
 
-/**
-  Set serial interface baudrate.
-  
-  \param[in]  baudrate    desired baudrate
-  \return 0:ok, 1:error
-*/
-int32_t Serial_SetBaudrate (uint32_t baudrate) {
-  int32_t err, status;
+int32_t Serial_GetMode (SERIAL_MODE *mode) {
+  int32_t err;
+  uint32_t msk;
 
-  status = Com.drv->Control (ARM_USART_ABORT_RECEIVE, NULL);
+  err = 1;
 
-  Com.rxc = 0U;
-  Com.rxi = 0U;
-  Com.txi = 0U;
-  Com.txb = 0U;
+  if (mode != NULL) {
+    err = 0;
 
-  if (status == ARM_DRIVER_OK) {
-    /* Configure UART mode: 8 bits, no parity, 1 stop bit, no flow control, 9600 bps */
-    status = Com.drv->Control (ARM_USART_MODE_ASYNCHRONOUS |
-                               ARM_USART_DATA_BITS_8       |
-                               ARM_USART_PARITY_NONE       |
-                               ARM_USART_STOP_BITS_1       |
-                               ARM_USART_FLOW_CONTROL_NONE, baudrate);
+    /* Initialize structure */
+    mode->baudrate = Com.baudrate;
+    mode->databits = 0;
+    mode->stopbits = 0;
+    mode->parity   = 0;
+    mode->flow_control = 0;
 
-    if (status == ARM_DRIVER_OK) {
-      /* Enable TX output */
-      Com.drv->Control(ARM_USART_CONTROL_TX, 1);
+    /* Extract parameters */
+    msk = Com.mode & ARM_USART_DATA_BITS_Msk;
 
-      /* Enable RX output */
-      Com.drv->Control(ARM_USART_CONTROL_RX, 1);
+    if      (msk == ARM_USART_DATA_BITS_8) { mode->databits = 8U; }
+    else if (msk == ARM_USART_DATA_BITS_7) { mode->databits = 7U; }
+    else if (msk == ARM_USART_DATA_BITS_6) { mode->databits = 6U; }
+    else if (msk == ARM_USART_DATA_BITS_5) { mode->databits = 5U; }
 
-      /* Start serial receive */
-      status = Com.drv->Receive (&RxBuf[0], SERIAL_RXBUF_SZ);
-    }
+    msk = Com.mode & ARM_USART_STOP_BITS_Msk;
+
+    if      (msk == ARM_USART_STOP_BITS_1) { mode->stopbits = 1U; }
+    else if (msk == ARM_USART_STOP_BITS_2) { mode->stopbits = 2U; }
+
+    msk = Com.mode & ARM_USART_PARITY_Msk;
+
+    if      (msk == ARM_USART_PARITY_NONE) { mode->parity = 0U; }
+    else if (msk == ARM_USART_PARITY_ODD)  { mode->parity = 1U; }
+    else if (msk == ARM_USART_PARITY_EVEN) { mode->parity = 2U; }
+
+    msk = Com.mode & ARM_USART_FLOW_CONTROL_Msk;
+
+    if      (msk == ARM_USART_FLOW_CONTROL_NONE)   { mode->flow_control = 0U; }
+    else if (msk == ARM_USART_FLOW_CONTROL_RTS)    { mode->flow_control = 1U; }
+    else if (msk == ARM_USART_FLOW_CONTROL_CTS)    { mode->flow_control = 2U; }
+    else if (msk == ARM_USART_FLOW_CONTROL_RTS_CTS){ mode->flow_control = 3U; }
   }
 
-  if (status == ARM_DRIVER_OK) {
-    err = 0;
-  } else {
-    err = 1;
+  return (err);
+}
+
+int32_t Serial_SetMode (SERIAL_MODE *mode) {
+  int32_t err, status;
+  uint32_t arg, br;
+
+  err = 1;
+
+  if (mode != NULL) {
+    br  = mode->baudrate;
+    arg = ARM_USART_MODE_ASYNCHRONOUS;
+
+    if      (mode->databits == 8U) { arg |= ARM_USART_DATA_BITS_8; }
+    else if (mode->databits == 7U) { arg |= ARM_USART_DATA_BITS_7; }
+    else if (mode->databits == 6U) { arg |= ARM_USART_DATA_BITS_6; }
+    else if (mode->databits == 5U) { arg |= ARM_USART_DATA_BITS_5; }
+
+    if      (mode->stopbits == 1U) { arg |= ARM_USART_STOP_BITS_1; }
+    else if (mode->stopbits == 2U) { arg |= ARM_USART_STOP_BITS_2; }
+    
+    if      (mode->parity == 0U) { arg |= ARM_USART_PARITY_NONE; }
+    else if (mode->parity == 1U) { arg |= ARM_USART_PARITY_ODD;  }
+    else if (mode->parity == 2U) { arg |= ARM_USART_PARITY_EVEN; }
+
+    if      (mode->flow_control == 0U) { arg |= ARM_USART_FLOW_CONTROL_NONE;    }
+    else if (mode->flow_control == 1U) { arg |= ARM_USART_FLOW_CONTROL_RTS;     }
+    else if (mode->flow_control == 2U) { arg |= ARM_USART_FLOW_CONTROL_CTS;     }
+    else if (mode->flow_control == 3U) { arg |= ARM_USART_FLOW_CONTROL_RTS_CTS; }
+
+    /* Abort current receive operation */
+    status = Com.drv->Control (ARM_USART_ABORT_RECEIVE, NULL);
+
+    Com.rxc = 0U;
+    Com.rxi = 0U;
+    Com.txi = 0U;
+    Com.txb = 0U;
+
+    if (status == ARM_DRIVER_OK) {
+      /* Re-configure UART mode and baud rate */
+      status = Com.drv->Control (arg, br);
+
+      if (status == ARM_DRIVER_OK) {
+        /* Update mode */
+        Com.mode     = arg;
+        Com.baudrate = br;
+
+        /* Enable TX output */
+        Com.drv->Control(ARM_USART_CONTROL_TX, 1);
+
+        /* Enable RX output */
+        Com.drv->Control(ARM_USART_CONTROL_RX, 1);
+
+        /* Start serial receive */
+        status = Com.drv->Receive (&RxBuf[0], SERIAL_RXBUF_SZ);
+      }
+    }
+
+    if (status == ARM_DRIVER_OK) {
+      err = 0;
+    }
   }
 
   return (err);
@@ -211,10 +316,11 @@ int32_t Serial_SendBuf (const uint8_t *buf, uint32_t len) {
 
   memcpy (TxBuf, buf, cnt);
 
+  Com.txb = 1U;
+
   stat = Com.drv->Send (&TxBuf[0], cnt);
 
   if (stat == ARM_DRIVER_OK) {
-    Com.txb = 1U;
     n = (int32_t)cnt;
   }
   else {

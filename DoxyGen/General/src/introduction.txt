@@ -45,6 +45,27 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.0</td>
+      <td>
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
+          - Added DHCP setting before station Activate
+          - Added read of DHCP assigned IPs after station activate
+          - Fixed serial tx busy flag handling
+          - Fixed function AT_Resp_ConnectAP for NULL argument
+          - Enhanced serial communication startup procedure
+        - Updated Inventek ISM43362 WiFi driver (version 1.8.0):
+          - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
+          - Corrected GetModuleInfo return string termination
+          - Corrected functionality when DATARDY line is used in polling mode
+          - Corrected SocketConnect function never returning 0 in non-blocking mode
+          - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+          - Corrected delay after module reset
+          - For non-STM firmware variant only firmware version 6.2.1.7 is supported
+        - Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
+      </td>
+    </tr>
+    <tr>
       <td>2.5.0</td>
       <td>
         - Added Espressif ESP32 WiFi driver
@@ -57,7 +78,7 @@ Revision History
           - Added debug of SPI traffic with Event Recorder
           - Added CMSIS Driver Validation test results
       </td>
-    </tr>    
+    </tr>
     <tr>
       <td>2.4.1</td>
       <td>
@@ -115,51 +136,113 @@ Revision History
 /**
 \page driver_eth Ethernet
 
-\section driver_KSZ8851SNL KSZ8851SNL/SNLI
+\section driver_eth_devices Driver Implementations
 
-The documentation for the KSZ8851SNL/SNLI can be found here: https://www.microchip.com/KSZ8851
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
 
+<table class="cmtable" summary="Ethernet Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    \anchor driver_KSZ8851SNL
+    <tr>
+      <td>\b KSZ8851SNL/SNLI</td>
+      <td>
+       Ethernet PHY and MAC interfaces for <a href="https://www.microchip.com/KSZ8851" target="_blank"><b>KSZ8851</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN9220
+    <tr>
+      <td>\b LAN9220</td>
+      <td>
+       Ethernet PHY and MAC interfaces for <a href="https://www.microchip.com/LAN9220" target="_blank"><b>LAN9220</b></a>.
+      </td>
+    </tr>
+    \anchor driver_DP83848C
+    <tr>
+      <td>\b DP83848C</td>
+      <td>
+       Ethernet PHY interface for <a href="http://www.ti.com/product/DP83848C" target="_blank"><b>DP83848C</b></a>.
+      </td>
+    </tr>
+    \anchor driver_KSZ8061RNB
+    <tr>
+      <td>\b KSZ8061RNB</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/KSZ8061" target="_blank"><b>KSZ8061</b></a>.
+      </td>
+    </tr>
+    \anchor driver_KSZ8081RNA
+    <tr>
+      <td>\b KSZ8081RNA</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/KSZ8081" target="_blank"><b>KSZ8081</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8710A
+    <tr>
+      <td>\b LAN8710A</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8710A" target="_blank"><b>LAN8710A</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8720
+    <tr>
+      <td>\b LAN8720</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>LAN8720</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8742A
+    <tr>
+      <td>\b LAN8742A</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8742A" target="_blank"><b>LAN8742A</b></a>.
+      </td>
+    </tr>
+    \anchor driver_ST802RT1
+    <tr>
+      <td>\b ST802RT1</td>
+      <td>
+       Ethernet PHY interface for <a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf" target="_blank"><b>ST802RT1</b></a>.
+      </td>
+    </tr>
+</table>
 
-\section driver_LAN9220 LAN9220
+\section driver_eth_multiple Multiple Driver Instances
 
-The documentation for the LAN9220 can be found here: https://www.microchip.com/LAN9220
-
-
-\section driver_DP83848C DP83848C
-
-The documentation for the DP83848C can be found here: http://www.ti.com/product/DP83848C
-
-
-\section driver_KSZ8061RNB KSZ8061RNB
-
-The documentation for the KSZ8061RNB can be found here: https://www.microchip.com/KSZ8061
-
-
-\section driver_KSZ8081RNA KSZ8081RNA
-
-The documentation for the KSZ8081RNA can be found here: https://www.microchip.com/KSZ8081
-
-
-\section driver_LAN8710A LAN8710A
-
-The documentation for the LAN8710A can be found here: https://www.microchip.com/LAN8710A
-
-
-\section driver_LAN8720 LAN8720
-
-The documentation for the LAN8720 can be found here: https://www.microchip.com/LAN8720A
-
-
-\section driver_LAN8742A LAN8742A
-
-The documentation for the LAN8742A can be found here: https://www.microchip.com/LAN8742A
-
-
-\section driver_ST802RT1 ST802RT1
-
-The data brief for the ST802RT1 can be found here:
-http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf
-
+CMSIS-Driver API supports multiple driver instances. The Ethernet drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c ETH_LAN9220.c file as \c ETH2_LAN9220.c.</li>
+ <li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+ <li>Specify the driver parameters for the second instance. For example, in \c ETH2_LAN9220.c new values to the following parameters are needed instead of default ones:
+   \code
+    #define ETH_MAC_NUM             1
+    #define ETH_PHY_NUM             1
+    #define LAN9220_BASE            (0x53000000UL)
+  \endcode
+ </li>
+ <li>Now both Ethernet instances can be accessed from the  application. For example:
+\code
+#include "Driver_ETH_MAC.h"
+#include "Driver_ETH_PHY.h"
+ 
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC0;
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC1;
+ 
+extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY0;
+extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
+ 
+#define eth0    (&Driver_ETH_MAC0)
+#define eth1    (&Driver_ETH_MAC1)
+ 
+#define phy0    (&Driver_ETH_PHY0)
+#define phy1    (&Driver_ETH_PHY1)
+\endcode
+ </li>
+</ul>
 
 */
 
@@ -170,6 +253,45 @@ http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7
 \section driver_ISM43362 ISM43362
 
 The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
+
+\subsection ismart43362_e_firmware_download Flashing a different firmware to ISMART43362-E Shield
+
+The ISMART43362-E Shield has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
+flashed with the firmware for UART communication. To enable SPI communication, follow these steps to flash the module:
+
+\b Prepare \b the \b hardware
+- Set the power supply jumper on ISMART43362-E to connect 5V_USB and 5V_BOARD.
+- Set the SW3 switch to position 1 (factory default position).
+
+\b Prepare \b the \b software
+- Download
+  [ISM43362_M3G_L44_SPI_C6.2.1.7.zip](https://www.inventeksys.com/iwin/wp-content/uploads/ISM43362_M3G_L44_SPI_C6.2.1.7.zip)
+  and extract it locally.
+- Download [eS-WIFi_Demo](https://www.inventeksys.com/iwin/wp-content/uploads/eS-WIFi_Demo.zip)
+- Unzip the file and install the application on your PC. 
+- Start es-WiFi Demo and select <b>Menu - Install Drivers</b> and install both, CYW9WCD1EVAL1 and BCM9WCD1EVAL1:
+  \image html ISM43362_install_drivers.png
+- Connect the ISMART43362-E to the PC using the Mini-USB connector. In Device Manager, you should see WICED USB Serial Port
+  (COMx).
+- If not already done, assign a low COM port number.
+- In the es-WiFi Demo application, execute:
+  - Go to <b>Setup - Serial Port - Configure/Open</b>:
+    \image html ISM43362_set_COM_port_conf.png
+  - Check the follwoing settings (Serial Port being the one added just now):
+    \image html ISM43362_set_COM_port.png
+  - Go to <b>Menu - Firmware - Update</b>:
+    \image html ISM43362_update_firmware.png
+  - Select the binary image file extracted in the first step (ISM43362_M3G_L44_SPI_C6.2.1.7.bin). Make sure it is an SPI
+    firmware variant:
+    \image html ISM43362_module_detected.png
+- After the firmware is updated, the console will show the message "Resetting...":
+  \image html ISM43362_update_firmware_resetting.png
+  You can now disconnect the module from the PC as it contains the new SPI firmware.
+
+  If you want to flash a different firmware later, please visit
+  [Inventek's Firmware page](https://www.inventeksys.com/iwin/firmware/) for the latest binary files.
+
+\note Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!
 
 \section driver_ESP32 ESP32
 
@@ -183,53 +305,93 @@ The documentation for the Espressif ESP8266 can be found here: https://www.espre
 
 The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
 
+The latest firmware images are available on GitHub: https://github.com/wizfi/Release. Instructions on how to flash the
+firmware onto the device can be found on the WIZnet Wiki:
+https://wizwiki.net/wiki/lib/exe/fetch.php/products:wizfi360:wizfi360ds:wizfi360fug_v124e.pdf.
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
 \page driver_Flash Flash
 
-\section driver_AM29x800BB AM29x800BB
+\section driver_Flash_devices Driver Implementations
 
-This product is discontinued.
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__flash__interface__gr.html" target="_blank"><b>CMSIS-Flash drivers</b></a> for the following devices:
 
+<table class="cmtable" summary="Flash Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    \anchor driver_AM29x800BB
+    <tr>
+      <td>\b AM29x800BB</td>
+      <td>Flash interface for Parallel NOR Flash <b>AM29x800BB</b>. This product is discontinued.</td>
+    </tr>
+    \anchor driver_AT45DB641E
+    <tr>
+      <td>\b AT45DB641E</td>
+      <td>Flash interface for SPI Serial DataFlash <a href="https://www.adestotech.com/wp-content/uploads/DS-45DB641E-027.pdf" target="_blank"><b>AT45DB641E</b></a>.</td>
+    </tr>
+    \anchor driver_AT45DB642D
+    <tr>
+      <td>\b AT45DB642D</td>
+      <td>Flash interface for SPI Serial DataFlash <a href="https://www.adestotech.com/wp-content/uploads/doc3542.pdf" target="_blank"><b>AT45DB642D</b></a>.
+      </td>
+    </tr>
+    \anchor driver_M29EW28F128
+    <tr>
+      <td>\b M29EW28F128</td>
+      <td>Flash interface for Parallel NOR Flash <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf" target="_blank"><b>M29EW28F128</b></a>.
+      </td>
+    </tr>
+    \anchor driver_M29W640FB
+    <tr>
+      <td>\b M29W640FB</td>
+      <td>Flash interface for Parallel NOR Flash <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e" target="_blank"><b>M29W640FB</b></a>.
+      </td>
+    </tr>
+    \anchor driver_N25Q032A
+    <tr>
+      <td>\b N25Q032A</td>
+      <td> Serial NOR Flash. <a href="https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e" target="_blank"><b>Device info</b></a>.
+      </td>
+    </tr>
+    \anchor driver_S29GL064Nx2
+    <tr>
+      <td>\b S29GL064Nx2</td>
+      <td>Flash interface for Parallel NOR Flash <a href="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash" target="_blank"><b>S29GL064N</b></a>.
+      </td>
+</table>
 
-\section driver_AT45DB641E AT45DB641E
+\section driver_Flash_multiple Multiple Driver Instances
 
-The documentation for the AT45DB641E can be found here: https://www.adestotech.com/products/data-flash/
-
-
-\section driver_AT45DB642D AT45DB642D
-
-The documentation for the AT45DB642D can be found here: https://www.adestotech.com/legacy-product-datasheets/
-
-
-\section driver_M29EW28F128 M29EW28F128
-
-The documentation for the M29EW28F128 can be found here:
-https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf
-
-
-\section driver_M29W640FB M29W640FB
-
-The documentation for the M29W640FB can be found here:
-https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e
-
-
-\section driver_N25Q032A N25Q032A
-
-The documentation for the N25Q032A can be found here:
-https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e
-
-
-\section driver_S29GL064Nx2 S29GL064Nx2
-
-The documentation for the S29GL064Nx2 can be found here:
-http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash
-
+CMSIS-Driver API supports multiple driver instances. The Flash drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c AT45DB641E.c file as \c AT45DB641E_2.c.</li>
+ <li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+ <li>Specify the driver parameters for the second instance based on the hardware design. For example, in \c AT45DB641E_2.c the values for the flash driver number and SPI driver number need to be configured as shown below:
+   \code
+    #define DRIVER_FLASH_NUM        1
+    #define DRIVER_SPI_NUM          1
+  \endcode
+ </li>
+ <li>Now both Flash instances can be accessed from the application. For example:
+\code
+#include "Driver_Flash.h"
+ 
+/* Flash driver instances */
+extern ARM_DRIVER_FLASH Driver_Flash0;
+extern ARM_DRIVER_FLASH Driver_Flash1;
+ 
+#define flash0  (&Driver_Flash0)
+#define flash1  (&Driver_Flash1)
+\endcode
+ </li>
+</ul>
 
 */
-
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
@@ -264,7 +426,6 @@ periodically access two I2C slave devices.
  
 #include "RTE_Components.h"
 #include  CMSIS_device_header
-#include "stm32f2xx_hal.h"              // Keil::Device:STM32Cube HAL:Common
  
 #include "Driver_I2C.h"                 // ::CMSIS Driver:I2C
  
@@ -339,7 +500,7 @@ __NO_RETURN static void Thread_B (void *argument) {
     I2C_A->MasterTransmit(addr, &reg, 1, true);
     while (I2C_A->GetStatus().busy);
  
-    I2C_A->MasterTransmit (addr, &val, 1, false);
+    I2C_A->MasterTransmit(addr, &val, 1, false);
     while (I2C_B->GetStatus().busy);
  
     osDelay(10);
@@ -353,10 +514,10 @@ __NO_RETURN static void app_main (void *argument) {
   (void)argument;
  
   /* Create SPI threads */
-  ThreadId_A = osThreadNew (Thread_A, NULL, NULL);
-  ThreadId_B = osThreadNew (Thread_B, NULL, NULL);
+  ThreadId_A = osThreadNew(Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew(Thread_B, NULL, NULL);
  
-  osDelay (osWaitForever);
+  osDelay(osWaitForever);
  
   for (;;) {}
 }
@@ -373,7 +534,6 @@ int main (void) {
 }
 \endcode
 */
-
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
@@ -466,10 +626,10 @@ void SPI_Control_SlaveSelect (uint32_t device, uint32_t ss_state) {
  
   if (ss_state == ARM_SPI_SS_INACTIVE) {
     /* Set GPIO pin high */
-    HAL_GPIO_WritePin (GPIOx, pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOx, pin, GPIO_PIN_SET);
   } else {
     /* Set GPIO pin low */
-    HAL_GPIO_WritePin (GPIOx, pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOx, pin, GPIO_PIN_RESET);
   }
 }
  
@@ -480,19 +640,19 @@ __NO_RETURN static void Thread_A (void *argument) {
   char *p = "Sending data to Slave Device 0";
   (void)argument;
   
-  SPI_A->Initialize (NULL);
-  SPI_A->PowerControl (ARM_POWER_FULL);
-  SPI_A->Control (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \
-                                      | ARM_SPI_DATA_BITS(8) \
-                                      | ARM_SPI_MSB_LSB      \
-                                      | ARM_SPI_SS_MASTER_UNUSED,
-                                      10000000);
+  SPI_A->Initialize(NULL);
+  SPI_A->PowerControl(ARM_POWER_FULL);
+  SPI_A->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \
+                                     | ARM_SPI_DATA_BITS(8) \
+                                     | ARM_SPI_MSB_LSB      \
+                                     | ARM_SPI_SS_MASTER_UNUSED,
+                                     10000000);
  
-  SPI_A->Control (ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+  SPI_A->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
  
   while(1) {
     /* Send to Slave Device 0 */
-    SPI_A->Send (p, strlen(p));
+    SPI_A->Send(p, strlen(p));
  
     osDelay(10);
   }
@@ -506,19 +666,19 @@ __NO_RETURN static void Thread_B (void *argument) {
   (void)argument;
  
   /* Initialize and configure SPI */
-  SPI_B->Initialize (NULL);
-  SPI_B->PowerControl (ARM_POWER_FULL);
-  SPI_B->Control (ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \
-                                      | ARM_SPI_DATA_BITS(8) \
-                                      | ARM_SPI_MSB_LSB      \
-                                      | ARM_SPI_SS_MASTER_UNUSED,
-                                      15000000);
+  SPI_B->Initialize(NULL);
+  SPI_B->PowerControl(ARM_POWER_FULL);
+  SPI_B->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \
+                                     | ARM_SPI_DATA_BITS(8) \
+                                     | ARM_SPI_MSB_LSB      \
+                                     | ARM_SPI_SS_MASTER_UNUSED,
+                                     15000000);
  
-  SPI_B->Control (ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+  SPI_B->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
  
   while(1) {
     /* Send to Slave Device 1 */
-    SPI_B->Send (p, strlen(p));
+    SPI_B->Send(p, strlen(p));
  
     osDelay(10);
   }
@@ -531,10 +691,10 @@ __NO_RETURN static void app_main (void *argument) {
   (void)argument;
  
   /* Create SPI threads */
-  ThreadId_A = osThreadNew (Thread_A, NULL, NULL);
-  ThreadId_B = osThreadNew (Thread_B, NULL, NULL);
+  ThreadId_A = osThreadNew(Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew(Thread_B, NULL, NULL);
  
-  osDelay (osWaitForever);
+  osDelay(osWaitForever);
  
   for (;;) {}
 }

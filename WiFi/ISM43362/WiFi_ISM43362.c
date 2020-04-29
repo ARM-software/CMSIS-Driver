@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. November 2019
- * $Revision:    V1.3
+ * $Date:        24. February 2020
+ * $Revision:    V1.8
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -74,9 +74,31 @@
  *      For testing the driver in such combination delay between 
  *      WiFi Initialization and debugger connect has to be introduced and 
  *      WiFi Shield has to be reset manually before starting debug session.
+ *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.7.bin is supported
+ *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.8.bin is not supported:
+ *    - added additional "\r\n" to "OK" response (now 12 bytes instead of 10)
+ *      ("\r\n\r\n\r\nOK\r\n> " instead of previously 
+ *       "\r\n\r\nOK\r\n> ")
+ *    - added additional "\r\n" in front of "OK" in response containing
+ *      received data but just for UDP sockets
+ *      ("\r\n"DATA"\r\n\r\nOK\r\n> " instead of previously 
+ *       "\r\n"DATA"\r\nOK\r\n> ")
+ *    - does not return single byte received when requested by R0 command
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.8
+ *    - Corrected SocketConnect function never returning 0 in non-blocking mode
+ *    - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
+ *    - Corrected delay after module reset
+ *  Version 1.7
+ *    - Added check that non-STM firmware version is 6.2.1.7, other are not supported
+ *  Version 1.6
+ *    - Corrected functionality when DATARDY line is used in polling mode
+ *  Version 1.5
+ *    - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
+ *  Version 1.4
+ *    - Corrected GetModuleInfo return string termination
  *  Version 1.3
  *    - Corrected not setting password in Activate if OPEN security is used
  *  Version 1.2
@@ -143,7 +165,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,8)        // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -255,6 +277,8 @@ static const osThreadAttr_t thread_async_poll_attr = {
 // Local variables and structures
 static uint8_t                          module_initialized = 0U;
 static uint8_t                          driver_initialized = 0U;
+static uint8_t                          firmware_stm       = 0U;
+static uint32_t                         firmware_version   = 0U;
 
 static osEventFlagsId_t                 event_flags_id;
 static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
@@ -316,6 +340,9 @@ static int32_t WiFi_SocketClose    (int32_t socket);
 */
 static void ResetVariables (void) {
   uint32_t i;
+
+  firmware_stm            = 0U;
+  firmware_version        = 0U;
 
   sta_dhcp_client         = 1U;         // DHCP client is enabled by default
 
@@ -429,7 +456,7 @@ static const uint8_t *SkipCommas (const uint8_t *ptr, uint8_t num) {
 }
 
 /**
-  \fn            void SPI_WaitReady (uint32_t timeout)
+  \fn            uint8_t SPI_WaitReady (uint32_t timeout)
   \brief         Wait for SPI ready (DATARDY pin active).
   \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
   \return        SPI ready state
@@ -444,7 +471,7 @@ static uint8_t SPI_WaitReady (uint32_t timeout) {
   } else {
     do {
       ret = WiFi_ISM43362_Pin_DATARDY();
-      if (ret == 0U) {                  // If DATARDY is ready
+      if (ret == 0U) {                  // If DATARDY is not ready
         osDelay(1U);
         if (timeout > 0U) {
           timeout--;
@@ -552,6 +579,16 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     }
   } else {
     ret = ARM_DRIVER_ERROR_TIMEOUT;
+  }
+
+  if (spi_datardy_irq == 0U) {                  // If events are not generated on DATARDY activation
+    // Wait for DATARDY to deactivate after command was sent
+    for (timeout = WIFI_ISM43362_SPI_TIMEOUT * 16U; timeout != 0U; timeout --) {
+      if (WiFi_ISM43362_Pin_DATARDY() == 0U) {
+        break;
+      }
+      Wait_us(32U);                             // Wait 32 us
+    }
   }
 
   // Receive response on SPI
@@ -1062,9 +1099,10 @@ static ARM_WIFI_CAPABILITIES WiFi_GetCapabilities (void) { return driver_capabil
                    - ARM_DRIVER_ERROR             : Operation failed
 */
 static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
-  int32_t  ret;
-  uint32_t timeout, flags;
-  uint8_t  i;
+        int32_t   ret;
+  const char     *ptr_str;
+        uint32_t  timeout, flags;
+        uint8_t   i, u8_arr[4];
 
   signal_event_fn = cb_event;           // Update pointer to callback function
 
@@ -1121,7 +1159,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         WiFi_ISM43362_Pin_RSTN(true);
         osDelay(50U);
         WiFi_ISM43362_Pin_RSTN(false);
-        osDelay(100U);
+        osDelay(350U);
 
         // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
         // Do a read independent of return data
@@ -1136,11 +1174,19 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         WiFi_ISM43362_Pin_SSN(false);
         Wait_us(3U);
 
+        // Wait for DATARDY to activate
+        for (timeout = WIFI_ISM43362_SPI_TIMEOUT; timeout != 0U; timeout --) {
+          if (WiFi_ISM43362_Pin_DATARDY()) {
+            break;
+          }
+        }
+        Wait_us(4U);
+
         module_initialized = 1U;
       }
 
       // Do a dummy SPI communication so we can determine if event is used for DATARDY state change
-      memcpy((void *)spi_send_buf, (void *)"Z?\r\n", 4);
+      memcpy((void *)spi_send_buf, (void *)"I?\r\n", 4);
       WiFi_ISM43362_Pin_SSN(true);              // Activate slave select line
       Wait_us(15U);                             // Wait 15 us
       if (ptrSPI->Send(spi_send_buf, 2U) == ARM_DRIVER_OK) {
@@ -1171,7 +1217,8 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         ret = ARM_DRIVER_ERROR;
       }
 
-      // Receive data requested by 'Z?' command
+      // Receive data requested by 'I?' command
+      Wait_us(4U);
       WiFi_ISM43362_Pin_SSN(true);
       Wait_us(15U);
       if (ptrSPI->Receive(spi_recv_buf, 64U)  == ARM_DRIVER_OK) {
@@ -1185,9 +1232,30 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
       if (osMutexRelease(mutex_id_spi) != osOK) {       // If SPI mutex release has failed
         ret = ARM_DRIVER_ERROR;
       }
+
+      if (ret == ARM_DRIVER_OK) {
+        ptr_str = strstr ((const char *)spi_recv_buf, ",C");
+        if (ptr_str != NULL) {
+          if (sscanf(ptr_str + 2U, "%hhu.%hhu.%hhu.%hhu", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3]) == 4) {
+            firmware_version = ((uint32_t)u8_arr[0] << 24) | 
+                               ((uint32_t)u8_arr[1] << 16) | 
+                               ((uint32_t)u8_arr[2] <<  8) | 
+                               ((uint32_t)u8_arr[3]      );
+          }
+        }
+        ptr_str = strstr ((const char *)spi_recv_buf, "STM");
+        if (ptr_str != NULL) {
+          firmware_stm = 1U;
+        }
+      }
     } else {                            // If SPI interface is not accessible (locked by another thread)
       ret = ARM_DRIVER_ERROR;
     }
+  }
+
+  if ((firmware_stm == 0U) && (firmware_version != 0x06020107U)) {
+    // For non-STM firmware variant only firmware version 6.2.1.7 is supported
+    ret = ARM_DRIVER_ERROR;
   }
 
   // Create asynchronous message processing thread
@@ -1390,7 +1458,7 @@ static int32_t WiFi_GetModuleInfo (char *module_info, uint32_t max_len) {
         if (copy_len > 0) {
           memcpy ((void *)module_info, (void *)&spi_recv_buf[2], copy_len);
         }
-        module_info[copy_len+1] = 0;
+        module_info[copy_len] = 0;
       } else {
         ret = ARM_DRIVER_ERROR;
       }
@@ -2984,7 +3052,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                 ret = SPI_StartStopTransportServerClient (socket, socket_arr[socket].protocol, 0U, ip, port, TRANSPORT_START, TRANSPORT_CLIENT);
                 if (ret == 0) {
                   socket_arr[socket].client = 1U;
-                  socket_arr[socket].state  = SOCKET_STATE_CONNECTING;
+                  socket_arr[socket].state  = SOCKET_STATE_CONNECTED;
                   if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
                     ret = ARM_SOCKET_EINPROGRESS;
                   }
@@ -3092,7 +3160,7 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((buf == NULL) || (len == 0U)) {
+  if ((buf == NULL) && (len != 0U)) {
     return ARM_SOCKET_EINVAL;
   }
   if ((socket_arr[socket].protocol == ARM_SOCKET_SOCK_STREAM) && (socket_arr[socket].state != SOCKET_STATE_CONNECTED)) {
@@ -3111,9 +3179,16 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
     ret = 0;
 
     // Handle if data was already received, and just return data immediately
-    ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+    if (len != 0U) {
+      ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+    } else if (WiFi_ISM43362_BufferNotEmpty (hw_socket)) {
+      ret = 1;                                                // Set ret to 1, if len requested was 0 and data is available
+    }
 
     if (ret == 0) {
+      if (socket_arr[socket].poll_recv == 0U) {               // If reception not started with bind
+        socket_arr[socket].poll_recv = 1U;                    // start polling here
+      }
       if (socket_arr[socket].non_blocking != 0U) {            // If non-blocking
         socket_arr[socket].recv_time_left = 1U;
       } else {                                                // If blocking
@@ -3149,7 +3224,11 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
         socket_arr[socket].state = SOCKET_STATE_DISCONNECTED;
         ret = ARM_SOCKET_ECONNRESET;
       } else if ((flags & EVENT_SOCK_RECV) != 0U) {             // If reception has finished and some data was received
-        ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+        if (len != 0U) {
+          ret = (int32_t)WiFi_ISM43362_BufferGet (hw_socket, buf, len);
+        } else {
+          ret = 1;                                              // Set ret to 1, if len requested was 0 and data is available
+        }
       } else if ((flags & EVENT_SOCK_RECV_TIMEOUT) != 0U) {     // If reception has timed-out and nothing was received
         ret = ARM_SOCKET_EAGAIN;
       } else {                                                  // Should never happen
@@ -3159,6 +3238,11 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
     } else {
       ret = ARM_SOCKET_ERROR;
     }
+  }
+
+  // Handling of special case read with len 0, if there was data available ret is 1 at this point
+  if ((len == 0U) && (ret == 1)) {
+    ret = 0;
   }
 
   if (ret > 0) {
@@ -3230,7 +3314,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((buf == NULL) || (len == 0U)) {
+  if ((buf == NULL) && (len != 0U)) {
     return ARM_SOCKET_EINVAL;
   }
   if ((ip != NULL) && (ip_len != 4U)) {
@@ -3241,6 +3325,10 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
   }
   if (driver_initialized == 0U) {
     return ARM_SOCKET_ERROR;
+  }
+
+  if (len == 0U) {
+    return 0;
   }
 
   len_tot_sent = 0U;
@@ -3297,7 +3385,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
         len_to_send  = len;
         len_tot_sent = 0U;
 
-        while ((ret == 0) && (len_tot_sent < len_to_send)) {
+        do {
           len_req = len_to_send - len_tot_sent;
           if (len_req > MAX_DATA_SIZE) {
             len_req = MAX_DATA_SIZE;
@@ -3312,7 +3400,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           if (spi_ret == ARM_DRIVER_OK) {
             if (resp_code == 0) {
               if (sscanf((const char *)&spi_recv_buf[2], "%d", &len_sent) == 1) {
-                if (len_sent > 0) {
+                if ((len_sent > 0) || ((len_sent == 0) && (len_to_send == 0U))) {
                   len_tot_sent += (uint32_t)len_sent;
                 } else if (len_sent == 0) {
                   ret = ARM_SOCKET_EAGAIN;
@@ -3333,7 +3421,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           } else {
             ret = ARM_SOCKET_ERROR;
           }
-        }
+        } while ((ret == 0) && (len_tot_sent < len_to_send));
       }
       osMutexRelease(mutex_id_spi);
     } else {

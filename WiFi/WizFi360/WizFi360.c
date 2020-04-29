@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        12. November 2019
- * $Revision:    V1.0
+ * $Date:        11. February 2020
  *
  * Project:      WizFi360 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -235,25 +234,38 @@ void Serial_Cb (uint32_t cb_event) {
 
 /**
   Initialize parser.
+  
+  \return 0: initialized, pooling is required
+          1: initialized, event driven operation
+   negative: initialization error
 */
 int32_t AT_Parser_Initialize (void) {
   osMemoryPoolAttr_t mp_attr;
   osMemoryPoolId_t   mp_id;
-  int32_t err;
+  int32_t ex, stat;
 
-  err = 1;
+  stat = -1;
 
   mp_attr = AT_Parser_MemPool_Attr;
   mp_id = osMemoryPoolNew (PARSER_BUFFER_BLOCK_COUNT, PARSER_BUFFER_BLOCK_SIZE, &mp_attr);
 
   if (mp_id != NULL) {
-    if (Serial_Initialize () == 0) {
-      /* Serial initialized */
-      err = 0;
+    /* Init serial interface */
+    ex = Serial_Initialize ();
+
+    if (ex == 0) {
+      /* Initialized, pooling mode */
+      stat = 0;
+    }
+    else {
+      if (ex == 1) {
+        /* Initialized, rx timeout signal event driven */
+        stat = 1;
+      }
     }
   }
 
-  if (err == 0) {
+  if (stat >= 0) {
     /* Setup memory pool */
     BufInit (mp_id, NULL, &pCb->mem);
     BufInit (mp_id, NULL, &pCb->resp);
@@ -262,18 +274,21 @@ int32_t AT_Parser_Initialize (void) {
     pCb->state     = AT_STATE_ANALYZE;
     pCb->cmd_sent  = CMD_UNKNOWN;
     pCb->gen_resp  = 0U;
+    pCb->msg_code  = 0U;
     pCb->resp_code = CMD_UNKNOWN;
     pCb->resp_len  = 0U;
   }
 
-  if (err != 0) {
+  if (stat < 0) {
     /* Clean up resources */
+    Serial_Uninitialize();
+
     if (mp_id != NULL) {
       osMemoryPoolDelete (mp_id);
     }
   }
 
-  return (err);
+  return (stat);
 }
 
 /**
@@ -294,10 +309,17 @@ int32_t AT_Parser_Uninitialize (void) {
 }
 
 /**
-  Set serial baudrate.
+  Get current serial interface mode and baud rate.
 */
-int32_t AT_Parser_SetBaudrate (uint32_t baudrate) {
-  return Serial_SetBaudrate (baudrate);
+int32_t AT_Parser_GetSerialCfg (AT_PARSER_COM_SERIAL *info) {
+  return (Serial_GetMode ((SERIAL_MODE *)info));
+}
+
+/**
+  Set serial interface mode and baud rate.
+*/
+int32_t AT_Parser_SetSerialCfg (AT_PARSER_COM_SERIAL *info) {
+  return (Serial_SetMode ((SERIAL_MODE *)info));
 }
 
 /**
@@ -312,6 +334,7 @@ void AT_Parser_Reset (void) {
   pCb->state     = AT_STATE_ANALYZE;
   pCb->cmd_sent  = CMD_UNKNOWN;
   pCb->gen_resp  = 0U;
+  pCb->msg_code  = 0U;
   pCb->resp_code = CMD_UNKNOWN;
   pCb->resp_len  = 0U;
 }
@@ -330,9 +353,11 @@ void AT_Parser_Execute (void) {
   while (sleep == 0) {
 
     /* Receive serial data */
-    if (ReceiveData() != 0U) {
+    n = ReceiveData();
+
+    if (n == 1U) {
       /* Out of memory */
-      AT_Notify (AT_NOTIFY_OUT_OF_MEMORY, NULL);
+      AT_Notify (AT_NOTIFY_OUT_OF_MEMORY, pCb->mem.mp_id);
     }
 
     switch (pCb->state) {
@@ -370,17 +395,20 @@ void AT_Parser_Execute (void) {
         AT_Notify (AT_NOTIFY_CONNECTION_RX_DATA, &p);
 
         /* On return, p must contain number of bytes left to receive */
-        if (pCb->ipd_rx == p) {
-          /* Application did not read anything */
-          sleep = 1U;
-        }
-        pCb->ipd_rx = p;
-
-        if (pCb->ipd_rx == 0) {
+        if (p == 0) {
           /* Packet is received */
+          sleep = 1U;
+
+          /* Next state */
           pCb->state = AT_STATE_ANALYZE;
         }
-        sleep = 1U;
+        else {
+          if (p == pCb->ipd_rx) {
+            /* Application did not read anything */
+            sleep = 1U;
+          }
+          pCb->ipd_rx = p;
+        }
         break;
 
       case AT_STATE_RESP_DATA:
@@ -394,14 +422,13 @@ void AT_Parser_Execute (void) {
 
           AT_Notify (AT_NOTIFY_CONNECTION_RX_INIT, &(pCb->ipd_rx));
 
-          if (pCb->ipd_rx != 0) {
-            /* Start receiving data */
-            pCb->state = AT_STATE_RECV_DATA;
+          if (pCb->ipd_rx == 0U) {
+            /* Socket is out of memory */
+            AT_Notify (AT_NOTIFY_OUT_OF_MEMORY, NULL);
           }
-          else {
-            /* Flush +IPD response */
-            pCb->state = AT_STATE_FLUSH;
-          }
+
+          /* Start receiving data */
+          pCb->state = AT_STATE_RECV_DATA;
         }
         else {
           /* Response data arrived */
@@ -414,6 +441,7 @@ void AT_Parser_Execute (void) {
             pCb->resp_len -= 1U;
           }
 
+          /* Copy response (including "\r\n" characters) */
           BufCopy (&(pCb->resp), &(pCb->mem), pCb->resp_len+2);
 
           pCb->state = AT_STATE_ANALYZE;
@@ -450,65 +478,72 @@ void AT_Parser_Execute (void) {
 
       case AT_STATE_RESP_GEN:
         /* Generic response received */
+        switch (pCb->msg_code) {
+          case AT_RESP_OK:
+          case AT_RESP_ERROR:
+          case AT_RESP_ALREADY_CONNECTED:
+          case AT_RESP_SEND_OK:
+          case AT_RESP_SEND_FAIL:
+            /* Set generic command response */
+            pCb->gen_resp = pCb->msg_code;
 
-        if (pCb->gen_resp == AT_RESP_UNKNOWN) {
-          /* Unknown response */
-          //
-        }
-        else if (pCb->gen_resp == AT_RESP_ECHO) {
-          /* Echo response */
-          //
-        }
-        else if (pCb->gen_resp == AT_RESP_ERR_CODE) {
-          /* Error code received */
-          /* Artificially add '+' character and copy response */
-          BufWriteByte ('+', &(pCb->resp));
-          BufCopy (&(pCb->resp), &(pCb->mem), pCb->resp_len+2);
-
-          AT_Notify (AT_NOTIFY_ERR_CODE, NULL);
-        }
-        else if ((pCb->gen_resp == AT_RESP_BUSY_P) || (pCb->gen_resp == AT_RESP_BUSY_S)) {
-          /* Busy processing or busy sending */
-          pCb->state = AT_STATE_FLUSH;
-        }
-        else if (pCb->gen_resp == AT_RESP_WIFI_CONNECTED) {
-          AT_Notify (AT_NOTIFY_CONNECTED, NULL);
-        }
-        else if (pCb->gen_resp == AT_RESP_WIFI_GOT_IP) {
-          AT_Notify (AT_NOTIFY_GOT_IP, NULL);
-        }
-        else if (pCb->gen_resp == AT_RESP_WIFI_DISCONNECT) {
-          AT_Notify (AT_NOTIFY_DISCONNECTED, NULL);
-        }
-        else {
-          if (pCb->cmd_sent != CMD_UNKNOWN) {
             /* Application waits for response */
             AT_Notify (AT_NOTIFY_RESPONSE_GENERIC, NULL);
-          }
-        }
 
-        sleep = 1U;
+            sleep = 1U;
+            break;
+
+          case AT_RESP_BUSY_P:
+          case AT_RESP_BUSY_S:
+            /* Busy processing or busy sending */
+            break;
+
+          case AT_RESP_WIFI_CONNECTED:
+            AT_Notify (AT_NOTIFY_CONNECTED, NULL);
+            break;
+
+          case AT_RESP_WIFI_GOT_IP:
+            AT_Notify (AT_NOTIFY_GOT_IP, NULL);
+            break;
+
+          case AT_RESP_WIFI_DISCONNECT:
+            AT_Notify (AT_NOTIFY_DISCONNECTED, NULL);
+            break;
+
+          case AT_RESP_READY:
+            pCb->gen_resp = pCb->msg_code;
+
+            AT_Notify (AT_NOTIFY_READY, NULL);
+            sleep = 1U;
+            break;
+          
+          case AT_RESP_ERR_CODE:
+            /* Error code received */
+            /* Artificially add '+' character and copy response */
+            BufWriteByte ('+', &(pCb->resp));
+            BufCopy (&(pCb->resp), &(pCb->mem), pCb->resp_len+2);
+
+            AT_Notify (AT_NOTIFY_ERR_CODE, NULL);
+            break;
+          
+          default:
+          case AT_RESP_UNKNOWN:
+            /* Unknown response */
+            break;
+        }
 
         /* Set next state */
         pCb->state = AT_STATE_FLUSH;
         break;
 
       case AT_STATE_SEND_DATA:
+        /* Received '>' character */
+        AT_Notify (AT_NOTIFY_REQUEST_TO_SEND, NULL);
 
-        if (pCb->cmd_sent == CMD_CIPSEND) {
-          /* Last command was send data, application wants to transmit */
+        sleep = 1U;
 
-          /* Received '>' character */
-          AT_Notify (AT_NOTIFY_REQUEST_TO_SEND, NULL);
-
-          sleep = 1U;
-        }
-
-        /* Flush out the '>' character */
-        BufFlush (1, pMem);
-
-        /* Set next state */
-        pCb->state = AT_STATE_ANALYZE;
+        /* Next state */
+        pCb->state = AT_STATE_FLUSH;
         break;
 
       case AT_STATE_RESP_CTRL:
@@ -525,6 +560,12 @@ void AT_Parser_Execute (void) {
         /* Next state */
         pCb->state = AT_STATE_FLUSH;
         break;
+
+      case AT_STATE_RESP_ECHO:
+        /* Command echo received */
+        /* Next state */
+        pCb->state = AT_STATE_FLUSH;
+        break;
     }
   }
 }
@@ -534,10 +575,12 @@ void AT_Parser_Execute (void) {
   Retrieve data from the serial interface and copy the data into the buffer.
 */
 static int32_t ReceiveData (void) {
+  static uint32_t sz_buf;
+  static uint32_t n_prev;
   BUF_MEM *buf;
   uint32_t n, cnt, num;
   int32_t err;
-  static uint32_t sz_buf;
+  
 
   if (sz_buf == 0) {
     sz_buf = BufGetSize(pMem);
@@ -546,6 +589,11 @@ static int32_t ReceiveData (void) {
   err = 0;
   num = 0U;
   n = Serial_GetRxCount();
+
+  if (n == n_prev) {
+    /* No new bytes received */
+    n = 0U;
+  }
 
   while (num < n) {
     /* Determine free space in the buffer */
@@ -573,7 +621,7 @@ static int32_t ReceiveData (void) {
         num         += cnt;
       } else {
         /* Serial buffer empty? */
-        err = 1U;
+        err = 2U;
       }
     }
     else {
@@ -678,6 +726,8 @@ static uint32_t AnalyzeLine (BUF_LIST *mem) {
       val = BufFind (crlf, 2, mem);
 
       if (val != -1) {
+        pCb->resp_len = (uint8_t)val;
+
         flags |= AT_LINE_CRLF;
       } else {
         /* Not terminated */
@@ -777,7 +827,11 @@ static uint8_t AnalyzeLineData (void) {
       else {
         code = GetASCIIResponseCode (pMem);
 
-        if (code != AT_RESP_UNKNOWN) {
+        if (code == AT_RESP_ECHO) {
+          /* Command echo received */
+          rval = AT_STATE_RESP_ECHO;
+        }
+        else if (code != AT_RESP_UNKNOWN) {
           /* Generic response received */
           rval = AT_STATE_RESP_GEN;
         }
@@ -788,7 +842,7 @@ static uint8_t AnalyzeLineData (void) {
       }
 
       /* Save response code */
-      pCb->gen_resp = code;
+      pCb->msg_code = code;
     }
     else {
       /* No line termination */
@@ -1808,12 +1862,17 @@ int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, 
   Response Q: +CWJAP_CUR:<ssid>,<bssid>,<channel>,<rssi>
   Example  Q: +CWJAP_CUR:"AP_SSID","xx:xx:xx:xx:xx:xx",6,-60
 
-  \todo Handle SET response
+  Set response is handled by using NULL as ap argument.
 
-  \return - 1: connection timeout
-          - 2: wrong password
-          - 3: cannot find the target AP
-          - 4: connection failed
+  \return (SET response)
+           - 1: connection timeout
+           - 2: wrong password
+           - 3: cannot find the target AP
+           - 4: connection failed
+          (QUERY response)
+           execution status
+           - negative: error
+           - 0: OK, response retrieved, no more data
 */
 int32_t AT_Resp_ConnectAP (AT_DATA_CWJAP *ap) {
   char    *p;
@@ -1830,6 +1889,11 @@ int32_t AT_Resp_ConnectAP (AT_DATA_CWJAP *ap) {
 
     if (val < 0) {
       break;
+    }
+
+    if (ap == NULL) {
+      /* Extract and return error code */
+      return (buf[0] - 0x30);
     }
 
     /* Ignore ':' delimiter */
@@ -2251,7 +2315,7 @@ int32_t AT_Resp_AccessPointMAC (uint8_t mac[]) {
   Format Q: AT+CIPSTA_CUR?
 
   Example: AT+CIPSTA_CUR="192.168.1.100","192.168.6.1","255.255.255.0"
-  
+
   Response: AT_Resp_StationIP
 */
 int32_t AT_Cmd_StationIP (uint32_t at_cmode, uint8_t ip[], uint8_t gw[], uint8_t mask[]) {

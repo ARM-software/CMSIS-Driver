@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        30. October 2019
+ * $Date:        13. February 2020
  * $Revision:    V1.1
  *
  * Project:      WiFi Driver Configuration for 
@@ -36,7 +36,7 @@
 
 //   <o> SPI Driver Number
 //   <i> Configuration settings specifying SPI driver number used (if Module uses SPI interface)
-#define WIFI_ISM43362_SPI_DRV_NUM           3
+#define WIFI_ISM43362_SPI_DRV_NUM           0
 
 //   <o> Memory pool size
 //   <i> Configuration settings specifying memory pool size for receive packets buffering
@@ -61,7 +61,7 @@
 // Maximum time that command can keep the SPI DATARDY line busy
 #define WIFI_ISM43362_CMD_TIMEOUT          (30000)
 
-// Asynchronous thread polling time interval in ms (default: 1000)
+// Asynchronous thread polling time interval in ms (default: 8)
 // Interval in which asynchronous events are polled and also interval 
 // in which long blocking socket receive is split
 #define WIFI_ISM43362_ASYNC_INTERVAL       (8)

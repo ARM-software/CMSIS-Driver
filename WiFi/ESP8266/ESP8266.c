@@ -1818,6 +1818,76 @@ int32_t AT_Resp_CurrentMode (uint32_t *mode) {
 
 
 /**
+  Set/Query Configures the Name of ESP8266 Station
+
+  Format S: AT+CWHOSTNAME=<hostname>
+  Format Q: AT+CWHOSTNAME?
+
+  Response S:
+  "OK"
+  "ERROR"
+
+  Response Q: Current HostName
+  
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  hostname  the host name of the ESP8266 Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname) {
+  char out[15 + 32];
+  int32_t n;
+
+  /* Open AT command (AT+<cmd><mode> */
+  n = CmdOpen (CMD_CWHOSTNAME, at_cmode, out);
+
+  if (at_cmode == AT_CMODE_SET) {
+    /* Add command arguments */
+    n += sprintf (&out[n], "\"%s\"", hostname);
+  }
+
+  /* Append CRLF and send command */
+  return (CmdSend(CMD_CWHOSTNAME, out, n));
+}
+
+/**
+  Get response to HostName command
+
+  Response Q: +CWHOSTNAME:<host	name>
+  Example  Q: +CWHOSTNAME:ESP_XXXXXX\r\n\r\nOK
+
+  \param[in]  hostname  the host name of the ESP8266 Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+int32_t AT_Resp_HostName (char* hostname) {
+  uint8_t buf[12 + 32 + 6];
+  int32_t val;
+
+  do {
+    /* Retrieve response argument */
+    val = GetRespArg (buf, sizeof(buf));
+
+    if (val < 0) {
+      break;
+    }
+
+    if (val != 1) {
+      strcpy (hostname, (const char *)buf);
+      break;
+    }
+  }
+  while (val != 2);
+
+  if (val < 0) {
+    val = -1;
+  } else {
+    val = 0;
+  }
+
+  return (val);
+}
+
+
+/**
   Set/Query connected access point or access point to connect to
 
   Format S: AT+CWJAP_CUR=<ssid>,<pwd>[,<bssid>]

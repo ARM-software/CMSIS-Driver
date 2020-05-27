@@ -1226,11 +1226,8 @@ static int32_t ARM_WIFI_GetOption (uint32_t interface, uint32_t option, void *da
           rval = ARM_DRIVER_ERROR_PARAMETER;
         }
         else {
-          if (interface == WIFI_INTERFACE_STATION) {
-            pCh = (char *)data;
-
-            ex = AT_Resp_HostName (pCh);
-          }
+          if (interface == WIFI_INTERFACE_STATION)
+            ex = AT_Cmd_HostName(AT_CMODE_QUERY, NULL);
           else
             rval = ARM_DRIVER_ERROR_UNSUPPORTED;
         }

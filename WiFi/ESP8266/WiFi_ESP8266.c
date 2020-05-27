@@ -983,6 +983,13 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         }
         break;
 
+      case ARM_WIFI_HOSTNAME:                           ///< Station    Set/Get HostName; data = &hostname, maxlen =  32, char[32]
+				if (interface == WIFI_INTERFACE_STATION)
+					ex = AT_Cmd_HostName (AT_CMODE_SET, (const char *)data);
+				else
+					rval = ARM_DRIVER_ERROR_UNSUPPORTED;
+        break;
+
       case ARM_WIFI_TX_POWER:                           // Station/AP Set/Get transmit power;                         data = &power,    len =  4, uint32_t: 0 .. 20 [dBm]
         #if (AT_VARIANT == AT_VARIANT_WIZ)
           rval = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1161,6 +1168,7 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
 static int32_t ARM_WIFI_GetOption (uint32_t interface, uint32_t option, void *data, uint32_t *len) {
   uint32_t *pu32, u32;
   uint8_t  *pu8;
+  char     *pCh;
   int32_t   rval, ex;
   uint8_t   ip_0[4], ip_1[4];
 
@@ -1210,6 +1218,21 @@ static int32_t ARM_WIFI_GetOption (uint32_t interface, uint32_t option, void *da
           else {
             rval = ARM_DRIVER_ERROR_UNSUPPORTED;
           }
+        }
+        break;
+
+      case ARM_WIFI_HOSTNAME:                            ///< Station    Set/Get HostName; data = &hostname, maxlen =  32, char[32]
+        if (*len < 32U) {
+          rval = ARM_DRIVER_ERROR_PARAMETER;
+        }
+        else {
+          if (interface == WIFI_INTERFACE_STATION) {
+            pCh = (char *)data;
+
+            ex = AT_Resp_HostName (pCh);
+          }
+          else
+            rval = ARM_DRIVER_ERROR_UNSUPPORTED;
         }
         break;
 
@@ -1369,6 +1392,12 @@ static int32_t ARM_WIFI_GetOption (uint32_t interface, uint32_t option, void *da
             pu8 = (uint8_t *)data;
 
             ex = AT_Resp_AccessPointMAC (pu8);
+            break;
+
+          case ARM_WIFI_HOSTNAME:                           ///< Station    Set/Get HostName; data = &hostname, maxlen =  32, char[32]
+            pCh = (char *)data;
+
+            ex = AT_Resp_HostName (pCh);
             break;
 
           case ARM_WIFI_MAC:                                // Station/AP Set/Get MAC;                                    data = &mac,      len =  6, uint8_t[6]

@@ -1639,7 +1639,7 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
 
           case 1:
             /* Connect to AP */
-            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, NULL);
+            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, config->bssid);
             break;
         }
 
@@ -2015,6 +2015,9 @@ static int32_t ARM_WIFI_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
           /* Password is stored in control block */
           pCtrl->ap_pass[32] = '\0';
           strcpy (net_info->pass, pCtrl->ap_pass);
+					
+          /* Copy bssid */
+          memcpy (net_info->bssid, ap.bssid, 6);
 
           /* Encryption method is stored in control block */
           net_info->security = pCtrl->ap_ecn;

@@ -1908,8 +1908,8 @@ int32_t AT_Resp_HostName (char* hostname) {
   \param[in]  bssid
   \return 0: ok, -1: error
 */
-int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const char *bssid) {
-  char out[64];
+int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const uint8_t *bssid) {
+  char out[113+1];
   int32_t n;
 
   /* Open AT command (AT+<cmd><mode> */
@@ -1920,7 +1920,7 @@ int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, 
     n += sprintf (&out[n], "\"%s\",\"%s\"", ssid, pwd);
 
     if (bssid != NULL) {
-      n += sprintf (&out[n], ",\"%s\"", bssid);
+      n += sprintf (&out[n], ",\"%02x:%02x:%02x:%02x:%02x:%02x\"", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     }
   }
 

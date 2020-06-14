@@ -383,7 +383,7 @@ extern int32_t AT_Resp_HostName (char* hostname);
   \param[in]  bssid
   \return
 */
-extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const char *bssid);
+extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const uint8_t *bssid);
 
 /**
   Response to ConnectAP command.

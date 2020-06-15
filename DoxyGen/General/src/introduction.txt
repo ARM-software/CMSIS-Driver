@@ -45,6 +45,15 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.1-dev0</td>
+      <td>
+        - Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+          - Corrected default protocol selection in SocketCreate function
+          - Detected STM firmware limitation: SocketConnect does not 
+            work if any of IP address octets is 255 (for example IP like x.y.z.255)
+      </td>
+    </tr>
+    <tr>
       <td>2.6.0</td>
       <td>
         - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:

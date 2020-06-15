@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        24. February 2020
- * $Revision:    V1.8
+ * $Date:        15. June 2020
+ * $Revision:    V1.9
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -58,6 +58,8 @@
  *
  * ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 limitations:
  *  - firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
+ *    - SocketConnect does not work if any of IP address octets is 255
+ *      (for example IPs like x.y.z.255 or x.y.255.z do not work)
  *    - module sometimes returns previous resolve result on request to 
  *      resolve non-existing host address
  *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
@@ -87,6 +89,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.9
+ *    - Corrected default protocol selection in SocketCreate function
  *  Version 1.8
  *    - Corrected SocketConnect function never returning 0 in non-blocking mode
  *    - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
@@ -2611,11 +2615,17 @@ static int32_t WiFi_SocketCreate (int32_t af, int32_t type, int32_t protocol) {
 
   switch (type) {
     case ARM_SOCKET_SOCK_DGRAM:
+      if (protocol == 0) {              // If default protocol
+        protocol = ARM_SOCKET_IPPROTO_UDP;
+      }
       if (protocol != ARM_SOCKET_IPPROTO_UDP) {
         return ARM_SOCKET_EINVAL;
       }
       break;
     case ARM_SOCKET_SOCK_STREAM:
+      if (protocol == 0) {              // If default protocol
+        protocol = ARM_SOCKET_IPPROTO_TCP;
+      }
       if (protocol != ARM_SOCKET_IPPROTO_TCP) {
         return ARM_SOCKET_EINVAL;
       }

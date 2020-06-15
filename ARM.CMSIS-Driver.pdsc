@@ -7,6 +7,12 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.1-dev0">
+      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+      - Corrected default protocol selection in SocketCreate function
+      - Detected STM firmware limitation: SocketConnect does not 
+        work if any of IP address octets is 255 (for example IP like x.y.z.255)
+    </release>
     <release version="2.6.0" date="2020-04-29">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
@@ -381,7 +387,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.9.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

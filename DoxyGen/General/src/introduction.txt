@@ -45,6 +45,15 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.1-dev1</td>
+      <td>
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - Added auto protocol selection in SocketCreate
+          - Fixed socket default timeout (zero == no time out)
+          - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
+      </td>
+    </tr>
+    <tr>
       <td>2.6.1-dev0</td>
       <td>
         - Updated Inventek ISM43362 WiFi driver (version 1.9.0):

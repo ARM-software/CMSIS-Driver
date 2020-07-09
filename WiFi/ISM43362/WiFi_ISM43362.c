@@ -90,6 +90,7 @@
 
 /* History:
  *  Version 1.9
+ *    - Corrected Initialize function failure if called shortly after reset
  *    - Corrected default protocol selection in SocketCreate function
  *  Version 1.8
  *    - Corrected SocketConnect function never returning 0 in non-blocking mode
@@ -1163,7 +1164,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         WiFi_ISM43362_Pin_RSTN(true);
         osDelay(50U);
         WiFi_ISM43362_Pin_RSTN(false);
-        osDelay(350U);
+        osDelay(750U);
 
         // Initial fetch cursor procedure, read (3 * 16 bits) 6 bytes
         // Do a read independent of return data

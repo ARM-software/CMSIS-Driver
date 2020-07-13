@@ -4,9 +4,20 @@
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
   <url>http://www.keil.com/pack/</url>
-  <!-- <license>LICENSE.txt</license> -->
+  <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.1" date="2020-07-13">
+      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      - Added auto protocol selection in SocketCreate
+      - Fixed socket default timeout (zero == no time out)
+      - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
+      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+      - Corrected Initialize function failure if called shortly after reset
+      - Corrected default protocol selection in SocketCreate function
+      - Detected STM firmware limitation: SocketConnect does not 
+        work if any of IP address octets is 255 (for example IP like x.y.z.255)
+    </release>
     <release version="2.6.0" date="2020-04-29">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
@@ -381,7 +392,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.9.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -391,7 +402,7 @@
         <file category="other"   name="WiFi/ISM43362/WiFi_ISM43362.scvd"/>
         <file category="include" name="WiFi/ISM43362/"/>
         <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.1.0"/>
-        <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.0.0"/>
+        <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.1.0"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Buf.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Mem.c"/>
@@ -399,7 +410,7 @@
     </component>
 
     <!-- ESP32 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.3.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.4.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP32 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_ESP32_UART   /* Driver WiFi ESP32 (UART) */
@@ -418,7 +429,7 @@
     </component>
 
     <!-- ESP8266 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.3.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.4.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP8266 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -438,7 +449,7 @@
     </component>
 
     <!-- WizFi360 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.4.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.5.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>WIZnet WizFi360 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */

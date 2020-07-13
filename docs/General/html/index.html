@@ -32,7 +32,7 @@
   <td id="projectlogo"><img alt="Logo" src="CMSIS_Logo_Final.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">CMSIS-Driver Implementations
-   &#160;<span id="projectnumber">Version 2.6.0</span>
+   &#160;<span id="projectnumber">Version 2.6.1</span>
    </div>
    <div id="projectbrief">MCU independent device driver implementations and template files of the CMSIS-Driver API specification</div>
   </td>
@@ -150,6 +150,22 @@ ARM::CMSIS-Driver Pack</h1>
 <tr>
 <th>Version </th><th>Description  </th></tr>
 <tr>
+<td>2.6.1 </td><td><ul>
+<li>Updated ESP8266, ESP32 and WizFi360 WiFi drivers:<ul>
+<li>Added auto protocol selection in SocketCreate</li>
+<li>Fixed socket default timeout (zero == no time out)</li>
+<li>Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length</li>
+</ul>
+</li>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.9.0):<ul>
+<li>Corrected Initialize function failure if called shortly after reset</li>
+<li>Corrected default protocol selection in SocketCreate function</li>
+<li>Detected STM firmware limitation: SocketConnect does not work if any of IP address octets is 255 (for example IP like x.y.z.255)   </li>
+</ul>
+</li>
+</ul>
+</td></tr>
+<tr>
 <td>2.6.0 </td><td><ul>
 <li>Updated ESP8266, ESP32 and WizFi360 WiFi drivers:<ul>
 <li>API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)</li>
@@ -241,7 +257,7 @@ ARM::CMSIS-Driver Pack</h1>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Wed Apr 29 2020 10:30:00 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
+    <li class="footer">Generated on Mon Jul 13 2020 11:25:48 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
 	<!--
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.6 

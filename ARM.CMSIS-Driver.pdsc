@@ -7,18 +7,13 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.6.1-dev2">
-      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
-      - Corrected Initialize function failure if called shortly after reset
-    </release> 
-    <release version="2.6.1-dev1">
+    <release version="2.6.1" date="2020-07-13">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - Added auto protocol selection in SocketCreate
       - Fixed socket default timeout (zero == no time out)
       - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
-    </release> 
-    <release version="2.6.1-dev0">
       Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+      - Corrected Initialize function failure if called shortly after reset
       - Corrected default protocol selection in SocketCreate function
       - Detected STM firmware limitation: SocketConnect does not 
         work if any of IP address octets is 255 (for example IP like x.y.z.255)

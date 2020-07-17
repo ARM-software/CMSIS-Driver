@@ -77,6 +77,9 @@
  *      WiFi Initialization and debugger connect has to be introduced and 
  *      WiFi Shield has to be reset manually before starting debug session.
  *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.7.bin is supported
+ *    - SocketConnect does not work if certain IP address octets contain 
+ *      value 0 or 255
+ *      (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
  *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.8.bin is not supported:
  *    - added additional "\r\n" to "OK" response (now 12 bytes instead of 10)
  *      ("\r\n\r\n\r\nOK\r\n> " instead of previously 

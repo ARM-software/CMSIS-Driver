@@ -162,15 +162,11 @@
     </td>
     <td class="td_res">
       <xsl:choose>
+        <xsl:when test="res = 'PASSED' and contains(dbgi, '[WARNING]')">
+          <a class="an_pass2">Passed</a>
+        </xsl:when>
         <xsl:when test="res = 'PASSED'">
-          <xsl:choose> 
-            <xsl:when test="contains(dbgi/detail, '[WARNING]')">
-              <a class="an_pass2">Passed</a>
-            </xsl:when>
-            <xsl:otherwise>
-              <a class="an_pass">Passed</a>
-            </xsl:otherwise>
-          </xsl:choose> 
+          <a class="an_pass">Passed</a>
         </xsl:when>
         <xsl:when test="res = 'NOT EXECUTED'">
           <a class="an_noexec">Not executed</a>

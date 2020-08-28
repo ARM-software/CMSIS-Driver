@@ -12,6 +12,7 @@
       - Detected shield firmware limitation: SocketConnect does not work if 
         certain IP address octets contain value 0 or 255
         (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
+      - Updated CMSIS Driver Validation test results
     </release>
     <release version="2.6.1" date="2020-07-13">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:

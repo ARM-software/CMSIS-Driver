@@ -25,7 +25,9 @@
 
 /* History:
  *  Version 1.5
+ *    Based on AT command set version: 2.1.0.0
  *    Fixed SocketSendTo for stream socket lengths above 2048 bytes
+ *    Fixed baud rate change logic to take into account error response
  *  Version 1.4
  *    Added auto protocol selection in SocketCreate
  *    Fixed socket default timeout (zero == no time out)
@@ -4333,7 +4335,7 @@ static int32_t SetupCommunication (void) {
         /* Response received */
         ex = AT_Resp_Generic();
 
-        if (ex == AT_RESP_OK) {
+        if ((ex == AT_RESP_OK) || (ex == AT_RESP_ERROR)) {
           if (state == 0) {
             /* Communication established */
             if (k != 0) {

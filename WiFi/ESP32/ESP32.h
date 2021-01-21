@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
+ * $Date:        21. January 2021
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -30,7 +30,7 @@
 
 /* AT command set version and variant used */
 #ifndef AT_VERSION
-#define AT_VERSION                      0x01020000
+#define AT_VERSION                      0x02010000
 #endif
 #ifndef AT_VARIANT
 #define AT_VARIANT                      AT_VARIANT_ESP32
@@ -38,6 +38,7 @@
 
 /* AT command set version definition               */
 /* Version as major.minor.patch.build:  0xMMmmppbb */
+#define AT_VERSION_2_1_0_0              0x02010000
 #define AT_VERSION_2_0_0_0              0x02000000
 #define AT_VERSION_1_9_0_0              0x01090000
 #define AT_VERSION_1_8_0_0              0x01080000

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,16 @@
  * limitations under the License.
  *
  *
- * $Date:        2. July 2020
- * $Revision:    V1.4
+ * $Date:        21. January 2021
+ * $Revision:    V1.5
  *
  * Project:      ESP32 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP32_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.5
+ *    Fixed SocketSendTo for stream socket lengths above 2048 bytes
  *  Version 1.4
  *    Added auto protocol selection in SocketCreate
  *    Fixed socket default timeout (zero == no time out)
@@ -45,7 +47,7 @@
 #include "WiFi_ESP32_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 4)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 5)
 
 /* -------------------------------------------------------------------------- */
 
@@ -3374,8 +3376,8 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
             cnt = 2048;
           }
 
-          if (cnt > len) {
-            cnt = len;
+          if (cnt > (len - num)) {
+            cnt = len - num;
           }
 
           /* Initiate send operation */

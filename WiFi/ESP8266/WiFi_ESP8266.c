@@ -16,14 +16,16 @@
  * limitations under the License.
  *
  *
- * $Date:        21. January 2021
- * $Revision:    V1.5
+ * $Date:        3. February 2021
+ * $Revision:    V1.6
  *
  * Project:      ESP8266 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP8266_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    Fixed return string null terminator in GetModuleInfo
  *  Version 1.5
  *    Fixed SocketSendTo for stream socket lengths above 2048 bytes
  *  Version 1.4
@@ -47,7 +49,7 @@
 #include "WiFi_ESP8266_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 5)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 6)
 
 /* -------------------------------------------------------------------------- */
 
@@ -915,10 +917,10 @@ static int32_t ARM_WIFI_GetModuleInfo (char *module_info, uint32_t max_len) {
         ex = AT_Resp_Generic();
 
         if (ex == AT_RESP_OK) {
-          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len);
+          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len - 1U);
 
           /* Add string terminator */
-          module_info[max_len-1] = '\0';
+          module_info[ex] = '\0';
         }
       }
     }

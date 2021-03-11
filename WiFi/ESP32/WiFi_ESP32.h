@@ -126,6 +126,8 @@ typedef struct {
   uint16_t l_port;              /* Local port  */
   uint8_t  r_ip[4];             /* Remote ip   */
   uint8_t  l_ip[4];             /* Local ip    */
+  volatile
+  uint8_t accepted;
 } WIFI_SOCKET;
 
 /* WIFI driver options */

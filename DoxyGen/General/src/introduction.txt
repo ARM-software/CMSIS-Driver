@@ -567,14 +567,14 @@ return with an error. An SPI slave device connects to one of the exported driver
 (in master mode only). The wrapper provides multi thread protection.
 
 Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a
-particular function call and reconfigures the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
+particular function call and reconfigure the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
 mode must always be configured as \c ARM_SPI_SS_MASTER_SW. Since the underlying bus controlling SPI driver can only control
 one slave select line at the time, the slave select line for each particular slave device is instead controlled by
 the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A
 function prototype can be found in the SPI_Multislave.h header file and must be included in the project.
 
 When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case,
-transfer operations will be queued and executed immediately after the current transfer completes. The transfer queue operates
+transfer operation will be queued and executed immediately after the busy slave is deselected. The transfer queue operates
 as a FIFO, so transfers will be executed in the same call order as expected by the application.
 
 The wrapper is configured using the SPI_MultiSlave_Config.h file, which contains the following options:
@@ -669,7 +669,10 @@ static void Thread_A (void *argument) {
     /* Send to Slave Device 0 */
     SPI_A->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
     SPI_A->Send(p, strlen(p));
-    SPI_A->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
+ 
+    /* Wait until SPI A busy (or alternatively, wait for SPI event) */
+    while (SPI_A->GetStatus().busy);
+    SPI_A->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
  
     osDelay(10);
   }
@@ -697,7 +700,10 @@ static void Thread_B (void *argument) {
     /* Send to Slave Device 1 */
     SPI_B->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
     SPI_B->Send(p, strlen(p));
-    SPI_B->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
+ 
+    /* Wait until SPI B busy (or alternatively, wait for SPI event) */
+    while (SPI_B->GetStatus().busy);
+    SPI_B->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
  
     osDelay(10);
   }

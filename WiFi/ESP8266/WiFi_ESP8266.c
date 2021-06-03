@@ -16,14 +16,16 @@
  * limitations under the License.
  *
  *
- * $Date:        3. February 2021
- * $Revision:    V1.6
+ * $Date:        6. June 2021
+ * $Revision:    V1.7
  *
  * Project:      ESP8266 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP8266_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
  *  Version 1.6
  *    Fixed return string null terminator in GetModuleInfo
  *  Version 1.5
@@ -49,7 +51,7 @@
 #include "WiFi_ESP8266_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 6)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 7)
 
 /* -------------------------------------------------------------------------- */
 
@@ -988,7 +990,10 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         else {
           if (interface == WIFI_INTERFACE_STATION) {
             /* Set BSSID of the AP to connect to */
-            memcpy (pCtrl->options.st_bssid, data, 6);
+            pCtrl->flags |= WIFI_FLAGS_STATION_BSSID_SET;
+
+            /* Store BSSID into options structure */
+            memcpy (pCtrl->options.st_bssid, data, 6U);
             rval = ARM_DRIVER_OK;
           } else {
             rval = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1553,7 +1558,7 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
   int32_t  ex, rval, state;
   uint32_t mode;
   AT_DATA_CWSAP ap_cfg;
-  uint8_t  *ip_0, *ip_1, *ip_2;
+  uint8_t  *ip_0, *ip_1, *ip_2, *bssid;
 
   if ((interface > 1U) || (config == NULL)) {
     rval = ARM_DRIVER_ERROR_PARAMETER;
@@ -1626,7 +1631,14 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
 
           case 1:
             /* Connect to AP */
-            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, NULL);
+            if ((pCtrl->flags & WIFI_FLAGS_STATION_BSSID_SET) == 0U) {
+              /* BSSID was not specified */
+              bssid = NULL;
+            } else {
+              /* Use BSSID specified in SetOption with option ARM_WIFI_BSSID */
+              bssid = pCtrl->options.st_bssid;
+            }
+            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, bssid);
             break;
         }
 

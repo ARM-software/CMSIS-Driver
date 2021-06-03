@@ -7,6 +7,10 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev3">
+      Updated ESP8266 WiFi driver:
+      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
+    </release>
     <release version="2.6.2-dev2">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - Fixed return string null terminator in GetModuleInfo
@@ -444,7 +448,7 @@
     </component>
 
     <!-- ESP8266 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.6.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP8266 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. June 2020
- * $Revision:    V1.9
+ * $Date:        26. August 2021
+ * $Revision:    V1.10
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -92,6 +92,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.10
+ *    - Fixed socket connect operation for non-blocking mode
  *  Version 1.9
  *    - Corrected Initialize function failure if called shortly after reset
  *    - Corrected default protocol selection in SocketCreate function
@@ -173,7 +175,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,9)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,10)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -624,7 +626,7 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     } while ((ret == ARM_DRIVER_OK) && (len_to_recv > 0U) && (WiFi_ISM43362_Pin_DATARDY() != 0U));
 
     // Sometimes module does not deactivate DATARDY line after all expected data was read-out
-    // so we keep reading dummy data (0x15) untill DATARDY signals chip has finished
+    // so we keep reading dummy data (0x15) until DATARDY signals chip has finished
     while (WiFi_ISM43362_Pin_DATARDY() != 0U) {
       if (ptrSPI->Receive(dummy_buf, sizeof(dummy_buf) / 2) == ARM_DRIVER_OK) {
         if (SPI_WaitTransferDone(WIFI_ISM43362_CMD_TIMEOUT) == 0U) {
@@ -650,7 +652,7 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     // in which module returns no data but only pre-padded 0x15 with terminating "\r\nOK\r\n> "
     if (ptr_recv[0] == 0x15U) {
       for (i = 1U; i < len_recv; i++) {
-        if (ptr_recv[i] != 0x15U) {             // If non 0x15 value from begining was found
+        if (ptr_recv[i] != 0x15U) {             // If non 0x15 value from beginning was found
           break;
         }
       }
@@ -858,8 +860,10 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         uint32_t event_socket[WIFI_ISM43362_SOCKETS_NUM];
         uint32_t ticks, time_in_ms;
         int32_t  spi_ret;
+        int32_t  ret;
         uint8_t  u8_arr[6];
         uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
+        uint8_t  poll_nb_con, check_nb_con;
         uint8_t  async_prescaler;
         uint16_t u16_val;
         uint8_t  i, hw_socket;
@@ -875,10 +879,12 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
           break;
         }
 
-        // Check if thread should poll for asynchronous messages or receive in long blocking
+        // Check if thread should poll for asynchronous messages, non-blocking connect or receive in long blocking
         poll_async  = 0U;
+        poll_nb_con = 0U;
         poll_recv   = 0U;
         check_async = 0U;
+        check_nb_con= 0U;
         for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
           if (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
             poll_async = 1U;
@@ -890,6 +896,9 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
               }
             }
           }
+          if ((socket_arr[i].non_blocking != 0U) && (socket_arr[i].state == SOCKET_STATE_CONNECTING)) {
+            poll_nb_con = 1U;
+          }
           if (socket_arr[i].poll_recv != 0U){
             poll_recv = 1U;
           }
@@ -900,7 +909,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
 
         repeat = 0U;
 
-        if ((poll_async != 0U) || (poll_recv != 0U)) {
+        if ((poll_async != 0U) || (poll_nb_con != 0U) || (poll_recv != 0U)) {
           event_signal = 0U;
           memset(event_socket, 0, sizeof(event_socket));
 
@@ -973,6 +982,30 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                           event_signal = 1U;
                         }
                       }
+                    }
+                  }
+                }
+              }
+
+              if (poll_nb_con != 0U) {
+                // Loop through all sockets
+                for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
+                  hw_socket = i;
+                  if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
+                    hw_socket -= WIFI_ISM43362_SOCKETS_NUM;     // Actually used socket of module
+                  }
+                  if ((socket_arr[i].non_blocking != 0U) && (socket_arr[i].state == SOCKET_STATE_CONNECTING)) {
+                    if ((socket_arr[i].bound == 0U) || ((socket_arr[i].bound != 0U) && (socket_arr[i].local_port == 0U))) {
+                      ret = SPI_StartStopTransportServerClient (hw_socket, socket_arr[i].protocol, 0U, &socket_arr[i].remote_ip[0], socket_arr[i].remote_port, TRANSPORT_START, TRANSPORT_CLIENT);
+                      if (ret == 0) {
+                        socket_arr[i].client = 1U;
+                        socket_arr[i].state  = SOCKET_STATE_CONNECTED;
+                      }
+                      if (ret == ARM_SOCKET_ERROR) {
+                        socket_arr[i].state = SOCKET_STATE_DISCONNECTED;
+                      }
+                    } else {
+                      socket_arr[i].state = SOCKET_STATE_DISCONNECTED;
                     }
                   }
                 }
@@ -2206,7 +2239,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
 
         // Send command to join a network
         if (ret == ARM_DRIVER_OK) {
-          // If IP that we got is 0.0.0.0 then try again for max 3 times to get valide IP
+          // If IP that we got is 0.0.0.0 then try again for max 3 times to get valid IP
           memcpy((void *)spi_send_buf, "C0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
           ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
           if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
@@ -3016,6 +3049,44 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
     // If request to connect to IP 0.0.0.0 for UDP meaning dissolve the connection
     dissolve_udp = 1U;
   }
+
+  // Handling of non-blocking socket connect
+  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
+    switch (socket_arr[socket].state) {
+      case SOCKET_STATE_CONNECTED:
+        if (dissolve_udp) {
+          // Dissolve is handled same as for blocking socket (immediately)
+          break;
+        }
+        return ARM_SOCKET_EISCONN;
+      case SOCKET_STATE_CONNECTING:
+        return ARM_SOCKET_EALREADY;
+      case SOCKET_STATE_CREATED:
+        if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
+          // Store remote host IP and port
+          memcpy((void *)socket_arr[socket].remote_ip, ip, 4);
+          socket_arr[socket].remote_port = port;
+
+          socket_arr[socket].state = SOCKET_STATE_CONNECTING;
+          osMutexRelease(mutex_id_sockets);
+
+          osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread poll for non-blocking connection
+
+          return ARM_SOCKET_EINPROGRESS;
+        }
+        return ARM_SOCKET_ERROR;
+      case SOCKET_STATE_DISCONNECTED:
+        if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
+          socket_arr[socket].state = SOCKET_STATE_CREATED;
+          osMutexRelease(mutex_id_sockets);
+        }
+        return ARM_SOCKET_ERROR;
+      default:
+        return ARM_SOCKET_EINVAL;
+    }
+  }
+
+  // Handling of blocking socket connect
   switch (socket_arr[socket].state) {
     case SOCKET_STATE_CONNECTED:
       if (dissolve_udp) {
@@ -3067,11 +3138,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                 if (ret == 0) {
                   socket_arr[socket].client = 1U;
                   socket_arr[socket].state  = SOCKET_STATE_CONNECTED;
-                  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
-                    ret = ARM_SOCKET_EINPROGRESS;
-                  }
-                }
-                if (ret == ARM_SOCKET_ERROR) {
+                } else {
                   ret = ARM_SOCKET_ETIMEDOUT;
                 }
               } else {

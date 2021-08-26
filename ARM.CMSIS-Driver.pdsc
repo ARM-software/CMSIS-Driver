@@ -7,6 +7,10 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev4">
+      Updated Inventek ISM43362 WiFi driver (version 1.10.0):
+      - Fixed socket connect operation for non-blocking mode
+    </release>
     <release version="2.6.2-dev3">
       Updated ESP8266 WiFi driver:
       - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
@@ -411,7 +415,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.9.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.10.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

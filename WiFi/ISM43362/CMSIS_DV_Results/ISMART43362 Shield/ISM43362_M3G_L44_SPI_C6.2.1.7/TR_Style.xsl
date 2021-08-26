@@ -70,6 +70,13 @@
       <xsl:text> </xsl:text> 
       <xsl:value-of select="time"/>
     </h3>
+    <!-- Test Group Info -->
+    <xsl:for-each select="info">
+      <table style="border:none; font-size:16px;" width="80%" align="center">
+      <tr><td style="white-space:pre-line"><xsl:value-of select="current()"/></td></tr>
+      </table>
+      <br/>
+    </xsl:for-each>
     <table class="tab_fr" align="center">
       <!-- Print out result header -->
       <tr>

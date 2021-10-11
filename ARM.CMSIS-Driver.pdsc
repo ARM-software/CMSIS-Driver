@@ -7,6 +7,14 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev5">
+      Updated Inventek ISM43362 WiFi driver (version 1.11.0):
+      - Supports also ISM43340 Module
+      - Added support for 5 GHz channels on Access Point
+      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation: 
+        SocketConnect does not work if first or last octet of IP address is 0
+        (for example IPs 0.x.y.z or x.y.z.0 do not work)
+    </release>
     <release version="2.6.2-dev4">
       Updated Inventek ISM43362 WiFi driver (version 1.10.0):
       - Fixed socket connect operation for non-blocking mode
@@ -415,8 +423,8 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.10.0" condition="CMSIS Core with RTOS2 and SPI Driver">
-      <description>WiFi Inventek ISM43362 Driver (SPI)</description>
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.11.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+      <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
         #define RTE_Drivers_WiFi_ISM43362_SPI   /* Driver WiFi ISM43362 (SPI) */

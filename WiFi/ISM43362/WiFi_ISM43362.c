@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        26. August 2021
- * $Revision:    V1.10
+ * $Date:        11. October 2021
+ * $Revision:    V1.11
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -59,7 +59,9 @@
  * ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 limitations:
  *  - firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
  *    - SocketConnect does not work if any of IP address octets is 255
- *      (for example IPs like x.y.z.255 or x.y.255.z do not work)
+ *      (for example IPs like x.y.z.255 or x.y.255.z do not work) or 
+ *      if first or last octet is 0 
+ *      (for example IPs 0.x.y.z or x.y.z.0 do not work)
  *    - module sometimes returns previous resolve result on request to 
  *      resolve non-existing host address
  *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
@@ -92,6 +94,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.11
+ *    - Added support for 5 GHz channels on Access Point
  *  Version 1.10
  *    - Fixed socket connect operation for non-blocking mode
  *  Version 1.9
@@ -175,7 +179,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,10)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,11)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -863,7 +867,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         int32_t  ret;
         uint8_t  u8_arr[6];
         uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
-        uint8_t  poll_nb_con, check_nb_con;
+        uint8_t  poll_nb_con;
         uint8_t  async_prescaler;
         uint16_t u16_val;
         uint8_t  i, hw_socket;
@@ -884,7 +888,6 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         poll_nb_con = 0U;
         poll_recv   = 0U;
         check_async = 0U;
-        check_nb_con= 0U;
         for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
           if (socket_arr[i].state == SOCKET_STATE_ACCEPTING) {
             poll_async = 1U;
@@ -2095,9 +2098,24 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
     }
   }
 
-  // Valid channel settings are 0 for auto and 1 to 13 for exact channel selection
+  // Valid channel settings are: 0 for auto, 1 to 13 for 2.4 GHz and
+  // 36, 40, 44, 48, 149, 153, 157, 161, 165 for 5 GHz exact channel selection
   if (config->ch > 13U) {
-    return ARM_DRIVER_ERROR_PARAMETER;
+    switch (config->ch) {
+      case 36:
+      case 40:
+      case 44:
+      case 48:
+      case 149:
+      case 153:
+      case 157:
+      case 161:
+      case 165:
+        // Allowed 5 GHz channels
+        break;
+      default:
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
   }
 
   switch (config->wps_method) {

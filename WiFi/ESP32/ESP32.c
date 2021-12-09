@@ -537,7 +537,8 @@ void AT_Parser_Execute (void) {
         sleep = 1U;
 
         /* Next state */
-        pCb->state = AT_STATE_FLUSH;
+        BufFlush (1, pMem);
+        pCb->state = AT_STATE_ANALYZE;
         break;
 
       case AT_STATE_RESP_CTRL:

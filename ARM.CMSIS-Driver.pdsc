@@ -7,6 +7,48 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev5">
+      Updated Inventek ISM43362 WiFi driver (version 1.11.0):
+      - Supports also ISM43340 Module
+      - Added support for 5 GHz channels on Access Point
+      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation: 
+        SocketConnect does not work if first or last octet of IP address is 0
+        (for example IPs 0.x.y.z or x.y.z.0 do not work)
+    </release>
+    <release version="2.6.2-dev4">
+      Updated Inventek ISM43362 WiFi driver (version 1.10.0):
+      - Fixed socket connect operation for non-blocking mode
+    </release>
+    <release version="2.6.2-dev3">
+      Updated ESP8266 WiFi driver:
+      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
+    </release>
+    <release version="2.6.2-dev2">
+      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      - Fixed return string null terminator in GetModuleInfo
+    </release>
+    <release version="2.6.2-dev1">
+      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      - Fixed SocketSendTo for stream socket lengths above 2048 bytes
+    </release>
+    <release version="2.6.2-dev0">
+      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+      - Detected shield firmware limitation: SocketConnect does not work if 
+        certain IP address octets contain value 0 or 255
+        (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
+      - Updated CMSIS Driver Validation test results
+    </release>
+    <release version="2.6.1" date="2020-07-13">
+      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      - Added auto protocol selection in SocketCreate
+      - Fixed socket default timeout (zero == no time out)
+      - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
+      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+      - Corrected Initialize function failure if called shortly after reset
+      - Corrected default protocol selection in SocketCreate function
+      - Detected STM firmware limitation: SocketConnect does not 
+        work if any of IP address octets is 255 (for example IP like x.y.z.255)
+    </release>
     <release version="2.6.0" date="2020-04-29">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
@@ -381,8 +423,8 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
-      <description>WiFi Inventek ISM43362 Driver (SPI)</description>
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.11.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+      <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
         #define RTE_Drivers_WiFi_ISM43362_SPI   /* Driver WiFi ISM43362 (SPI) */
@@ -391,7 +433,7 @@
         <file category="other"   name="WiFi/ISM43362/WiFi_ISM43362.scvd"/>
         <file category="include" name="WiFi/ISM43362/"/>
         <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.1.0"/>
-        <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.0.0"/>
+        <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.1.0"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Buf.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Mem.c"/>
@@ -399,7 +441,7 @@
     </component>
 
     <!-- ESP32 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.3.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.6.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP32 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_ESP32_UART   /* Driver WiFi ESP32 (UART) */
@@ -418,7 +460,7 @@
     </component>
 
     <!-- ESP8266 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.3.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP8266 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -438,7 +480,7 @@
     </component>
 
     <!-- WizFi360 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.4.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>WIZnet WizFi360 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */

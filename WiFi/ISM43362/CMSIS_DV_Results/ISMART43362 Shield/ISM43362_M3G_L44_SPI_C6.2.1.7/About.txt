@@ -1,11 +1,11 @@
 This test report was produced with following configuration:
  - Hardware:  NXP LPC55S69-EVK board with ISMART43362 Shield Rev. C
  - Firmware:  ISM43362_M3G_L44_SPI_C6.2.1.7
- - Interface: SPI at 24 MHz
+ - Interface: SPI at 16 MHz
 
 Packs used for test:
- - ARM::CMSIS                   v5.7.0
- - ARM::CMSIS-Driver            v2.6.0
- - ARM::CMSIS-Driver_Validation v2.0.0
- - Keil::ARM_Compiler           v1.6.2
- - NXP::LPC55S69_DFP            v12.0.0
+ - ARM::CMSIS                   v5.8.0
+ - ARM::CMSIS-Driver            v2.6.2-dev4
+ - ARM::CMSIS-Driver_Validation v3.0.0-dev2
+ - Keil::ARM_Compiler           v1.6.3
+ - NXP::LPC55S69_DFP            v13.0.0

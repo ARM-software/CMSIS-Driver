@@ -45,6 +45,20 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.6.1</td>
+      <td>
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - Added auto protocol selection in SocketCreate
+          - Fixed socket default timeout (zero == no time out)
+          - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
+        - Updated Inventek ISM43362 WiFi driver (version 1.9.0):
+          - Corrected Initialize function failure if called shortly after reset
+          - Corrected default protocol selection in SocketCreate function
+          - Detected STM firmware limitation: SocketConnect does not 
+            work if any of IP address octets is 255 (for example IP like x.y.z.255)
+      </td>
+    </tr>
+    <tr>
       <td>2.6.0</td>
       <td>
         - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
@@ -553,14 +567,14 @@ return with an error. An SPI slave device connects to one of the exported driver
 (in master mode only). The wrapper provides multi thread protection.
 
 Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a
-particular function call and reconfigures the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
-mode must always be configured as \c ARM_SPI_SS_MASTER_UNUSED, since the underlying bus controlling the SPI driver can only
-control one slave select line at the time. The slave select line for each particular slave device is instead controlled by
+particular function call and reconfigure the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
+mode must always be configured as \c ARM_SPI_SS_MASTER_SW. Since the underlying bus controlling SPI driver can only control
+one slave select line at the time, the slave select line for each particular slave device is instead controlled by
 the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A
 function prototype can be found in the SPI_Multislave.h header file and must be included in the project.
 
 When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case,
-transfer operations will be queued and executed immediately after the current transfer completes. The transfer queue operates
+transfer operation will be queued and executed immediately after the busy slave is deselected. The transfer queue operates
 as a FIFO, so transfers will be executed in the same call order as expected by the application.
 
 The wrapper is configured using the SPI_MultiSlave_Config.h file, which contains the following options:
@@ -582,14 +596,14 @@ periodically access two SPI slave devices.
  
 #include "RTE_Components.h"
 #include  CMSIS_device_header
-#include "stm32f2xx_hal.h"              // Keil::Device:STM32Cube HAL:Common
+#include "stm32f2xx_hal.h"
  
 #include "SPI_MultiSlave.h"             // Keil::CMSIS Driver:SPI:Multi-Slave
  
 /* Thread prototypes */
-static void Thread_A (void *argument);
-static void Thread_B (void *argument);
-static void app_main (void *argument);
+__NO_RETURN static void Thread_A (void *argument);
+__NO_RETURN static void Thread_B (void *argument);
+__NO_RETURN static void app_main (void *argument);
  
 /* A and B Thread IDs */
 static osThreadId_t ThreadId_A;
@@ -603,7 +617,7 @@ extern ARM_DRIVER_SPI         Driver_SPI10;
 extern ARM_DRIVER_SPI         Driver_SPI11;
 #define SPI_B               (&Driver_SPI11)
  
-/**
+/*
   Slave select pin control function.
 
   \param[in]    driver    SPI Driver Instance
@@ -636,23 +650,29 @@ void SPI_Control_SlaveSelect (uint32_t device, uint32_t ss_state) {
 /*----------------------------------------------------------------------------
  * SPI Thread A
  *---------------------------------------------------------------------------*/
-__NO_RETURN static void Thread_A (void *argument) {
+static void Thread_A (void *argument) {
   char *p = "Sending data to Slave Device 0";
   (void)argument;
   
+  /* Initialize and configure SPI A */
   SPI_A->Initialize(NULL);
   SPI_A->PowerControl(ARM_POWER_FULL);
   SPI_A->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \
                                      | ARM_SPI_DATA_BITS(8) \
                                      | ARM_SPI_MSB_LSB      \
-                                     | ARM_SPI_SS_MASTER_UNUSED,
+                                     | ARM_SPI_SS_MASTER_SW,
                                      10000000);
  
   SPI_A->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
  
   while(1) {
     /* Send to Slave Device 0 */
+    SPI_A->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
     SPI_A->Send(p, strlen(p));
+ 
+    /* Wait until SPI A busy (or alternatively, wait for SPI event) */
+    while (SPI_A->GetStatus().busy);
+    SPI_A->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
  
     osDelay(10);
   }
@@ -661,24 +681,29 @@ __NO_RETURN static void Thread_A (void *argument) {
 /*----------------------------------------------------------------------------
  * SPI Thread B
  *---------------------------------------------------------------------------*/
-__NO_RETURN static void Thread_B (void *argument) {
+static void Thread_B (void *argument) {
   char *p = "Sending data to Slave Device 1";
   (void)argument;
  
-  /* Initialize and configure SPI */
+  /* Initialize and configure SPI B */
   SPI_B->Initialize(NULL);
   SPI_B->PowerControl(ARM_POWER_FULL);
   SPI_B->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \
                                      | ARM_SPI_DATA_BITS(8) \
                                      | ARM_SPI_MSB_LSB      \
-                                     | ARM_SPI_SS_MASTER_UNUSED,
+                                     | ARM_SPI_SS_MASTER_SW,
                                      15000000);
  
   SPI_B->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
  
   while(1) {
     /* Send to Slave Device 1 */
+    SPI_B->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
     SPI_B->Send(p, strlen(p));
+ 
+    /* Wait until SPI B busy (or alternatively, wait for SPI event) */
+    while (SPI_B->GetStatus().busy);
+    SPI_B->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
  
     osDelay(10);
   }
@@ -687,7 +712,7 @@ __NO_RETURN static void Thread_B (void *argument) {
 /*----------------------------------------------------------------------------
  * Application main thread
  *---------------------------------------------------------------------------*/
-__NO_RETURN static void app_main (void *argument) {
+static void app_main (void *argument) {
   (void)argument;
  
   /* Create SPI threads */

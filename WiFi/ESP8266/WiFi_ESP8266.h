@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        3. January 2020
+ * $Date:        6. June 2021
  *
  * Project:      ESP8266 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -44,15 +44,9 @@
 #define WIFI_CONNOPEN_TIMEOUT       (20000)
 #endif
 
-/* Socket timeouts [ms] (defaults) */
-#ifndef WIFI_SOCKET_TX_TIMEOUT
-#define WIFI_SOCKET_TX_TIMEOUT      (1000*20) /* 20 seconds */
-#endif
-#ifndef WIFI_SOCKET_RX_TIMEOUT
-#define WIFI_SOCKET_RX_TIMEOUT      (1000*20) /* 20 seconds */
-#endif
+/* Socket accept timeout */
 #ifndef WIFI_SOCKET_ACCEPT_TIMEOUT
-#define WIFI_SOCKET_ACCEPT_TIMEOUT  (0xFFFFFFFFU)
+#define WIFI_SOCKET_ACCEPT_TIMEOUT  (0)
 #endif
 
 /* WiFi thread pooling interval [ms] */
@@ -160,6 +154,7 @@ typedef struct {
 #define WIFI_FLAGS_STATION_GOT_IP     (1U << 6)
 #define WIFI_FLAGS_STATION_STATIC_IP  (1U << 7)
 #define WIFI_FLAGS_AP_STATIC_IP       (1U << 8)
+#define WIFI_FLAGS_STATION_BSSID_SET  (1U << 9)
 
 #define SOCKET_INVALID                0xFF
 #define CONN_ID_INVALID               5

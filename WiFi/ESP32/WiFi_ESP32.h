@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        3. January 2020
+ * $Date:        2. July 2020
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -44,15 +44,9 @@
 #define WIFI_CONNOPEN_TIMEOUT       (20000)
 #endif
 
-/* Socket timeouts [ms] (defaults) */
-#ifndef WIFI_SOCKET_TX_TIMEOUT
-#define WIFI_SOCKET_TX_TIMEOUT      (1000*20) /* 20 seconds */
-#endif
-#ifndef WIFI_SOCKET_RX_TIMEOUT
-#define WIFI_SOCKET_RX_TIMEOUT      (1000*20) /* 20 seconds */
-#endif
+/* Socket accept timeout */
 #ifndef WIFI_SOCKET_ACCEPT_TIMEOUT
-#define WIFI_SOCKET_ACCEPT_TIMEOUT  (0xFFFFFFFFU)
+#define WIFI_SOCKET_ACCEPT_TIMEOUT  (0)
 #endif
 
 /* WiFi thread pooling interval [ms] */
@@ -132,6 +126,8 @@ typedef struct {
   uint16_t l_port;              /* Local port  */
   uint8_t  r_ip[4];             /* Remote ip   */
   uint8_t  l_ip[4];             /* Local ip    */
+  volatile
+  uint8_t accepted;
 } WIFI_SOCKET;
 
 /* WIFI driver options */

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,24 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
- * $Revision:    V1.3
+ * $Date:        6. June 2021
+ * $Revision:    V1.7
  *
  * Project:      ESP8266 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP8266_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
+ *  Version 1.6
+ *    Fixed return string null terminator in GetModuleInfo
+ *  Version 1.5
+ *    Fixed SocketSendTo for stream socket lengths above 2048 bytes
+ *  Version 1.4
+ *    Added auto protocol selection in SocketCreate
+ *    Fixed socket default timeout (zero == no time out)
+ *    Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
  *  Version 1.3
  *    Enhanced serial communication startup procedure
  *    Fixed function AT_Resp_ConnectAP for NULL argument
@@ -41,7 +51,7 @@
 #include "WiFi_ESP8266_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 3)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 7)
 
 /* -------------------------------------------------------------------------- */
 
@@ -407,6 +417,11 @@ void AT_Notify (uint32_t event, void *arg) {
 static int32_t WiFi_Wait (uint32_t event, uint32_t timeout) {
   int32_t rval;
   uint32_t flags;
+
+  if (timeout == 0U) {
+    /* Operation will not time out */
+    timeout = osWaitForever;
+  }
 
   flags = osEventFlagsWait (pCtrl->evflags_id, event, osFlagsWaitAny, timeout);
 
@@ -904,10 +919,10 @@ static int32_t ARM_WIFI_GetModuleInfo (char *module_info, uint32_t max_len) {
         ex = AT_Resp_Generic();
 
         if (ex == AT_RESP_OK) {
-          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len);
+          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len - 1U);
 
           /* Add string terminator */
-          module_info[max_len-1] = '\0';
+          module_info[ex] = '\0';
         }
       }
     }
@@ -975,7 +990,10 @@ static int32_t ARM_WIFI_SetOption (uint32_t interface, uint32_t option, const vo
         else {
           if (interface == WIFI_INTERFACE_STATION) {
             /* Set BSSID of the AP to connect to */
-            memcpy (pCtrl->options.st_bssid, data, 6);
+            pCtrl->flags |= WIFI_FLAGS_STATION_BSSID_SET;
+
+            /* Store BSSID into options structure */
+            memcpy (pCtrl->options.st_bssid, data, 6U);
             rval = ARM_DRIVER_OK;
           } else {
             rval = ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1566,7 +1584,7 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
   int32_t  ex, rval, state;
   uint32_t mode;
   AT_DATA_CWSAP ap_cfg;
-  uint8_t  *ip_0, *ip_1, *ip_2;
+  uint8_t  *ip_0, *ip_1, *ip_2, *bssid;
 
   if ((interface > 1U) || (config == NULL)) {
     rval = ARM_DRIVER_ERROR_PARAMETER;
@@ -1639,7 +1657,14 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
 
           case 1:
             /* Connect to AP */
-            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, config->bssid);
+            if ((pCtrl->flags & WIFI_FLAGS_STATION_BSSID_SET) == 0U) {
+              /* BSSID was not specified */
+              bssid = NULL;
+            } else {
+              /* Use BSSID specified in SetOption with option ARM_WIFI_BSSID */
+              bssid = pCtrl->options.st_bssid;
+            }
+            ex = AT_Cmd_ConnectAP (AT_CMODE_SET, config->ssid, config->pass, bssid);
             break;
         }
 
@@ -2152,14 +2177,26 @@ static int32_t ARM_WIFI_SocketCreate (int32_t af, int32_t type, int32_t protocol
     /* Check socket type and protocol */
     if (type == ARM_SOCKET_SOCK_STREAM) {
       /* TCP */
-      if (protocol != ARM_SOCKET_IPPROTO_TCP) {
-        rval = ARM_SOCKET_EINVAL;
+      if (protocol == 0U) {
+        /* Select default protocol */
+        protocol = ARM_SOCKET_IPPROTO_TCP;
+      }
+      else {
+        if (protocol != ARM_SOCKET_IPPROTO_TCP) {
+          rval = ARM_SOCKET_EINVAL;
+        }
       }
     }
     else if (type == ARM_SOCKET_SOCK_DGRAM) {
       /* UDP */
-      if (protocol != ARM_SOCKET_IPPROTO_UDP) {
-        rval = ARM_SOCKET_EINVAL;
+      if (protocol == 0U) {
+        /* Select default protocol */
+        protocol = ARM_SOCKET_IPPROTO_UDP;
+      }
+      else {
+        if (protocol != ARM_SOCKET_IPPROTO_UDP) {
+          rval = ARM_SOCKET_EINVAL;
+        }
       }
     }
     else {
@@ -2189,8 +2226,8 @@ static int32_t ARM_WIFI_SocketCreate (int32_t af, int32_t type, int32_t protocol
           Socket[n].backlog  = SOCKET_INVALID;
           Socket[n].conn_id  = CONN_ID_INVALID;
           
-          Socket[n].tout_rx  = WIFI_SOCKET_RX_TIMEOUT;
-          Socket[n].tout_tx  = WIFI_SOCKET_TX_TIMEOUT;
+          Socket[n].tout_rx  = 0U;
+          Socket[n].tout_tx  = 0U;
 
           /* Setup socket memory */
           BufInit (pCtrl->mempool_id, pCtrl->memmtx_id, &Socket[n].mem);
@@ -2963,8 +3000,14 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
       if (sock->rx_len == 0) {
         /* No data received */
         if (sock->flags & SOCKET_FLAGS_NONBLOCK) {
-          /* Operation would block */
-          rval = ARM_SOCKET_EAGAIN;
+          if (n != 0U) {
+            /* Received less than specified buffer length */
+            rval = (int32_t)n;
+          }
+          else {
+            /* Operation would block */
+            rval = ARM_SOCKET_EAGAIN;
+          }
         }
         else {
           if (n != 0U) {
@@ -3376,8 +3419,8 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
             cnt = 2048;
           }
 
-          if (cnt > len) {
-            cnt = len;
+          if (cnt > (len - num)) {
+            cnt = len - num;
           }
 
           /* Initiate send operation */

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,24 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
- * $Revision:    V1.3
+ * $Date:        3. February 2021
+ * $Revision:    V1.6
  *
  * Project:      ESP32 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP32_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    Fixed return string null terminator in GetModuleInfo
+ *  Version 1.5
+ *    Based on AT command set version: 2.1.0.0
+ *    Fixed SocketSendTo for stream socket lengths above 2048 bytes
+ *    Fixed baud rate change logic to take into account error response
+ *  Version 1.4
+ *    Added auto protocol selection in SocketCreate
+ *    Fixed socket default timeout (zero == no time out)
+ *    Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
  *  Version 1.3
  *    Enhanced serial communication startup procedure
  *    Fixed function AT_Resp_ConnectAP for NULL argument
@@ -41,7 +51,7 @@
 #include "WiFi_ESP32_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 3)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 6)
 
 /* -------------------------------------------------------------------------- */
 
@@ -144,10 +154,10 @@ void AT_Notify (uint32_t event, void *arg) {
           /* Return number of bytes to receive */
           *u32 = len;
         }
-
-        /* Set number of bytes to copy (or dump) */
-        rx_num = len;
       }
+      
+      /* Set number of bytes to copy (or dump) */
+      rx_num = len;
     }
   }
   else if (event == AT_NOTIFY_CONNECTION_RX_DATA) {
@@ -207,6 +217,7 @@ void AT_Notify (uint32_t event, void *arg) {
                 if (Socket[n].state == SOCKET_STATE_LISTEN) {
                   /* Set connection id and change state */
                   Socket[n].conn_id = conn.link_id;
+                  Socket[n].accepted = false;
                   Socket[n].state   = SOCKET_STATE_CONNECTED;
 
                   /* Copy local and remote port number */
@@ -336,8 +347,16 @@ void AT_Notify (uint32_t event, void *arg) {
               Socket[n].state = SOCKET_STATE_CLOSED;
             }
           } else {
-            /* Listening socket, set state back to listen */
-            Socket[n].state = SOCKET_STATE_LISTEN;
+            if (Socket[n].state == SOCKET_STATE_CLOSING ||
+              (Socket[n].state == SOCKET_STATE_CONNECTED && !Socket[n].accepted))
+            {
+              /* Connection close initiated in SocketClose */
+              /* Listening socket, set state back to listen */
+              Socket[n].state = SOCKET_STATE_LISTEN;
+            } else {
+              /* Remote peer closed the connection */
+              Socket[n].state = SOCKET_STATE_CLOSED;
+            }
           }
           break;
         }
@@ -407,6 +426,11 @@ void AT_Notify (uint32_t event, void *arg) {
 static int32_t WiFi_Wait (uint32_t event, uint32_t timeout) {
   int32_t rval;
   uint32_t flags;
+
+  if (timeout == 0U) {
+    /* Operation will not time out */
+    timeout = osWaitForever;
+  }
 
   flags = osEventFlagsWait (pCtrl->evflags_id, event, osFlagsWaitAny, timeout);
 
@@ -904,10 +928,10 @@ static int32_t ARM_WIFI_GetModuleInfo (char *module_info, uint32_t max_len) {
         ex = AT_Resp_Generic();
 
         if (ex == AT_RESP_OK) {
-          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len);
+          ex = AT_Resp_GetVersion ((uint8_t *)module_info, max_len - 1U);
 
           /* Add string terminator */
-          module_info[max_len-1] = '\0';
+          module_info[ex] = '\0';
         }
       }
     }
@@ -2123,14 +2147,26 @@ static int32_t ARM_WIFI_SocketCreate (int32_t af, int32_t type, int32_t protocol
     /* Check socket type and protocol */
     if (type == ARM_SOCKET_SOCK_STREAM) {
       /* TCP */
-      if (protocol != ARM_SOCKET_IPPROTO_TCP) {
-        rval = ARM_SOCKET_EINVAL;
+      if (protocol == 0U) {
+        /* Select default protocol */
+        protocol = ARM_SOCKET_IPPROTO_TCP;
+      }
+      else {
+        if (protocol != ARM_SOCKET_IPPROTO_TCP) {
+          rval = ARM_SOCKET_EINVAL;
+        }
       }
     }
     else if (type == ARM_SOCKET_SOCK_DGRAM) {
       /* UDP */
-      if (protocol != ARM_SOCKET_IPPROTO_UDP) {
-        rval = ARM_SOCKET_EINVAL;
+      if (protocol == 0U) {
+        /* Select default protocol */
+        protocol = ARM_SOCKET_IPPROTO_UDP;
+      }
+      else {
+        if (protocol != ARM_SOCKET_IPPROTO_UDP) {
+          rval = ARM_SOCKET_EINVAL;
+        }
       }
     }
     else {
@@ -2160,8 +2196,8 @@ static int32_t ARM_WIFI_SocketCreate (int32_t af, int32_t type, int32_t protocol
           Socket[n].backlog  = SOCKET_INVALID;
           Socket[n].conn_id  = CONN_ID_INVALID;
           
-          Socket[n].tout_rx  = WIFI_SOCKET_RX_TIMEOUT;
-          Socket[n].tout_tx  = WIFI_SOCKET_TX_TIMEOUT;
+          Socket[n].tout_rx  = 0U;
+          Socket[n].tout_tx  = 0U;
 
           /* Setup socket memory */
           BufInit (pCtrl->mempool_id, pCtrl->memmtx_id, &Socket[n].mem);
@@ -2490,64 +2526,71 @@ static int32_t ARM_WIFI_SocketAccept (int32_t socket, uint8_t *ip, uint32_t *ip_
     }
     else {
       do {
+        uint8_t sockFound = false;
+        
         /* Check backlog for open connections */
         n = sock->backlog;
+        do
+        {
 
-        if (Socket[n].state == SOCKET_STATE_CONNECTED) {
-          /* We have connection active */
-          if ((pCtrl->flags & WIFI_FLAGS_CONN_INFO_POOLING) != 0U) {
-            /* Pool for connection status, +LINK_CONN is not available */
-            ex = AT_Cmd_GetStatus (AT_CMODE_EXEC);
-
-            if (ex == 0) {
-              /* Wait until response arrives */
-              ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+          if (Socket[n].state == SOCKET_STATE_CONNECTED && !Socket[n].accepted) {
+            
+            sockFound = true;
+            
+            /* We have connection active */
+            if ((pCtrl->flags & WIFI_FLAGS_CONN_INFO_POOLING) != 0U) {
+              /* Pool for connection status, +LINK_CONN is not available */
+              ex = AT_Cmd_GetStatus (AT_CMODE_EXEC);
 
               if (ex == 0) {
-                /* Check response */
-                do {
-                  /* Response arrived */
-                  ex = AT_Resp_GetStatus (&conn);
-                  
-                  if (ex >= 0) {
-                    /* Check if structure contains information relevant for current link id */
-                    if (conn.link_id == Socket[n].conn_id) {
-                      /* Copy remote ip */
-                      memcpy (Socket[n].r_ip, conn.remote_ip, 4);
-                      /* Set remote port */
-                      Socket[n].r_port = conn.remote_port;
-                      /* Set local port */
-                      Socket[n].l_port = conn.local_port;
+                /* Wait until response arrives */
+                ex = WiFi_Wait (WIFI_WAIT_RESP_GENERIC, WIFI_RESP_TIMEOUT);
+
+                if (ex == 0) {
+                  /* Check response */
+                  do {
+                    /* Response arrived */
+                    ex = AT_Resp_GetStatus (&conn);
+                    
+                    if (ex >= 0) {
+                      /* Check if structure contains information relevant for current link id */
+                      if (conn.link_id == Socket[n].conn_id) {
+                        /* Copy remote ip */
+                        memcpy (Socket[n].r_ip, conn.remote_ip, 4);
+                        /* Set remote port */
+                        Socket[n].r_port = conn.remote_port;
+                        /* Set local port */
+                        Socket[n].l_port = conn.local_port;
+                      }
                     }
                   }
+                  while (ex > 0);
                 }
-                while (ex > 0);
               }
             }
-          }
+            
+            Socket[n].accepted = true;
 
-          if (ip != NULL) {
-            /* Copy remote ip */
-            *ip_len = 4U;
-            memcpy (ip, Socket[n].r_ip, 4);
-          }
+            if (ip != NULL) {
+              /* Copy remote ip */
+              *ip_len = 4U;
+              memcpy (ip, Socket[n].r_ip, 4);
+            }
 
-          if (port != NULL) {
-            /* Copy remote port */
-            *port = Socket[n].r_port;
-          }
+            if (port != NULL) {
+              /* Copy remote port */
+              *port = Socket[n].r_port;
+            }
 
-          /* Return socket number */
-          rval = n;
-
-          /* Update backlog, put current socket to the end of list */
-          while (Socket[n].backlog != sock->backlog) {
-            n = Socket[n].backlog;
+            /* Return socket number */
+            rval = n;
           }
-          Socket[n].backlog    = (uint8_t)rval;
-          Socket[rval].backlog = sock->backlog;
-        }
-        else {
+          n = Socket[n].backlog;
+          
+        } while (!sockFound && (n != sock->backlog));
+        
+        if (!sockFound)
+        {
           /* No connection to accept */
           if (sock->flags & SOCKET_FLAGS_NONBLOCK) {
             rval = ARM_SOCKET_EAGAIN;
@@ -2920,6 +2963,10 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
 
     while (rval == 0) {
       /* Read socket buffer */
+      if (sock->state != SOCKET_STATE_CONNECTED) {
+          rval = ARM_SOCKET_ERROR;
+          break;
+      }
       if (sock->rx_len == 0) {
         /* Read packet header */
         if (BufGetCount (&sock->mem) >= 2U) {
@@ -2934,8 +2981,14 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
       if (sock->rx_len == 0) {
         /* No data received */
         if (sock->flags & SOCKET_FLAGS_NONBLOCK) {
-          /* Operation would block */
-          rval = ARM_SOCKET_EAGAIN;
+          if (n != 0U) {
+            /* Received less than specified buffer length */
+            rval = (int32_t)n;
+          }
+          else {
+            /* Operation would block */
+            rval = ARM_SOCKET_EAGAIN;
+          }
         }
         else {
           if (n != 0U) {
@@ -3347,8 +3400,8 @@ static int32_t ARM_WIFI_SocketSendTo (int32_t socket, const void *buf, uint32_t 
             cnt = 2048;
           }
 
-          if (cnt > len) {
-            cnt = len;
+          if (cnt > (len - num)) {
+            cnt = len - num;
           }
 
           /* Initiate send operation */
@@ -3966,7 +4019,7 @@ static int32_t ARM_WIFI_SocketClose (int32_t socket) {
     }
     else {
       /* Close client socket */
-      if ((sock->state > SOCKET_STATE_LISTEN) && (sock->state < SOCKET_STATE_CLOSING)) {
+      if ((sock->state > SOCKET_STATE_LISTEN) && (sock->state <= SOCKET_STATE_CLOSING)) {
         /* Set state to close initiated */
         sock->state = SOCKET_STATE_CLOSING;
 
@@ -3992,6 +4045,8 @@ static int32_t ARM_WIFI_SocketClose (int32_t socket) {
             rval = ARM_SOCKET_ERROR;
           }
         }
+        if (sock->state == SOCKET_STATE_CLOSING)
+          rval = ARM_SOCKET_ERROR;
       }
       else {
         /* Non-connected socket, just mark it as free */
@@ -4304,7 +4359,7 @@ static int32_t SetupCommunication (void) {
         /* Response received */
         ex = AT_Resp_Generic();
 
-        if (ex == AT_RESP_OK) {
+        if ((ex == AT_RESP_OK) || (ex == AT_RESP_ERROR)) {
           if (state == 0) {
             /* Communication established */
             if (k != 0) {

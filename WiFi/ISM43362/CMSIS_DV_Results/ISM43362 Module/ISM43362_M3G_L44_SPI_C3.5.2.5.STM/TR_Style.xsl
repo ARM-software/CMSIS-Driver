@@ -70,6 +70,13 @@
       <xsl:text> </xsl:text> 
       <xsl:value-of select="time"/>
     </h3>
+    <!-- Test Group Info -->
+    <xsl:for-each select="info">
+      <table style="border:none; font-size:16px;" width="80%" align="center">
+      <tr><td style="white-space:pre-line"><xsl:value-of select="current()"/></td></tr>
+      </table>
+      <br/>
+    </xsl:for-each>
     <table class="tab_fr" align="center">
       <!-- Print out result header -->
       <tr>
@@ -162,15 +169,11 @@
     </td>
     <td class="td_res">
       <xsl:choose>
+        <xsl:when test="res = 'PASSED' and contains(dbgi, '[WARNING]')">
+          <a class="an_pass2">Passed</a>
+        </xsl:when>
         <xsl:when test="res = 'PASSED'">
-          <xsl:choose> 
-            <xsl:when test="contains(dbgi/detail, '[WARNING]')">
-              <a class="an_pass2">Passed</a>
-            </xsl:when>
-            <xsl:otherwise>
-              <a class="an_pass">Passed</a>
-            </xsl:otherwise>
-          </xsl:choose> 
+          <a class="an_pass">Passed</a>
         </xsl:when>
         <xsl:when test="res = 'NOT EXECUTED'">
           <a class="an_noexec">Not executed</a>

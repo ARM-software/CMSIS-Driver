@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,17 @@
  * limitations under the License.
  *
  *
- * $Date:        6. June 2021
- * $Revision:    V1.7
+ * $Date:        17. March 2022
+ * $Revision:    V1.8
  *
  * Project:      ESP8266 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP8266_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.8
+ *    Enabled placement of USART transfer buffers in appropriate RAM by using section
+ *    ".bss.driver.usartn" (n = WIFI_ESP8266_SERIAL_DRIVER value) in the linker scatter file
  *  Version 1.7
  *    Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
  *  Version 1.6
@@ -51,7 +54,7 @@
 #include "WiFi_ESP8266_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 7)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 8)
 
 /* -------------------------------------------------------------------------- */
 

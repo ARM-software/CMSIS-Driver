@@ -8,6 +8,9 @@
 
   <releases>
     <release version="2.6.2-dev6">
+      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+      -  Enabled placement of USART transfer buffers in appropriate RAM by using section
+         ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
       Updated Inventek ISM43362 WiFi driver:
       -  Enabled placement of SPI transfer buffers in appropriate RAM by using section
          ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
@@ -446,7 +449,7 @@
     </component>
 
     <!-- ESP32 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.6.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP32 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_ESP32_UART   /* Driver WiFi ESP32 (UART) */
@@ -465,7 +468,7 @@
     </component>
 
     <!-- ESP8266 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>Espressif ESP8266 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -485,7 +488,7 @@
     </component>
 
     <!-- WizFi360 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and USART Driver">
       <description>WIZnet WizFi360 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */

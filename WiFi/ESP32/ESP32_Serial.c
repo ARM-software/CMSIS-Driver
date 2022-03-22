@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
+ * $Date:        17. March 2022
  *
  * Project:      Simple serial buffer
  * -------------------------------------------------------------------------- */
@@ -49,6 +49,16 @@
 extern ARM_DRIVER_USART           CMSIS_USART_DRIVER;
 #define pDrvUART                 &CMSIS_USART_DRIVER
 
+#ifndef USART_DRIVER_BSS
+#define USART_DRIVER_BSS_STRING(str)    #str
+#define USART_DRIVER_BSS_CREATE(id, n)  USART_DRIVER_BSS_STRING(id##n)
+#define USART_DRIVER_BSS_SYMBOL(id, n)  USART_DRIVER_BSS_CREATE(id, n)
+#define USART_DRIVER_BSS                USART_DRIVER_BSS_SYMBOL(    \
+                                          .bss.driver.usart,        \
+                                          WIFI_ESP32_SERIAL_DRIVER  \
+                                        )
+#endif
+
 /* Static functions */
 static void UART_Callback (uint32_t event);
 
@@ -63,8 +73,8 @@ typedef struct {
   uint8_t  r[3];          /* Reserved          */
 } SERIAL_COM;
 
-static uint8_t RxBuf[SERIAL_RXBUF_SZ];
-static uint8_t TxBuf[SERIAL_TXBUF_SZ];
+static uint8_t RxBuf[SERIAL_RXBUF_SZ] __attribute__((section(USART_DRIVER_BSS)));
+static uint8_t TxBuf[SERIAL_TXBUF_SZ] __attribute__((section(USART_DRIVER_BSS)));
 
 static SERIAL_COM Com;
 

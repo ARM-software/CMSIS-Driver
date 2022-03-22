@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,14 +16,17 @@
  * limitations under the License.
  *
  *
- * $Date:        3. February 2021
- * $Revision:    V1.6
+ * $Date:        17. March 2022
+ * $Revision:    V1.7
  *
  * Project:      ESP32 WiFi Driver
  * Driver:       Driver_WiFin (n = WIFI_ESP32_DRIVER_NUMBER value)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Enabled placement of USART transfer buffers in appropriate RAM by using section
+ *    ".bss.driver.usartn" (n = WIFI_ESP32_SERIAL_DRIVER value) in the linker scatter file
  *  Version 1.6
  *    Fixed return string null terminator in GetModuleInfo
  *  Version 1.5
@@ -51,7 +54,7 @@
 #include "WiFi_ESP32_Os.h"
 
 /* Driver version */
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 6)
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1, 7)
 
 /* -------------------------------------------------------------------------- */
 

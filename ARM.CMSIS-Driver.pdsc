@@ -7,6 +7,11 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev6">
+      Updated Inventek ISM43362 WiFi driver:
+      -  Enabled placement of SPI transfer buffers in appropriate RAM by using section
+         ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
+    </release>
     <release version="2.6.2-dev5">
       Updated Inventek ISM43362 WiFi driver (version 1.11.0):
       - Supports also ISM43340 Module
@@ -423,7 +428,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.11.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.12.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

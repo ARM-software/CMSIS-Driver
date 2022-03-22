@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        11. October 2021
- * $Revision:    V1.11
+ * $Date:        16. March 2022
+ * $Revision:    V1.12
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -32,6 +32,10 @@
  *  - RSTN    = reset        (active low)  (output)
  *  - SSN     = slave select (active low)  (output)
  *  - DATARDY = data ready   (active high) (input)
+ *
+ * SPI transfer buffers (spi_send_buf and spi_recv_buf) can be placed in the
+ * appropriate ram by using section ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM)
+ * in the linker scatter file. Example: ".bss.driver.spi1".
  *
  * To initialize/uninitialize and drive SSN and RSTN pins, and get state of 
  * DATARDY pin you need to implement following functions 
@@ -94,6 +98,9 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.12
+ *    - Enabled placement of SPI transfer buffers in appropriate RAM by using section
+ *      ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM) in the linker scatter file
  *  Version 1.11
  *    - Added support for 5 GHz channels on Access Point
  *  Version 1.10
@@ -179,7 +186,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,11)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,12)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -256,6 +263,16 @@ typedef struct {                        // Socket structure
 extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define ptrSPI                        (&SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM))
 
+#ifndef SPI_DRIVER_BSS
+#define SPI_DRIVER_BSS_STRING(str)      #str
+#define SPI_DRIVER_BSS_CREATE(id, n)    SPI_DRIVER_BSS_STRING(id##n)
+#define SPI_DRIVER_BSS_SYMBOL(id, n)    SPI_DRIVER_BSS_CREATE(id, n)
+#define SPI_DRIVER_BSS                  SPI_DRIVER_BSS_SYMBOL(      \
+                                          .bss.driver.spi,          \
+                                          WIFI_ISM43362_SPI_DRV_NUM \
+                                        )
+#endif
+
 #define MAX_DATA_SIZE                  (1460U)
 
 #define TRANSPORT_START                (1U)
@@ -308,8 +325,8 @@ static uint8_t                          oper_mode;
 static uint32_t                         kernel_tick_freq_in_ms;
 static uint8_t                          kernel_tick_freq_shift_to_ms;
 
-static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4);
-static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4);
+static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
+static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
 static uint32_t                         spi_recv_len;
 static int32_t                          resp_code;
 

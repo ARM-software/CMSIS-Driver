@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        2. July 2020
+ * $Date:        23. March 2022
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -156,6 +156,7 @@ typedef struct {
 #define WIFI_FLAGS_STATION_GOT_IP     (1U << 6)
 #define WIFI_FLAGS_STATION_STATIC_IP  (1U << 7)
 #define WIFI_FLAGS_AP_STATIC_IP       (1U << 8)
+#define WIFI_FLAGS_STATION_BSSID_SET  (1U << 9)
 
 #define SOCKET_INVALID                0xFF
 #define CONN_ID_INVALID               5

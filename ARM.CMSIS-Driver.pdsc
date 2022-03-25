@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.4.9" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.7.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
@@ -7,45 +7,26 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.6.2-dev7">
+    <release version="2.7.0-rc0">
       Added ETH_LAN91C111 driver
       Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
       - Corrected invalid power status in MAC_PowerControl
-    </release>
-    <release version="2.6.2-dev6">
+      Updated ESP8266 WiFi driver:
+      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      -  Enabled placement of USART transfer buffers in appropriate RAM by using section
-         ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
-      Updated Inventek ISM43362 WiFi driver:
-      -  Enabled placement of SPI transfer buffers in appropriate RAM by using section
-         ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
-    </release>
-    <release version="2.6.2-dev5">
+      - Fixed return string null terminator in GetModuleInfo
+      - Fixed SocketSendTo for stream socket lengths above 2048 bytes
+      - Enabled placement of USART transfer buffers in appropriate RAM by using section
+        ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
       Updated Inventek ISM43362 WiFi driver (version 1.11.0):
       - Supports also ISM43340 Module
       - Added support for 5 GHz channels on Access Point
-      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation: 
+      - Fixed socket connect operation for non-blocking mode
+      - Enabled placement of SPI transfer buffers in appropriate RAM by using section
+        ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
+      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation:
         SocketConnect does not work if first or last octet of IP address is 0
         (for example IPs 0.x.y.z or x.y.z.0 do not work)
-    </release>
-    <release version="2.6.2-dev4">
-      Updated Inventek ISM43362 WiFi driver (version 1.10.0):
-      - Fixed socket connect operation for non-blocking mode
-    </release>
-    <release version="2.6.2-dev3">
-      Updated ESP8266 WiFi driver:
-      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
-    </release>
-    <release version="2.6.2-dev2">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Fixed return string null terminator in GetModuleInfo
-    </release>
-    <release version="2.6.2-dev1">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Fixed SocketSendTo for stream socket lengths above 2048 bytes
-    </release>
-    <release version="2.6.2-dev0">
-      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
       - Detected shield firmware limitation: SocketConnect does not work if 
         certain IP address octets contain value 0 or 255
         (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)

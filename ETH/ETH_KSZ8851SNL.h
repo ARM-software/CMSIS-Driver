@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. January 2017
- * $Revision:    V6.6
+ * $Date:        25. March 2022
+ * $Revision:    V6.7
  *
  * Project:      Register Interface Definitions for KSZ8851SNL
  * -------------------------------------------------------------------- */

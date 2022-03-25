@@ -7,6 +7,10 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.6.2-dev7">
+      Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
+      - Corrected invalid power status in MAC_PowerControl
+    </release>
     <release version="2.6.2-dev6">
       Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
       -  Enabled placement of USART transfer buffers in appropriate RAM by using section
@@ -192,7 +196,7 @@
   <components>
 
     <!-- CMSIS-Driver Ethernet -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.1.0" Cversion="6.6.0" condition="CMSIS Core with RTOS and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.1.0" Cversion="6.7.0" condition="CMSIS Core with RTOS and SPI Driver">
       <description>Ethernet MAC + PHY KSZ8851SNL/SNLI Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -204,7 +208,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.1.0" Cversion="1.1.0" condition="CMSIS Core">
       <description>Ethernet MAC + PHY LAN9220 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

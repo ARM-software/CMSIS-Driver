@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. January 2017
- * $Revision:    V6.6
+ * $Date:        25. March 2022
+ * $Revision:    V6.7
  *
  * Driver:       Driver_ETH_MACn (default: Driver_ETH_MAC0),
                  Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -36,6 +36,8 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 6.7
+ *    Corrected invalid power status in MAC_PowerControl
  *  Version 6.6
  *    Updated for CMSIS RTOS2
  *  Version 6.5
@@ -79,8 +81,8 @@
 #include "Driver_ETH_MAC.h"
 #include "Driver_ETH_PHY.h"
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,6) /* driver version */
-#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,6) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,7) /* driver version */
+#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,7) /* driver version */
 
 /* Default ethernet driver number */
 #ifndef ETH_NUM
@@ -327,7 +329,7 @@ static int32_t MAC_PowerControl (ARM_POWER_STATE state) {
 
   switch ((int32_t)state) {
     case ARM_POWER_OFF:
-      ETH.flags &= ETH_POWER;
+      ETH.flags &= ~ETH_POWER;
 
       /* Disable interrupts */
       reg_wr (REG_IER, 0);

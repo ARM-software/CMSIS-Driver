@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        16. February 2018
- * $Revision:    V1.0
+ * $Date:        25. March 2022
+ * $Revision:    V1.1
  *
  * Driver:       Driver_ETH_MACn (default: Driver_ETH_MAC0),
  *               Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -36,6 +36,8 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected invalid power status in MAC_PowerControl
  *  Version 1.0
  *    Initial release
  */
@@ -48,8 +50,8 @@
 #include "ETH_LAN9220.h"
 
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0) /* driver version */
-#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
+#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
 
 
 /* Ethernet MAC driver number (default) */
@@ -318,7 +320,7 @@ static int32_t MAC_PowerControl (ARM_POWER_STATE state) {
 
   switch ((int32_t)state) {
     case ARM_POWER_OFF:
-      ETH.Flags &= ETH_POWER;
+      ETH.Flags &= ~ETH_POWER;
 
       /* Power down */
       LAN9220->PMT_CTRL = (0x02U << PMT_CTRL_PM_MODE_Pos);

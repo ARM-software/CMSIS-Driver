@@ -8,6 +8,7 @@
 
   <releases>
     <release version="2.6.2-dev7">
+      Added ETH_LAN91C111 driver
       Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
       - Corrected invalid power status in MAC_PowerControl
     </release>
@@ -205,6 +206,18 @@
       <files>
         <file category="doc" name="https://www.microchip.com/KSZ8851"/>
         <file category="source" name="ETH/ETH_KSZ8851SNL.c"/>
+      </files>
+    </component>
+
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>Ethernet MAC + PHY LAN91C111 Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_ETH_LAN91C111       /* Driver ETH_LAN91C111 */
+      </RTE_Components_h>
+      <files>
+        <file category="doc" name="https://www.microchip.com/LAN91C111"/>
+        <file category="source" name="ETH/ETH_LAN91C111.c"/>
       </files>
     </component>
 

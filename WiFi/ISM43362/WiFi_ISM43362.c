@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        16. March 2022
+ * $Date:        30. March 2022
  * $Revision:    V1.12
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
@@ -3226,12 +3226,13 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
 
 /**
   \fn            int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len)
-  \brief         Receive data on a connected socket.
+  \brief         Receive data or check if data is available on a connected socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3246,17 +3247,18 @@ static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Receive data on a socket.
+  \brief         Receive data or check if data is available on a socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \param[out]    ip       Pointer to buffer where remote source address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)
                    - length of supplied 'ip' on input
                    - length of stored 'ip' on output
   \param[out]    port     Pointer to buffer where remote source port shall be returned (NULL for none)
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3380,12 +3382,13 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
 
 /**
   \fn            int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len)
-  \brief         Send data on a connected socket.
+  \brief         Send data or check if data can be sent on a connected socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3400,15 +3403,16 @@ static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len, const uint8_t *ip, uint32_t ip_len, uint16_t port)
-  \brief         Send data on a socket.
+  \brief         Send data or check if data can be sent on a socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \param[in]     ip       Pointer to remote destination IP address
   \param[in]     ip_len   Length of 'ip' address in bytes
   \param[in]     port     Remote destination port number
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3653,7 +3657,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
 
 /**
   \fn            int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Retrieve remote IP address and port of a socket
+  \brief         Retrieve remote IP address and port of a socket.
   \param[in]     socket   Socket identification number
   \param[out]    ip       Pointer to buffer where remote address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)

@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        23. March 2022
+ * $Date:        30. March 2022
  * $Revision:    V1.8
  *
  * Project:      WizFi360 WiFi Driver
@@ -1546,7 +1546,7 @@ static int32_t ARM_WIFI_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num
 
 
 /**
-  Activate interface (Connect for Station interface or Start Access Point for Access Point interface).
+  Activate interface (Connect to a wireless network or activate an access point).
 
   \param[in]     interface Interface (0 = Station, 1 = Access Point)
   \param[in]     config    Pointer to ARM_WIFI_CONFIG_t structure where Configuration parameters are located
@@ -1554,8 +1554,8 @@ static int32_t ARM_WIFI_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num
                    - \ref ARM_DRIVER_OK                : Operation successful
                    - \ref ARM_DRIVER_ERROR             : Operation failed
                    - \ref ARM_DRIVER_ERROR_TIMEOUT     : Timeout occurred
-                   - \ref ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported
-                   - \ref ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, security type or NULL config pointer)
+                   - \ref ARM_DRIVER_ERROR_UNSUPPORTED : Operation not supported (security type, channel autodetect or WPS not supported)
+                   - \ref ARM_DRIVER_ERROR_PARAMETER   : Parameter error (invalid interface, NULL config pointer or invalid configuration)
 */
 static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *config) {
   int32_t  ex, rval, state;
@@ -1870,7 +1870,7 @@ static int32_t ARM_WIFI_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *c
 
 
 /**
-  Deactivate interface (Disconnect for Station interface or Stop Access Point for Access Point interface).
+  Deactivate interface (Disconnect from a wireless network or deactivate an access point).
 
   \param[in]     interface Interface (0 = Station, 1 = Access Point)
   \return        execution status
@@ -2774,13 +2774,14 @@ static int32_t ARM_WIFI_SocketConnect (int32_t socket, const uint8_t *ip, uint32
 
 
 /**
-  \fn            int32_t ARM_WIFI_SocketRecv (int32_t socket, void *buf, uint32_t len)
-  \brief         Receive data on a connected socket.
+  Receive data or check if data is available on a connected socket.
+
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                                 : Data is available (len = 0)
                    - \ref ARM_SOCKET_ESOCK             : Invalid socket
                    - \ref ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - \ref ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -2799,18 +2800,19 @@ static int32_t ARM_WIFI_SocketRecv (int32_t socket, void *buf, uint32_t len) {
 
 
 /**
-  Receive data on a socket.
+  Receive data or check if data is available on a socket.
 
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \param[out]    ip       Pointer to buffer where remote source address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)
                    - length of supplied 'ip' on input
                    - length of stored 'ip' on output
   \param[out]    port     Pointer to buffer where remote source port shall be returned (NULL for none)
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                                 : Data is available (len = 0)
                    - \ref ARM_SOCKET_ESOCK             : Invalid socket
                    - \ref ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - \ref ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3079,13 +3081,14 @@ static int32_t ARM_WIFI_SocketRecvFrom (int32_t socket, void *buf, uint32_t len,
 
 
 /**
-  Send data on a connected socket.
+  Send data or check if data can be sent on a connected socket.
 
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                                 : Data can be sent (len = 0)
                    - \ref ARM_SOCKET_ESOCK             : Invalid socket
                    - \ref ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - \ref ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3104,16 +3107,17 @@ static int32_t ARM_WIFI_SocketSend (int32_t socket, const void *buf, uint32_t le
 
 
 /**
-  Send data on a socket.
+  Send data or check if data can be sent on a socket.
 
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \param[in]     ip       Pointer to remote destination IP address
   \param[in]     ip_len   Length of 'ip' address in bytes
   \param[in]     port     Remote destination port number
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                                 : Data can be sent (len = 0)
                    - \ref ARM_SOCKET_ESOCK             : Invalid socket
                    - \ref ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - \ref ARM_SOCKET_ENOTCONN          : Socket is not connected

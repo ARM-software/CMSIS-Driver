@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
+ * $Date:        23. March 2022
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -70,6 +70,7 @@ static STRING_LIST_t List_PlusResp[] = {
   { "CWQAP"            },
   { "CWSAP"            },
   { "CWMODE"           },
+  { "CWHOSTNAME"       },
   { "CIPSTAMAC"        },
   { "CIPAPMAC"         },
   { "RFPOWER"          },
@@ -111,6 +112,7 @@ typedef enum {
   CMD_CWQAP,
   CMD_CWSAP_CUR,
   CMD_CWMODE_CUR,
+  CMD_CWHOSTNAME,
   CMD_CIPSTAMAC_CUR,
   CMD_CIPAPMAC_CUR,
   CMD_RFPOWER,
@@ -1813,6 +1815,76 @@ int32_t AT_Resp_CurrentMode (uint32_t *mode) {
 
 
 /**
+  Set/Query Configures the Name of Station
+
+  Format S: AT+CWHOSTNAME=<hostname>
+  Format Q: AT+CWHOSTNAME?
+
+  Response S:
+  "OK"
+  "ERROR"
+
+  Response Q: Current HostName
+  
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname) {
+  char out[15 + 32];
+  int32_t n;
+
+  /* Open AT command (AT+<cmd><mode> */
+  n = CmdOpen (CMD_CWHOSTNAME, at_cmode, out);
+
+  if (at_cmode == AT_CMODE_SET) {
+    /* Add command arguments */
+    n += sprintf (&out[n], "\"%s\"", hostname);
+  }
+
+  /* Append CRLF and send command */
+  return (CmdSend(CMD_CWHOSTNAME, out, n));
+}
+
+/**
+  Get response to HostName command
+
+  Response Q: +CWHOSTNAME:<host	name>
+  Example  Q: +CWHOSTNAME:ESP_XXXXXX\r\n\r\nOK
+
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+int32_t AT_Resp_HostName (char* hostname) {
+  uint8_t buf[12 + 32 + 6];
+  int32_t val;
+
+  do {
+    /* Retrieve response argument */
+    val = GetRespArg (buf, sizeof(buf));
+
+    if (val < 0) {
+      break;
+    }
+
+    if (val != 1) {
+      strcpy (hostname, (const char *)buf);
+      break;
+    }
+  }
+  while (val != 2);
+
+  if (val < 0) {
+    val = -1;
+  } else {
+    val = 0;
+  }
+
+  return (val);
+}
+
+
+/**
   Set/Query connected access point or access point to connect to
 
   Format S: AT+CWJAP_CUR=<ssid>,<pwd>[,<bssid>]
@@ -1831,8 +1903,8 @@ int32_t AT_Resp_CurrentMode (uint32_t *mode) {
   \param[in]  bssid
   \return 0: ok, -1: error
 */
-int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const char *bssid) {
-  char out[64];
+int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const uint8_t *bssid) {
+  char out[113+1];
   int32_t n;
 
   /* Open AT command (AT+<cmd><mode> */
@@ -1843,7 +1915,7 @@ int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, 
     n += sprintf (&out[n], "\"%s\",\"%s\"", ssid, pwd);
 
     if (bssid != NULL) {
-      n += sprintf (&out[n], ",\"%s\"", bssid);
+      n += sprintf (&out[n], ",\"%02x:%02x:%02x:%02x:%02x:%02x\"", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     }
   }
 

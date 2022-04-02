@@ -343,7 +343,7 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
 
 
 /**
-  Set/Query Configures the Name of ESP8266 Station
+  Set/Query Configures the Name of Station
 
   Format S: AT+CWHOSTNAME=<hostname>
   Format Q: AT+CWHOSTNAME?
@@ -355,7 +355,7 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
   Response Q: Current HostName
   
   \param[in]  at_cmode  Command mode (inquiry, set, exec)
-  \param[in]  hostname  the host name of the ESP8266 Station, the maximum length is 32 bytes.
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
   \return 0: OK, -1: ERROR
 */
 extern int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname);
@@ -366,7 +366,7 @@ extern int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname);
   Response Q: +CWHOSTNAME:<host	name>
   Example  Q: +CWHOSTNAME:ESP_XXXXXX\r\n\r\nOK
 
-  \param[in]  hostname  the host name of the ESP8266 Station, the maximum length is 32 bytes.
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
   \return 0: OK, -1: ERROR
 */
 extern int32_t AT_Resp_HostName (char* hostname);

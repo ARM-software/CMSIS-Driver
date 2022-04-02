@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2021 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        11. October 2021
- * $Revision:    V1.11
+ * $Date:        30. March 2022
+ * $Revision:    V1.12
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -32,6 +32,10 @@
  *  - RSTN    = reset        (active low)  (output)
  *  - SSN     = slave select (active low)  (output)
  *  - DATARDY = data ready   (active high) (input)
+ *
+ * SPI transfer buffers (spi_send_buf and spi_recv_buf) can be placed in the
+ * appropriate ram by using section ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM)
+ * in the linker scatter file. Example: ".bss.driver.spi1".
  *
  * To initialize/uninitialize and drive SSN and RSTN pins, and get state of 
  * DATARDY pin you need to implement following functions 
@@ -94,6 +98,9 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.12
+ *    - Enabled placement of SPI transfer buffers in appropriate RAM by using section
+ *      ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM) in the linker scatter file
  *  Version 1.11
  *    - Added support for 5 GHz channels on Access Point
  *  Version 1.10
@@ -179,7 +186,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,11)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,12)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -256,6 +263,16 @@ typedef struct {                        // Socket structure
 extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define ptrSPI                        (&SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM))
 
+#ifndef SPI_DRIVER_BSS
+#define SPI_DRIVER_BSS_STRING(str)      #str
+#define SPI_DRIVER_BSS_CREATE(id, n)    SPI_DRIVER_BSS_STRING(id##n)
+#define SPI_DRIVER_BSS_SYMBOL(id, n)    SPI_DRIVER_BSS_CREATE(id, n)
+#define SPI_DRIVER_BSS                  SPI_DRIVER_BSS_SYMBOL(      \
+                                          .bss.driver.spi,          \
+                                          WIFI_ISM43362_SPI_DRV_NUM \
+                                        )
+#endif
+
 #define MAX_DATA_SIZE                  (1460U)
 
 #define TRANSPORT_START                (1U)
@@ -308,8 +325,8 @@ static uint8_t                          oper_mode;
 static uint32_t                         kernel_tick_freq_in_ms;
 static uint8_t                          kernel_tick_freq_shift_to_ms;
 
-static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4);
-static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4);
+static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
+static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
 static uint32_t                         spi_recv_len;
 static int32_t                          resp_code;
 
@@ -3209,12 +3226,13 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
 
 /**
   \fn            int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len)
-  \brief         Receive data on a connected socket.
+  \brief         Receive data or check if data is available on a connected socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3229,17 +3247,18 @@ static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Receive data on a socket.
+  \brief         Receive data or check if data is available on a socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \param[out]    ip       Pointer to buffer where remote source address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)
                    - length of supplied 'ip' on input
                    - length of stored 'ip' on output
   \param[out]    port     Pointer to buffer where remote source port shall be returned (NULL for none)
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3363,12 +3382,13 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
 
 /**
   \fn            int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len)
-  \brief         Send data on a connected socket.
+  \brief         Send data or check if data can be sent on a connected socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3383,15 +3403,16 @@ static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len, const uint8_t *ip, uint32_t ip_len, uint16_t port)
-  \brief         Send data on a socket.
+  \brief         Send data or check if data can be sent on a socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \param[in]     ip       Pointer to remote destination IP address
   \param[in]     ip_len   Length of 'ip' address in bytes
   \param[in]     port     Remote destination port number
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3636,7 +3657,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
 
 /**
   \fn            int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Retrieve remote IP address and port of a socket
+  \brief         Retrieve remote IP address and port of a socket.
   \param[in]     socket   Socket identification number
   \param[out]    ip       Pointer to buffer where remote address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)

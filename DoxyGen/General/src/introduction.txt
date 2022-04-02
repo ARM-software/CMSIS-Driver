@@ -45,6 +45,34 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.7.0</td>
+      <td>
+        - Added ETH_LAN91C111 driver
+        - Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
+          - Corrected invalid power status in MAC_PowerControl
+        - Updated ESP8266 WiFi driver:
+          - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
+        - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
+          - Fixed return string null terminator in GetModuleInfo
+          - Fixed SocketSendTo for stream socket lengths above 2048 bytes
+          - Enabled placement of USART transfer buffers in appropriate RAM by using section
+            ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
+        - Updated Inventek ISM43362 WiFi driver (version 1.11.0):
+          - Supports also ISM43340 Module
+          - Added support for 5 GHz channels on Access Point
+          - Fixed socket connect operation for non-blocking mode
+          - Enabled placement of SPI transfer buffers in appropriate RAM by using section
+            ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
+          - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation:
+            SocketConnect does not work if first or last octet of IP address is 0
+            (for example IPs 0.x.y.z or x.y.z.0 do not work)
+          - Detected shield firmware limitation: SocketConnect does not work if 
+            certain IP address octets contain value 0 or 255
+            (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
+          - Updated CMSIS Driver Validation test results
+      </td>
+    </tr>
+    <tr>
       <td>2.6.1</td>
       <td>
         - Updated ESP8266, ESP32 and WizFi360 WiFi drivers:

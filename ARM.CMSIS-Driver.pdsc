@@ -19,8 +19,9 @@
       - Fixed SocketSendTo for stream socket lengths above 2048 bytes
       - Enabled placement of USART transfer buffers in appropriate RAM by using section
         ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
-      Updated Inventek ISM43362 WiFi driver (version 1.11.0):
+      Updated Inventek ISM43362 WiFi driver (version 1.13.0):
       - Supports also ISM43340 Module
+      - Added configuration for asynchronous thread stack size
       - Added support for 5 GHz channels on Access Point
       - Fixed socket connect operation for non-blocking mode
       - Enabled placement of SPI transfer buffers in appropriate RAM by using section
@@ -442,7 +443,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.12.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.13.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -451,7 +452,7 @@
       <files>
         <file category="other"   name="WiFi/ISM43362/WiFi_ISM43362.scvd"/>
         <file category="include" name="WiFi/ISM43362/"/>
-        <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.1.0"/>
+        <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.2.0"/>
         <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.1.0"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Buf.c"/>

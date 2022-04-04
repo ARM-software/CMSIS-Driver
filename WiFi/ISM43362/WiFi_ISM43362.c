@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        30. March 2022
- * $Revision:    V1.12
+ * $Date:        4. April 2022
+ * $Revision:    V1.13
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -98,6 +98,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.13
+ *    - Added configuration for asynchronous thread stack size
  *  Version 1.12
  *    - Enabled placement of SPI transfer buffers in appropriate RAM by using section
  *      ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM) in the linker scatter file
@@ -165,6 +167,10 @@
 #ifndef WIFI_ISM43362_SPI_BUS_SPEED
 #define WIFI_ISM43362_SPI_BUS_SPEED    (20000000)
 #endif
+#ifndef WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE
+#define WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE  (1024)
+#endif
+
 
 // Hardware dependent functions --------
 
@@ -186,7 +192,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,12)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,13)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -281,35 +287,13 @@ extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define TRANSPORT_SERVER               (1U)
 #define TRANSPORT_CLIENT               (0U)
 
-// Mutex responsible for protecting SPI media access
-static const osMutexAttr_t mutex_spi_attr = {
-  "Mutex_SPI",                          // Mutex name
-  osMutexPrioInherit,                   // attr_bits
-  NULL,                                 // Memory for control block
-  0U                                    // Size for control block
-};
-
-// Mutex responsible for protecting socket local variables access
-static const osMutexAttr_t mutex_socket_attr = {
-  "Mutex_Socket",                       // Mutex name
-  osMutexPrioInherit,                   // attr_bits
-  NULL,                                 // Memory for control block
-  0U                                    // Size for control block
-};
-
-// Thread for polling and processing asynchronous messages
-static const osThreadAttr_t thread_async_poll_attr = {
-  .name       = "Thread_Async_Poll",    // Thread name
-  .stack_size = 1024,                   // Required thread stack size
-  .priority   = WIFI_ISM43362_ASYNC_PRIORITY    // Initial thread priority
-};
-
-
 // Local variables and structures
 static uint8_t                          module_initialized = 0U;
 static uint8_t                          driver_initialized = 0U;
 static uint8_t                          firmware_stm       = 0U;
 static uint32_t                         firmware_version   = 0U;
+
+static uint8_t                          async_thread_stack_mem[WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE] __ALIGNED(8);
 
 static osEventFlagsId_t                 event_flags_id;
 static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
@@ -344,6 +328,35 @@ static uint8_t                          ap_local_ip   [4];
 static uint8_t                          ap_mac     [8][6];
 
 static socket_t                         socket_arr[2 * WIFI_ISM43362_SOCKETS_NUM];
+
+// Mutex responsible for protecting SPI media access
+static const osMutexAttr_t mutex_spi_attr = {
+  "Mutex_SPI",                          // Mutex name
+  osMutexPrioInherit,                   // attr_bits
+  NULL,                                 // Memory for control block
+  0U                                    // Size for control block
+};
+
+// Mutex responsible for protecting socket local variables access
+static const osMutexAttr_t mutex_socket_attr = {
+  "Mutex_Socket",                       // Mutex name
+  osMutexPrioInherit,                   // attr_bits
+  NULL,                                 // Memory for control block
+  0U                                    // Size for control block
+};
+
+// Thread for polling and processing asynchronous messages
+static const osThreadAttr_t thread_async_poll_attr = {
+  .name       = "WiFi_ISM43362_Async_Thread",   // name of the thread
+  .attr_bits  = osThreadDetached,               // attribute bits
+  .cb_mem     = NULL,                           // memory for control block (system allocated)
+  .cb_size    = 0U,                             // size of provided memory for control block (system defined)
+  .stack_mem  = &async_thread_stack_mem,        // memory for stack
+  .stack_size = sizeof(async_thread_stack_mem), // size of stack
+  .priority   = WIFI_ISM43362_ASYNC_PRIORITY,   // initial thread priority
+  .tz_module  = 0U,                             // TrustZone module identifier
+  .reserved   = 0U                              // reserved (must be 0)
+};
 
 #if    (WIFI_ISM43362_DEBUG_EVR == 1)
 #define EVR_DEBUG_SPI_MAX_LEN          (128)    // Maximum number of bytes of SPI debug message

@@ -7,7 +7,8 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.7.0-rc0">
+    <release version="2.7.0-rc1">
+      Added PHY_LAN8740A driver
       Added ETH_LAN91C111 driver
       Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
       - Corrected invalid power status in MAC_PowerControl
@@ -238,7 +239,7 @@
         <file category="source" name="ETH/PHY_KSZ8061RNB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.3.0" condition="CMSIS Core">
       <description>Ethernet PHY KSZ8081RNA Driver</description>
       <RTE_Components_h>
@@ -250,7 +251,7 @@
         <file category="source" name="ETH/PHY_KSZ8081RNA.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8710A Driver</description>
       <RTE_Components_h>
@@ -262,7 +263,7 @@
         <file category="source" name="ETH/PHY_LAN8710A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8720 Driver</description>
       <RTE_Components_h>
@@ -274,7 +275,19 @@
         <file category="source" name="ETH/PHY_LAN8720.c"/>
       </files>
     </component>
-    
+
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>Ethernet PHY LAN8740A Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8740A        /* Driver PHY LAN8740A */
+      </RTE_Components_h>
+      <files>
+        <file category="doc" name="https://www.microchip.com/LAN8740A"/>
+        <file category="source" name="ETH/PHY_LAN8740A.c"/>
+      </files>
+    </component>
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8742A Driver</description>
       <RTE_Components_h>
@@ -286,7 +299,7 @@
         <file category="source" name="ETH/PHY_LAN8742A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY ST802RT1 Driver</description>
       <RTE_Components_h>
@@ -311,7 +324,7 @@
         <file category="source" name="Flash/AM29x800BB/AM29x800BB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB641E" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
       <description>AT45DB641E Flash (SPI)</description>
       <RTE_Components_h>
@@ -323,7 +336,7 @@
         <file category="source" name="Flash/AT45DB641E/AT45DB641E.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB642D" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
       <description>AT45DB642D Flash (SPI)</description>
       <RTE_Components_h>
@@ -335,7 +348,7 @@
         <file category="source" name="Flash/AT45DB642D/AT45DB642D.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29EW28F128" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>M29EW 128Mb Flash (16-bit Bus): JS28F128M29EW, PC28F128M29EW, RC28F128M29EW</description>
       <RTE_Components_h>
@@ -347,7 +360,7 @@
         <file category="source" name="Flash/M29EW28F128/M29EW28F128.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29W640FB" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>M29W640FB Flash (16-bit Bus)</description>
       <RTE_Components_h>
@@ -359,7 +372,7 @@
         <file category="source" name="Flash/M29W640FB/M29W640FB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="N25Q032A" Capiversion="2.0.0" Cversion="1.1.0" condition="CMSIS Core and SPI Driver">
       <description>N25Q032A Flash (SPI)</description>
       <RTE_Components_h>
@@ -371,7 +384,7 @@
         <file category="source" name="Flash/N25Q032A/N25Q032A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="S29GL064Nx2" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>S29GL064N Dual Flash (32-bit Bus)</description>
       <RTE_Components_h>

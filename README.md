@@ -16,6 +16,7 @@ All drivers refer the API Interface header file defintions published in the CMSI
 - PHY_KSZ8081RNA
 - PHY_LAN8710A
 - PHY_LAN8720
+- PHY_LAN8740A
 - PHY_LAN8742A
 - PHY_ST802RT1
 

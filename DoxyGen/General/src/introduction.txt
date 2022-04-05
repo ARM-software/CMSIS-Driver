@@ -47,6 +47,7 @@ Revision History
     <tr>
       <td>2.7.0</td>
       <td>
+        - Added PHY_LAN8740A driver
         - Added ETH_LAN91C111 driver
         - Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
           - Corrected invalid power status in MAC_PowerControl
@@ -234,6 +235,13 @@ The \ref driver_pack_content contains implementations of <a href="https://arm-so
       <td>\b LAN8720</td>
       <td>
        Ethernet PHY interface for <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>LAN8720</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8740A
+    <tr>
+      <td>\b LAN8740A</td>
+      <td>
+       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8740A" target="_blank"><b>LAN8740A</b></a>.
       </td>
     </tr>
     \anchor driver_LAN8742A

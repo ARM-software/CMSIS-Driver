@@ -32,7 +32,7 @@
   <td id="projectlogo"><img alt="Logo" src="CMSIS_Logo_Final.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">CMSIS-Driver Implementations
-   &#160;<span id="projectnumber">Version 2.6.1</span>
+   &#160;<span id="projectnumber">Version 2.7.0</span>
    </div>
    <div id="projectbrief">MCU independent device driver implementations and template files of the CMSIS-Driver API specification</div>
   </td>
@@ -111,8 +111,8 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>The SPI MultiSlave wrapper (SPI_MultiSlave.c) resides on top of an arbitrary SPI CMSIS-Driver and exports a maximum of four SPI CMSIS-Drivers with SPI Master functionality only. Slave functionalities are disabled and calling the slave functions will return with an error. An SPI slave device connects to one of the exported drivers and uses it as any other SPI CMSIS-Driver (in master mode only). The wrapper provides multi thread protection.</p>
-<p>Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a particular function call and reconfigures the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select mode must always be configured as <code>ARM_SPI_SS_MASTER_UNUSED</code>, since the underlying bus controlling the SPI driver can only control one slave select line at the time. The slave select line for each particular slave device is instead controlled by the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A function prototype can be found in the SPI_Multislave.h header file and must be included in the project.</p>
-<p>When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case, transfer operations will be queued and executed immediately after the current transfer completes. The transfer queue operates as a FIFO, so transfers will be executed in the same call order as expected by the application.</p>
+<p>Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a particular function call and reconfigure the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select mode must always be configured as <code>ARM_SPI_SS_MASTER_SW</code>. Since the underlying bus controlling SPI driver can only control one slave select line at the time, the slave select line for each particular slave device is instead controlled by the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A function prototype can be found in the SPI_Multislave.h header file and must be included in the project.</p>
+<p>When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case, transfer operation will be queued and executed immediately after the busy slave is deselected. The transfer queue operates as a FIFO, so transfers will be executed in the same call order as expected by the application.</p>
 <p>The wrapper is configured using the SPI_MultiSlave_Config.h file, which contains the following options:</p>
 <ul>
 <li><code>#define</code> <code>SPI_DRIVER</code> specifies the underlying SPI CMSIS-Driver, which actually controls the SPI peripheral and the accesses the bus. The wrapper will connect to that driver.</li>
@@ -126,14 +126,14 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <div class="line"> </div>
 <div class="line"><span class="preprocessor">#include &quot;RTE_Components.h&quot;</span></div>
 <div class="line"><span class="preprocessor">#include  CMSIS_device_header</span></div>
-<div class="line"><span class="preprocessor"></span><span class="preprocessor">#include &quot;stm32f2xx_hal.h&quot;</span>              <span class="comment">// Keil::Device:STM32Cube HAL:Common</span></div>
+<div class="line"><span class="preprocessor"></span><span class="preprocessor">#include &quot;stm32f2xx_hal.h&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="preprocessor">#include &quot;SPI_MultiSlave.h&quot;</span>             <span class="comment">// Keil::CMSIS Driver:SPI:Multi-Slave</span></div>
 <div class="line"> </div>
 <div class="line"><span class="comment">/* Thread prototypes */</span></div>
-<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> Thread_A (<span class="keywordtype">void</span> *argument);</div>
-<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> Thread_B (<span class="keywordtype">void</span> *argument);</div>
-<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> app_main (<span class="keywordtype">void</span> *argument);</div>
+<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> Thread_A (<span class="keywordtype">void</span> *argument);</div>
+<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> Thread_B (<span class="keywordtype">void</span> *argument);</div>
+<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> app_main (<span class="keywordtype">void</span> *argument);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">/* A and B Thread IDs */</span></div>
 <div class="line"><span class="keyword">static</span> osThreadId_t ThreadId_A;</div>
@@ -147,6 +147,12 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <div class="line"><span class="keyword">extern</span> ARM_DRIVER_SPI         Driver_SPI11;</div>
 <div class="line"><span class="preprocessor">#define SPI_B               (&amp;Driver_SPI11)</span></div>
 <div class="line"><span class="preprocessor"></span> </div>
+<div class="line"><span class="comment">/*</span></div>
+<div class="line"><span class="comment">  Slave select pin control function.</span></div>
+<div class="line"><span class="comment"></span></div>
+<div class="line"><span class="comment">  \param[in]    driver    SPI Driver Instance</span></div>
+<div class="line"><span class="comment">  \param[in]    ss_state  Slave Select signal state (ARM_SPI_SS_INACTIVE | ARM_SPI_SS_ACTIVE)</span></div>
+<div class="line"><span class="comment">*/</span></div>
 <div class="line"><span class="keywordtype">void</span> SPI_Control_SlaveSelect (uint32_t device, uint32_t ss_state) {</div>
 <div class="line">  GPIO_TypeDef* GPIOx;</div>
 <div class="line">  uint16_t pin;</div>
@@ -174,23 +180,29 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <div class="line"><span class="comment">/*----------------------------------------------------------------------------</span></div>
 <div class="line"><span class="comment"> * SPI Thread A</span></div>
 <div class="line"><span class="comment"> *---------------------------------------------------------------------------*/</span></div>
-<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> Thread_A (<span class="keywordtype">void</span> *argument) {</div>
+<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> Thread_A (<span class="keywordtype">void</span> *argument) {</div>
 <div class="line">  <span class="keywordtype">char</span> *p = <span class="stringliteral">&quot;Sending data to Slave Device 0&quot;</span>;</div>
 <div class="line">  (void)argument;</div>
 <div class="line">  </div>
+<div class="line">  <span class="comment">/* Initialize and configure SPI A */</span></div>
 <div class="line">  SPI_A-&gt;Initialize(NULL);</div>
 <div class="line">  SPI_A-&gt;PowerControl(ARM_POWER_FULL);</div>
 <div class="line">  SPI_A-&gt;Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \</div>
 <div class="line">                                     | ARM_SPI_DATA_BITS(8) \</div>
 <div class="line">                                     | ARM_SPI_MSB_LSB      \</div>
-<div class="line">                                     | ARM_SPI_SS_MASTER_UNUSED,</div>
+<div class="line">                                     | ARM_SPI_SS_MASTER_SW,</div>
 <div class="line">                                     10000000);</div>
 <div class="line"> </div>
 <div class="line">  SPI_A-&gt;Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);</div>
 <div class="line"> </div>
 <div class="line">  <span class="keywordflow">while</span>(1) {</div>
 <div class="line">    <span class="comment">/* Send to Slave Device 0 */</span></div>
+<div class="line">    SPI_A-&gt;Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);</div>
 <div class="line">    SPI_A-&gt;Send(p, strlen(p));</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">/* Wait until SPI A busy (or alternatively, wait for SPI event) */</span></div>
+<div class="line">    <span class="keywordflow">while</span> (SPI_A-&gt;GetStatus().busy);</div>
+<div class="line">    SPI_A-&gt;Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);</div>
 <div class="line"> </div>
 <div class="line">    osDelay(10);</div>
 <div class="line">  }</div>
@@ -199,24 +211,29 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <div class="line"><span class="comment">/*----------------------------------------------------------------------------</span></div>
 <div class="line"><span class="comment"> * SPI Thread B</span></div>
 <div class="line"><span class="comment"> *---------------------------------------------------------------------------*/</span></div>
-<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> Thread_B (<span class="keywordtype">void</span> *argument) {</div>
+<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> Thread_B (<span class="keywordtype">void</span> *argument) {</div>
 <div class="line">  <span class="keywordtype">char</span> *p = <span class="stringliteral">&quot;Sending data to Slave Device 1&quot;</span>;</div>
 <div class="line">  (void)argument;</div>
 <div class="line"> </div>
-<div class="line">  <span class="comment">/* Initialize and configure SPI */</span></div>
+<div class="line">  <span class="comment">/* Initialize and configure SPI B */</span></div>
 <div class="line">  SPI_B-&gt;Initialize(NULL);</div>
 <div class="line">  SPI_B-&gt;PowerControl(ARM_POWER_FULL);</div>
 <div class="line">  SPI_B-&gt;Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \</div>
 <div class="line">                                     | ARM_SPI_DATA_BITS(8) \</div>
 <div class="line">                                     | ARM_SPI_MSB_LSB      \</div>
-<div class="line">                                     | ARM_SPI_SS_MASTER_UNUSED,</div>
+<div class="line">                                     | ARM_SPI_SS_MASTER_SW,</div>
 <div class="line">                                     15000000);</div>
 <div class="line"> </div>
 <div class="line">  SPI_B-&gt;Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);</div>
 <div class="line"> </div>
 <div class="line">  <span class="keywordflow">while</span>(1) {</div>
 <div class="line">    <span class="comment">/* Send to Slave Device 1 */</span></div>
+<div class="line">    SPI_B-&gt;Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);</div>
 <div class="line">    SPI_B-&gt;Send(p, strlen(p));</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">/* Wait until SPI B busy (or alternatively, wait for SPI event) */</span></div>
+<div class="line">    <span class="keywordflow">while</span> (SPI_B-&gt;GetStatus().busy);</div>
+<div class="line">    SPI_B-&gt;Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);</div>
 <div class="line"> </div>
 <div class="line">    osDelay(10);</div>
 <div class="line">  }</div>
@@ -225,7 +242,7 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <div class="line"><span class="comment">/*----------------------------------------------------------------------------</span></div>
 <div class="line"><span class="comment"> * Application main thread</span></div>
 <div class="line"><span class="comment"> *---------------------------------------------------------------------------*/</span></div>
-<div class="line">__NO_RETURN <span class="keyword">static</span> <span class="keywordtype">void</span> app_main (<span class="keywordtype">void</span> *argument) {</div>
+<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> app_main (<span class="keywordtype">void</span> *argument) {</div>
 <div class="line">  (void)argument;</div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">/* Create SPI threads */</span></div>
@@ -252,7 +269,7 @@ $(document).ready(function(){initNavTree('driver_SPI.html','');});
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Mon Jul 13 2020 11:25:48 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
+    <li class="footer">Generated on Wed Apr 6 2022 12:37:44 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
 	<!--
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.6 

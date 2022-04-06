@@ -32,7 +32,7 @@
   <td id="projectlogo"><img alt="Logo" src="CMSIS_Logo_Final.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">CMSIS-Driver Implementations
-   &#160;<span id="projectnumber">Version 2.6.1</span>
+   &#160;<span id="projectnumber">Version 2.7.0</span>
    </div>
    <div id="projectbrief">MCU independent device driver implementations and template files of the CMSIS-Driver API specification</div>
   </td>
@@ -150,6 +150,36 @@ ARM::CMSIS-Driver Pack</h1>
 <tr>
 <th>Version </th><th>Description  </th></tr>
 <tr>
+<td>2.7.0 </td><td><ul>
+<li>Added PHY_LAN8740A driver</li>
+<li>Added ETH_LAN91C111 driver</li>
+<li>Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:<ul>
+<li>Corrected invalid power status in MAC_PowerControl</li>
+</ul>
+</li>
+<li>Updated ESP8266 WiFi driver:<ul>
+<li>Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID</li>
+</ul>
+</li>
+<li>Updated ESP8266, ESP32 and WizFi360 WiFi drivers:<ul>
+<li>Fixed return string null terminator in GetModuleInfo</li>
+<li>Fixed SocketSendTo for stream socket lengths above 2048 bytes</li>
+<li>Enabled placement of USART transfer buffers in appropriate RAM by using section ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file</li>
+</ul>
+</li>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.11.0):<ul>
+<li>Supports also ISM43340 Module</li>
+<li>Added support for 5 GHz channels on Access Point</li>
+<li>Fixed socket connect operation for non-blocking mode</li>
+<li>Enabled placement of SPI transfer buffers in appropriate RAM by using section ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file</li>
+<li>Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation: SocketConnect does not work if first or last octet of IP address is 0 (for example IPs 0.x.y.z or x.y.z.0 do not work)</li>
+<li>Detected shield firmware limitation: SocketConnect does not work if certain IP address octets contain value 0 or 255 (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)</li>
+<li>Updated CMSIS Driver Validation test results   </li>
+</ul>
+</li>
+</ul>
+</td></tr>
+<tr>
 <td>2.6.1 </td><td><ul>
 <li>Updated ESP8266, ESP32 and WizFi360 WiFi drivers:<ul>
 <li>Added auto protocol selection in SocketCreate</li>
@@ -257,7 +287,7 @@ ARM::CMSIS-Driver Pack</h1>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Mon Jul 13 2020 11:25:48 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
+    <li class="footer">Generated on Wed Apr 6 2022 12:37:44 for CMSIS-Driver Implementations by Arm Ltd. All rights reserved.
 	<!--
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.6 

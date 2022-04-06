@@ -7,7 +7,7 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.7.0-rc1">
+    <release version="2.7.0" date="2022-04-06">
       Added PHY_LAN8740A driver
       Added ETH_LAN91C111 driver
       Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:

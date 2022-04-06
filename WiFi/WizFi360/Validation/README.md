@@ -1,4 +1,4 @@
-# Validation of the **WiFi CMSIS-Driver** for the **WIZnet WizFi360**
+# Validation of the WIZnet WizFi360 WiFi CMSIS-Driver
 
 ## The [Test Report](./TestReport.txt) file was produced with the following configuration:
  - Hardware:  **NXP MIMXRT1064-EVK board** with **WizFi360** on **WIZnet WizFi360-EVB**

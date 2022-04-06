@@ -1,4 +1,4 @@
-# Validation of the **WiFi CMSIS-Driver** for the **Espressif ESP32**
+# Validation of the Espressif ESP32 WiFi CMSIS-Driver
 
 ## The [Test Report](./TestReport.txt) file was produced with the following configuration:
  - Hardware:  **NXP MIMXRT1064-EVK** board with **ESP32-WROOM-32D** on **SparkFun ESP32 Thing Plus**

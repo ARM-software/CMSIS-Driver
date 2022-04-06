@@ -1,4 +1,4 @@
-# Validation of the **WiFi CMSIS-Driver** for the **Inventek ISM43362**
+# Validation of the Inventek ISM43362 WiFi CMSIS-Driver
 
 ## The [Test Report](./TestReport.txt) file was produced with the following configuration:
  - Hardware:  **STMicroelectonics B-L475E-IOT01A1** board with on-board **ISM43362** WiFi Module

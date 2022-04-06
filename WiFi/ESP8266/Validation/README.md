@@ -1,4 +1,4 @@
-# Validation of the **WiFi CMSIS-Driver** for the **Espressif ESP8266EX**
+# Validation of the Espressif ESP8266EX WiFi CMSIS-Driver
 
 ## The [Test Report](./TestReport.txt) file was produced with the following configuration:
  - Hardware:  **NXP MIMXRT1064-EVK** board with **ESP8266EX** on **SparkFun ESP8266 WiFi Shield**

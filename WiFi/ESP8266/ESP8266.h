@@ -343,6 +343,36 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
 
 
 /**
+  Set/Query Configures the Name of Station
+
+  Format S: AT+CWHOSTNAME=<hostname>
+  Format Q: AT+CWHOSTNAME?
+
+  Response S:
+  "OK"
+  "ERROR"
+
+  Response Q: Current HostName
+  
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+extern int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname);
+
+/**
+  Get response to HostName command
+
+  Response Q: +CWHOSTNAME:<host	name>
+  Example  Q: +CWHOSTNAME:ESP_XXXXXX\r\n\r\nOK
+
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+extern int32_t AT_Resp_HostName (char* hostname);
+
+
+/**
   Set/Query connected access point or access point to connect to.
   
   Command: CWJAP_CUR
@@ -353,7 +383,7 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
   \param[in]  bssid
   \return
 */
-extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const char *bssid);
+extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const uint8_t *bssid);
 
 /**
   Response to ConnectAP command.

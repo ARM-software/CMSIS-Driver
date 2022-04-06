@@ -1,0 +1,58 @@
+CMSIS-Driver_Validation v3.0.0 CMSIS-Driver WiFi Test Report   Apr  4 2022   14:30:13 
+
+TEST 01: WIFI_GetVersion                  
+  DV_WIFI.c (305): [INFO] Driver API version 1.1, Driver version 1.13
+                                          PASSED
+TEST 02: WIFI_GetCapabilities             PASSED
+TEST 03: WIFI_Initialize_Uninitialize     PASSED
+TEST 04: WIFI_PowerControl                
+  DV_WIFI.c (410): [WARNING] PowerControl (ARM_POWER_OFF) not supported
+                                          PASSED
+TEST 05: WIFI_GetModuleInfo               
+  DV_WIFI.c (473): [INFO] Module Info is ISM43362-M3G-L44-SPI,C6.2.1.7,v006.002.001.0002,v2.0.3,v9.0.0,120000000,Inventek eS-WiFi
+                                          PASSED
+TEST 06: WIFI_SetOption_GetOption         PASSED
+TEST 07: WIFI_Scan                        PASSED
+TEST 08: WIFI_Activate_Deactivate         PASSED
+TEST 09: WIFI_IsConnected                 PASSED
+TEST 10: WIFI_GetNetInfo                  PASSED
+TEST 11: WIFI_SocketCreate                PASSED
+TEST 12: WIFI_SocketBind                  PASSED
+TEST 13: WIFI_SocketListen                PASSED
+TEST 14: WIFI_SocketAccept                PASSED
+TEST 15: WIFI_SocketAccept_nbio           PASSED
+TEST 16: WIFI_SocketConnect               
+  DV_WIFI.c (4597): [WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ETIMEDOUT, expected ARM_SOCKET_ECONNREFUSED)
+                                          PASSED
+TEST 17: WIFI_SocketConnect_nbio          
+  DV_WIFI.c (4939): [WARNING] Non BSD-strict, connect to non-existent port (result ARM_SOCKET_ERROR, expected ARM_SOCKET_ECONNREFUSED)
+  DV_WIFI.c (4981): [WARNING] Non BSD-strict, connect to non-existent stream server (result ARM_SOCKET_ERROR, expected ARM_SOCKET_ETIMEDOUT)
+                                          PASSED
+TEST 18: WIFI_SocketRecv                  PASSED
+TEST 19: WIFI_SocketRecv_nbio             PASSED
+TEST 20: WIFI_SocketRecvFrom              PASSED
+TEST 21: WIFI_SocketRecvFrom_nbio         PASSED
+TEST 22: WIFI_SocketSend                  PASSED
+TEST 23: WIFI_SocketSendTo                PASSED
+TEST 24: WIFI_SocketGetSockName           PASSED
+TEST 25: WIFI_SocketGetPeerName           PASSED
+TEST 26: WIFI_SocketGetOpt                PASSED
+TEST 27: WIFI_SocketSetOpt                PASSED
+TEST 28: WIFI_SocketClose                 PASSED
+TEST 29: WIFI_SocketGetHostByName         PASSED
+TEST 30: WIFI_Ping                        PASSED
+TEST 31: WIFI_Transfer_Fixed              PASSED
+TEST 32: WIFI_Transfer_Incremental        PASSED
+TEST 33: WIFI_Send_Fragmented             PASSED
+TEST 34: WIFI_Recv_Fragmented             PASSED
+TEST 35: WIFI_Test_Speed                  PASSED
+TEST 36: WIFI_Concurrent_Socket           PASSED
+TEST 37: WIFI_Downstream_Rate             
+  DV_WIFI.c (9267): [INFO] Speed 259 KB/s
+                                          PASSED
+TEST 38: WIFI_Upstream_Rate               
+  DV_WIFI.c (9335): [INFO] Speed 377 KB/s
+                                          PASSED
+
+Test Summary: 38 Tests, 38 Passed, 0 Failed.
+Test Result: PASSED

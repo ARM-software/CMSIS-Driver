@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. June 2020
- * $Revision:    V1.9
+ * $Date:        4. April 2022
+ * $Revision:    V1.13
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -32,6 +32,10 @@
  *  - RSTN    = reset        (active low)  (output)
  *  - SSN     = slave select (active low)  (output)
  *  - DATARDY = data ready   (active high) (input)
+ *
+ * SPI transfer buffers (spi_send_buf and spi_recv_buf) can be placed in the
+ * appropriate ram by using section ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM)
+ * in the linker scatter file. Example: ".bss.driver.spi1".
  *
  * To initialize/uninitialize and drive SSN and RSTN pins, and get state of 
  * DATARDY pin you need to implement following functions 
@@ -59,7 +63,9 @@
  * ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 limitations:
  *  - firmware ISM43362_M3G_L44_SPI_C3.5.2.5.STM:
  *    - SocketConnect does not work if any of IP address octets is 255
- *      (for example IPs like x.y.z.255 or x.y.255.z do not work)
+ *      (for example IPs like x.y.z.255 or x.y.255.z do not work) or 
+ *      if first or last octet is 0 
+ *      (for example IPs 0.x.y.z or x.y.z.0 do not work)
  *    - module sometimes returns previous resolve result on request to 
  *      resolve non-existing host address
  *    - CMSIS Driver Validation test for SocketAccept fails if SocketBind and 
@@ -77,6 +83,9 @@
  *      WiFi Initialization and debugger connect has to be introduced and 
  *      WiFi Shield has to be reset manually before starting debug session.
  *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.7.bin is supported
+ *    - SocketConnect does not work if certain IP address octets contain 
+ *      value 0 or 255
+ *      (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
  *  - firmware ISM43362_M3G_L44_SPI_C6.2.1.8.bin is not supported:
  *    - added additional "\r\n" to "OK" response (now 12 bytes instead of 10)
  *      ("\r\n\r\n\r\nOK\r\n> " instead of previously 
@@ -89,6 +98,15 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.13
+ *    - Added configuration for asynchronous thread stack size
+ *  Version 1.12
+ *    - Enabled placement of SPI transfer buffers in appropriate RAM by using section
+ *      ".bss.driver.spin" (n = WIFI_ISM43362_SPI_DRV_NUM) in the linker scatter file
+ *  Version 1.11
+ *    - Added support for 5 GHz channels on Access Point
+ *  Version 1.10
+ *    - Fixed socket connect operation for non-blocking mode
  *  Version 1.9
  *    - Corrected Initialize function failure if called shortly after reset
  *    - Corrected default protocol selection in SocketCreate function
@@ -149,6 +167,10 @@
 #ifndef WIFI_ISM43362_SPI_BUS_SPEED
 #define WIFI_ISM43362_SPI_BUS_SPEED    (20000000)
 #endif
+#ifndef WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE
+#define WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE  (1024)
+#endif
+
 
 // Hardware dependent functions --------
 
@@ -170,7 +192,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,9)        // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,13)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -247,6 +269,16 @@ typedef struct {                        // Socket structure
 extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define ptrSPI                        (&SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM))
 
+#ifndef SPI_DRIVER_BSS
+#define SPI_DRIVER_BSS_STRING(str)      #str
+#define SPI_DRIVER_BSS_CREATE(id, n)    SPI_DRIVER_BSS_STRING(id##n)
+#define SPI_DRIVER_BSS_SYMBOL(id, n)    SPI_DRIVER_BSS_CREATE(id, n)
+#define SPI_DRIVER_BSS                  SPI_DRIVER_BSS_SYMBOL(      \
+                                          .bss.driver.spi,          \
+                                          WIFI_ISM43362_SPI_DRV_NUM \
+                                        )
+#endif
+
 #define MAX_DATA_SIZE                  (1460U)
 
 #define TRANSPORT_START                (1U)
@@ -254,6 +286,48 @@ extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define TRANSPORT_RESTART              (2U)
 #define TRANSPORT_SERVER               (1U)
 #define TRANSPORT_CLIENT               (0U)
+
+// Local variables and structures
+static uint8_t                          module_initialized = 0U;
+static uint8_t                          driver_initialized = 0U;
+static uint8_t                          firmware_stm       = 0U;
+static uint32_t                         firmware_version   = 0U;
+
+static uint8_t                          async_thread_stack_mem[WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE] __ALIGNED(8);
+
+static osEventFlagsId_t                 event_flags_id;
+static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
+static osMutexId_t                      mutex_id_spi;
+static osMutexId_t                      mutex_id_sockets;
+static osThreadId_t                     thread_id_async_poll;
+
+static ARM_WIFI_SignalEvent_t           signal_event_fn;
+
+static uint8_t                          spi_datardy_irq;
+
+static uint8_t                          oper_mode;
+static uint32_t                         kernel_tick_freq_in_ms;
+static uint8_t                          kernel_tick_freq_shift_to_ms;
+
+static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
+static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4) __attribute__((section(SPI_DRIVER_BSS)));
+static uint32_t                         spi_recv_len;
+static int32_t                          resp_code;
+
+static uint8_t                          recv_buf [WIFI_ISM43362_SOCKETS_NUM][MAX_DATA_SIZE] __ALIGNED(4);
+static uint32_t                         recv_len [WIFI_ISM43362_SOCKETS_NUM];
+
+static uint32_t                         sta_lp_time;
+static uint8_t                          sta_dhcp_client;
+static uint8_t                          ap_beacon_interval;
+static uint8_t                          ap_num_connected;
+static uint32_t                         ap_dhcp_lease_time;
+
+static uint8_t                          sta_local_ip  [4];
+static uint8_t                          ap_local_ip   [4];
+static uint8_t                          ap_mac     [8][6];
+
+static socket_t                         socket_arr[2 * WIFI_ISM43362_SOCKETS_NUM];
 
 // Mutex responsible for protecting SPI media access
 static const osMutexAttr_t mutex_spi_attr = {
@@ -273,51 +347,16 @@ static const osMutexAttr_t mutex_socket_attr = {
 
 // Thread for polling and processing asynchronous messages
 static const osThreadAttr_t thread_async_poll_attr = {
-  .name       = "Thread_Async_Poll",    // Thread name
-  .stack_size = 1024,                   // Required thread stack size
-  .priority   = WIFI_ISM43362_ASYNC_PRIORITY    // Initial thread priority
+  .name       = "WiFi_ISM43362_Async_Thread",   // name of the thread
+  .attr_bits  = osThreadDetached,               // attribute bits
+  .cb_mem     = NULL,                           // memory for control block (system allocated)
+  .cb_size    = 0U,                             // size of provided memory for control block (system defined)
+  .stack_mem  = &async_thread_stack_mem,        // memory for stack
+  .stack_size = sizeof(async_thread_stack_mem), // size of stack
+  .priority   = WIFI_ISM43362_ASYNC_PRIORITY,   // initial thread priority
+  .tz_module  = 0U,                             // TrustZone module identifier
+  .reserved   = 0U                              // reserved (must be 0)
 };
-
-
-// Local variables and structures
-static uint8_t                          module_initialized = 0U;
-static uint8_t                          driver_initialized = 0U;
-static uint8_t                          firmware_stm       = 0U;
-static uint32_t                         firmware_version   = 0U;
-
-static osEventFlagsId_t                 event_flags_id;
-static osEventFlagsId_t                 event_flags_sockets_id[WIFI_ISM43362_SOCKETS_NUM];
-static osMutexId_t                      mutex_id_spi;
-static osMutexId_t                      mutex_id_sockets;
-static osThreadId_t                     thread_id_async_poll;
-
-static ARM_WIFI_SignalEvent_t           signal_event_fn;
-
-static uint8_t                          spi_datardy_irq;
-
-static uint8_t                          oper_mode;
-static uint32_t                         kernel_tick_freq_in_ms;
-static uint8_t                          kernel_tick_freq_shift_to_ms;
-
-static uint8_t                          spi_send_buf[MAX_DATA_SIZE +  8] __ALIGNED(4);
-static uint8_t                          spi_recv_buf[MAX_DATA_SIZE + 12] __ALIGNED(4);
-static uint32_t                         spi_recv_len;
-static int32_t                          resp_code;
-
-static uint8_t                          recv_buf [WIFI_ISM43362_SOCKETS_NUM][MAX_DATA_SIZE] __ALIGNED(4);
-static uint32_t                         recv_len [WIFI_ISM43362_SOCKETS_NUM];
-
-static uint32_t                         sta_lp_time;
-static uint8_t                          sta_dhcp_client;
-static uint8_t                          ap_beacon_interval;
-static uint8_t                          ap_num_connected;
-static uint32_t                         ap_dhcp_lease_time;
-
-static uint8_t                          sta_local_ip  [4];
-static uint8_t                          ap_local_ip   [4];
-static uint8_t                          ap_mac     [8][6];
-
-static socket_t                         socket_arr[2 * WIFI_ISM43362_SOCKETS_NUM];
 
 #if    (WIFI_ISM43362_DEBUG_EVR == 1)
 #define EVR_DEBUG_SPI_MAX_LEN          (128)    // Maximum number of bytes of SPI debug message
@@ -621,7 +660,7 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     } while ((ret == ARM_DRIVER_OK) && (len_to_recv > 0U) && (WiFi_ISM43362_Pin_DATARDY() != 0U));
 
     // Sometimes module does not deactivate DATARDY line after all expected data was read-out
-    // so we keep reading dummy data (0x15) untill DATARDY signals chip has finished
+    // so we keep reading dummy data (0x15) until DATARDY signals chip has finished
     while (WiFi_ISM43362_Pin_DATARDY() != 0U) {
       if (ptrSPI->Receive(dummy_buf, sizeof(dummy_buf) / 2) == ARM_DRIVER_OK) {
         if (SPI_WaitTransferDone(WIFI_ISM43362_CMD_TIMEOUT) == 0U) {
@@ -647,7 +686,7 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
     // in which module returns no data but only pre-padded 0x15 with terminating "\r\nOK\r\n> "
     if (ptr_recv[0] == 0x15U) {
       for (i = 1U; i < len_recv; i++) {
-        if (ptr_recv[i] != 0x15U) {             // If non 0x15 value from begining was found
+        if (ptr_recv[i] != 0x15U) {             // If non 0x15 value from beginning was found
           break;
         }
       }
@@ -855,8 +894,10 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         uint32_t event_socket[WIFI_ISM43362_SOCKETS_NUM];
         uint32_t ticks, time_in_ms;
         int32_t  spi_ret;
+        int32_t  ret;
         uint8_t  u8_arr[6];
         uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
+        uint8_t  poll_nb_con;
         uint8_t  async_prescaler;
         uint16_t u16_val;
         uint8_t  i, hw_socket;
@@ -872,8 +913,9 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
           break;
         }
 
-        // Check if thread should poll for asynchronous messages or receive in long blocking
+        // Check if thread should poll for asynchronous messages, non-blocking connect or receive in long blocking
         poll_async  = 0U;
+        poll_nb_con = 0U;
         poll_recv   = 0U;
         check_async = 0U;
         for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
@@ -887,6 +929,9 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
               }
             }
           }
+          if ((socket_arr[i].non_blocking != 0U) && (socket_arr[i].state == SOCKET_STATE_CONNECTING)) {
+            poll_nb_con = 1U;
+          }
           if (socket_arr[i].poll_recv != 0U){
             poll_recv = 1U;
           }
@@ -897,7 +942,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
 
         repeat = 0U;
 
-        if ((poll_async != 0U) || (poll_recv != 0U)) {
+        if ((poll_async != 0U) || (poll_nb_con != 0U) || (poll_recv != 0U)) {
           event_signal = 0U;
           memset(event_socket, 0, sizeof(event_socket));
 
@@ -970,6 +1015,30 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                           event_signal = 1U;
                         }
                       }
+                    }
+                  }
+                }
+              }
+
+              if (poll_nb_con != 0U) {
+                // Loop through all sockets
+                for (i = 0; i < (2 * WIFI_ISM43362_SOCKETS_NUM); i++) {
+                  hw_socket = i;
+                  if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
+                    hw_socket -= WIFI_ISM43362_SOCKETS_NUM;     // Actually used socket of module
+                  }
+                  if ((socket_arr[i].non_blocking != 0U) && (socket_arr[i].state == SOCKET_STATE_CONNECTING)) {
+                    if ((socket_arr[i].bound == 0U) || ((socket_arr[i].bound != 0U) && (socket_arr[i].local_port == 0U))) {
+                      ret = SPI_StartStopTransportServerClient (hw_socket, socket_arr[i].protocol, 0U, &socket_arr[i].remote_ip[0], socket_arr[i].remote_port, TRANSPORT_START, TRANSPORT_CLIENT);
+                      if (ret == 0) {
+                        socket_arr[i].client = 1U;
+                        socket_arr[i].state  = SOCKET_STATE_CONNECTED;
+                      }
+                      if (ret == ARM_SOCKET_ERROR) {
+                        socket_arr[i].state = SOCKET_STATE_DISCONNECTED;
+                      }
+                    } else {
+                      socket_arr[i].state = SOCKET_STATE_DISCONNECTED;
                     }
                   }
                 }
@@ -2059,9 +2128,24 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
     }
   }
 
-  // Valid channel settings are 0 for auto and 1 to 13 for exact channel selection
+  // Valid channel settings are: 0 for auto, 1 to 13 for 2.4 GHz and
+  // 36, 40, 44, 48, 149, 153, 157, 161, 165 for 5 GHz exact channel selection
   if (config->ch > 13U) {
-    return ARM_DRIVER_ERROR_PARAMETER;
+    switch (config->ch) {
+      case 36:
+      case 40:
+      case 44:
+      case 48:
+      case 149:
+      case 153:
+      case 157:
+      case 161:
+      case 165:
+        // Allowed 5 GHz channels
+        break;
+      default:
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
   }
 
   switch (config->wps_method) {
@@ -2203,7 +2287,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
 
         // Send command to join a network
         if (ret == ARM_DRIVER_OK) {
-          // If IP that we got is 0.0.0.0 then try again for max 3 times to get valide IP
+          // If IP that we got is 0.0.0.0 then try again for max 3 times to get valid IP
           memcpy((void *)spi_send_buf, "C0\r\n", 4); spi_recv_len = sizeof(spi_recv_buf);
           ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
           if ((ret == ARM_DRIVER_OK) && (resp_code != 0)) {
@@ -3013,6 +3097,44 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
     // If request to connect to IP 0.0.0.0 for UDP meaning dissolve the connection
     dissolve_udp = 1U;
   }
+
+  // Handling of non-blocking socket connect
+  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
+    switch (socket_arr[socket].state) {
+      case SOCKET_STATE_CONNECTED:
+        if (dissolve_udp) {
+          // Dissolve is handled same as for blocking socket (immediately)
+          break;
+        }
+        return ARM_SOCKET_EISCONN;
+      case SOCKET_STATE_CONNECTING:
+        return ARM_SOCKET_EALREADY;
+      case SOCKET_STATE_CREATED:
+        if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
+          // Store remote host IP and port
+          memcpy((void *)socket_arr[socket].remote_ip, ip, 4);
+          socket_arr[socket].remote_port = port;
+
+          socket_arr[socket].state = SOCKET_STATE_CONNECTING;
+          osMutexRelease(mutex_id_sockets);
+
+          osEventFlagsSet(event_flags_id, EVENT_ASYNC_POLL);      // Trigger asynchronous thread poll for non-blocking connection
+
+          return ARM_SOCKET_EINPROGRESS;
+        }
+        return ARM_SOCKET_ERROR;
+      case SOCKET_STATE_DISCONNECTED:
+        if (osMutexAcquire(mutex_id_sockets, osWaitForever) == osOK) {
+          socket_arr[socket].state = SOCKET_STATE_CREATED;
+          osMutexRelease(mutex_id_sockets);
+        }
+        return ARM_SOCKET_ERROR;
+      default:
+        return ARM_SOCKET_EINVAL;
+    }
+  }
+
+  // Handling of blocking socket connect
   switch (socket_arr[socket].state) {
     case SOCKET_STATE_CONNECTED:
       if (dissolve_udp) {
@@ -3064,11 +3186,7 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
                 if (ret == 0) {
                   socket_arr[socket].client = 1U;
                   socket_arr[socket].state  = SOCKET_STATE_CONNECTED;
-                  if (socket_arr[socket].non_blocking != 0U) {  // If non-blocking mode
-                    ret = ARM_SOCKET_EINPROGRESS;
-                  }
-                }
-                if (ret == ARM_SOCKET_ERROR) {
+                } else {
                   ret = ARM_SOCKET_ETIMEDOUT;
                 }
               } else {
@@ -3121,12 +3239,13 @@ static int32_t WiFi_SocketConnect (int32_t socket, const uint8_t *ip, uint32_t i
 
 /**
   \fn            int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len)
-  \brief         Receive data on a connected socket.
+  \brief         Receive data or check if data is available on a connected socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3141,17 +3260,18 @@ static int32_t WiFi_SocketRecv (int32_t socket, void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Receive data on a socket.
+  \brief         Receive data or check if data is available on a socket.
   \param[in]     socket   Socket identification number
   \param[out]    buf      Pointer to buffer where data should be stored
-  \param[in]     len      Length of buffer (in bytes)
+  \param[in]     len      Length of buffer (in bytes), set len = 0 to check if data is available
   \param[out]    ip       Pointer to buffer where remote source address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)
                    - length of supplied 'ip' on input
                    - length of stored 'ip' on output
   \param[out]    port     Pointer to buffer where remote source port shall be returned (NULL for none)
   \return        status information
-                   - number of bytes received (>0)
+                   - number of bytes received (>=0), if len != 0
+                   - 0                            : Data is available (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3275,12 +3395,13 @@ static int32_t WiFi_SocketRecvFrom (int32_t socket, void *buf, uint32_t len, uin
 
 /**
   \fn            int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len)
-  \brief         Send data on a connected socket.
+  \brief         Send data or check if data can be sent on a connected socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3295,15 +3416,16 @@ static int32_t WiFi_SocketSend (int32_t socket, const void *buf, uint32_t len) {
 
 /**
   \fn            int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len, const uint8_t *ip, uint32_t ip_len, uint16_t port)
-  \brief         Send data on a socket.
+  \brief         Send data or check if data can be sent on a socket.
   \param[in]     socket   Socket identification number
   \param[in]     buf      Pointer to buffer containing data to send
-  \param[in]     len      Length of data (in bytes)
+  \param[in]     len      Length of data (in bytes), set len = 0 to check if data can be sent
   \param[in]     ip       Pointer to remote destination IP address
   \param[in]     ip_len   Length of 'ip' address in bytes
   \param[in]     port     Remote destination port number
   \return        status information
-                   - number of bytes sent (>0)
+                   - number of bytes sent (>=0), if len != 0
+                   - 0                            : Data can be sent (len = 0)
                    - ARM_SOCKET_ESOCK             : Invalid socket
                    - ARM_SOCKET_EINVAL            : Invalid argument (pointer to buffer or length)
                    - ARM_SOCKET_ENOTCONN          : Socket is not connected
@@ -3548,7 +3670,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
 
 /**
   \fn            int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port)
-  \brief         Retrieve remote IP address and port of a socket
+  \brief         Retrieve remote IP address and port of a socket.
   \param[in]     socket   Socket identification number
   \param[out]    ip       Pointer to buffer where remote address shall be returned (NULL for none)
   \param[in,out] ip_len   Pointer to length of 'ip' (or NULL if 'ip' is NULL)

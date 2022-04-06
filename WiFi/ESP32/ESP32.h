@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  *
- * $Date:        11. February 2020
+ * $Date:        23. March 2022
  *
  * Project:      ESP32 WiFi Driver
  * -------------------------------------------------------------------------- */
@@ -30,7 +30,7 @@
 
 /* AT command set version and variant used */
 #ifndef AT_VERSION
-#define AT_VERSION                      0x01020000
+#define AT_VERSION                      0x02010000
 #endif
 #ifndef AT_VARIANT
 #define AT_VARIANT                      AT_VARIANT_ESP32
@@ -38,6 +38,7 @@
 
 /* AT command set version definition               */
 /* Version as major.minor.patch.build:  0xMMmmppbb */
+#define AT_VERSION_2_1_0_0              0x02010000
 #define AT_VERSION_2_0_0_0              0x02000000
 #define AT_VERSION_1_9_0_0              0x01090000
 #define AT_VERSION_1_8_0_0              0x01080000
@@ -343,6 +344,36 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
 
 
 /**
+  Set/Query Configures the Name of Station
+
+  Format S: AT+CWHOSTNAME=<hostname>
+  Format Q: AT+CWHOSTNAME?
+
+  Response S:
+  "OK"
+  "ERROR"
+
+  Response Q: Current HostName
+  
+  \param[in]  at_cmode  Command mode (inquiry, set, exec)
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+extern int32_t AT_Cmd_HostName (uint32_t at_cmode, const char* hostname);
+
+/**
+  Get response to HostName command
+
+  Response Q: +CWHOSTNAME:<host	name>
+  Example  Q: +CWHOSTNAME:ESP_XXXXXX\r\n\r\nOK
+
+  \param[in]  hostname  the host name of the Station, the maximum length is 32 bytes.
+  \return 0: OK, -1: ERROR
+*/
+extern int32_t AT_Resp_HostName (char* hostname);
+
+
+/**
   Set/Query connected access point or access point to connect to.
   
   Command: CWJAP_CUR
@@ -353,7 +384,7 @@ extern int32_t AT_Resp_CurrentMode (uint32_t *mode);
   \param[in]  bssid
   \return
 */
-extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const char *bssid);
+extern int32_t AT_Cmd_ConnectAP (uint32_t at_cmode, const char *ssid, const char *pwd, const uint8_t *bssid);
 
 /**
   Response to ConnectAP command.

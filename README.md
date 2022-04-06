@@ -9,12 +9,14 @@ All drivers refer the API Interface header file defintions published in the CMSI
 
 ## ETH - Ethernet MAC & PHY or Ethernet PHY drivers
 - ETH_KSZ8851SNL
+- ETH_LAN91C111
 - ETH_LAN9220
 - PHY_DP83848
 - PHY_KSZ8061RNB
 - PHY_KSZ8081RNA
 - PHY_LAN8710A
 - PHY_LAN8720
+- PHY_LAN8740A
 - PHY_LAN8742A
 - PHY_ST802RT1
 

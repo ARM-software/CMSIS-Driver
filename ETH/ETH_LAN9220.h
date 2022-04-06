@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        16. February 2018
- * $Revision:    V1.0
+ * $Date:        25. March 2022
+ * $Revision:    V1.1
  *
  * Project:      Register Interface Definitions for LAN9220
  * -------------------------------------------------------------------- */

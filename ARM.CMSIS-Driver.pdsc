@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.7.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
@@ -7,6 +7,10 @@
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.7.1" date="2022-04-26">
+      Added support for Arm Cortex-M85 processor based devices
+      Added support for Arm China Star-MC1 processor based devices
+    </release>
     <release version="2.7.0" date="2022-04-06">
       Added PHY_LAN8740A driver
       Added ETH_LAN91C111 driver
@@ -116,7 +120,7 @@
 
   <conditions>
     <condition id="Cortex-M Device">
-      <description>Cortex-M processor based device: Cortex-M0, Cortex-M0+, Cortex-M1, Cortex-M3, Cortex-M4, Cortex-M7, Cortex-M23, Cortex-M33, SC000 or SC3000</description>
+      <description>Cortex-M processor based device: Cortex-M0/M0+/M1/M3/M4/M7/M23/M33/M35P/M55/M85, ARMV8MBL/ML, Star-MC1, SC000/300</description>
       <accept Dcore="Cortex-M0"/>
       <accept Dcore="Cortex-M0+"/>
       <accept Dcore="Cortex-M1"/>
@@ -127,8 +131,10 @@
       <accept Dcore="Cortex-M33"/>
       <accept Dcore="Cortex-M35P"/>
       <accept Dcore="Cortex-M55"/>
+      <accept Dcore="Cortex-M85"/>
       <accept Dcore="ARMV8MBL"/>
       <accept Dcore="ARMV8MML"/>
+      <accept Dcore="Star-MC1"/>
       <accept Dcore="SC000"/>
       <accept Dcore="SC300"/>
     </condition>

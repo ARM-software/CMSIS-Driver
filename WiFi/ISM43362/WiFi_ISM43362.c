@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        4. April 2022
- * $Revision:    V1.13
+ * $Date:        15. June 2022
+ * $Revision:    V1.14
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -98,6 +98,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.14
+ *    - Added statically allocated control block for asynchronous thread if FreeRTOS is used
  *  Version 1.13
  *    - Added configuration for asynchronous thread stack size
  *  Version 1.12
@@ -144,6 +146,10 @@
 #include "cmsis_os2.h"
 #include "cmsis_compiler.h"
 
+#ifdef   RTE_CMSIS_RTOS2_FreeRTOS
+#include "FreeRTOS.h"
+#endif
+
 #include "Driver_WiFi.h"
 
 #include "Driver_SPI.h"
@@ -171,6 +177,11 @@
 #define WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE  (1024)
 #endif
 
+// If FreeRTOS is used, use statically allocated control block for thread
+// For RTX use system allocated control block
+#ifdef  RTE_CMSIS_RTOS2_FreeRTOS
+#define WIFI_ISM43362_ASYNC_THREAD_CB_SIZE     (sizeof(StaticTask_t))
+#endif
 
 // Hardware dependent functions --------
 
@@ -192,7 +203,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,13)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,14)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -293,6 +304,9 @@ static uint8_t                          driver_initialized = 0U;
 static uint8_t                          firmware_stm       = 0U;
 static uint32_t                         firmware_version   = 0U;
 
+#ifdef WIFI_ISM43362_ASYNC_THREAD_CB_SIZE
+static uint8_t                          async_thread_cb_mem   [WIFI_ISM43362_ASYNC_THREAD_CB_SIZE]    __ALIGNED(4) __attribute__((section(".bss.os.thread.cb")));
+#endif
 static uint8_t                          async_thread_stack_mem[WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE] __ALIGNED(8);
 
 static osEventFlagsId_t                 event_flags_id;
@@ -349,8 +363,13 @@ static const osMutexAttr_t mutex_socket_attr = {
 static const osThreadAttr_t thread_async_poll_attr = {
   .name       = "WiFi_ISM43362_Async_Thread",   // name of the thread
   .attr_bits  = osThreadDetached,               // attribute bits
-  .cb_mem     = NULL,                           // memory for control block (system allocated)
+#ifdef WIFI_ISM43362_ASYNC_THREAD_CB_SIZE
+  .cb_mem     = async_thread_cb_mem,            // memory for control block (statically allocated, for FreeRTOS)
+  .cb_size    = sizeof(async_thread_cb_mem),    // size of provided memory for control block
+#else
+  .cb_mem     = NULL,                           // memory for control block (system allocated, for RTX)
   .cb_size    = 0U,                             // size of provided memory for control block (system defined)
+#endif
   .stack_mem  = &async_thread_stack_mem,        // memory for stack
   .stack_size = sizeof(async_thread_stack_mem), // size of stack
   .priority   = WIFI_ISM43362_ASYNC_PRIORITY,   // initial thread priority

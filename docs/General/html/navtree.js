@@ -8,6 +8,7 @@ var NAVTREE =
       [ "Multiple Driver Instances", "driver_eth.html#driver_eth_multiple", null ]
     ] ],
     [ "WiFi", "driver_WiFi.html", [
+      [ "DA16200", "driver_WiFi.html#driver_DA16200", null ],
       [ "ISM43362", "driver_WiFi.html#driver_ISM43362", [
         [ "Flashing a different firmware to ISMART43362-E Shield", "driver_WiFi.html#ismart43362_e_firmware_download", null ]
       ] ],

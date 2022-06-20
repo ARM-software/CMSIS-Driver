@@ -45,6 +45,21 @@ Revision History
       <th>Description</th>
     </tr>
     <tr>
+      <td>2.7.2</td>
+      <td>
+        - Added Renesas DA16200 WiFi driver
+        - Updated Inventek ISM43362 WiFi driver (version 1.14.0):
+          - Added statically allocated control block for asynchronous thread if FreeRTOS is used
+      </td>
+    </tr>
+    <tr>
+      <td>2.7.1</td>
+      <td>
+        - Added support for Arm Cortex-M85 processor based devices
+        - Added support for Arm China Star-MC1 processor based devices
+      </td>
+    </tr>
+    <tr>
       <td>2.7.0</td>
       <td>
         - Added PHY_LAN8740A driver
@@ -299,6 +314,12 @@ extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
 \page driver_WiFi WiFi
+
+\section driver_DA16200 DA16200
+
+The documentation for the Renesas DA16200 can be found here: https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices
+
+DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer) is required. Firmware image and programing instructions "DA16200 DA16600 FreeRTOS Getting Started Guide" are also available on the above web site.
 
 \section driver_ISM43362 ISM43362
 

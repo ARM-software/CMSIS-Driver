@@ -3,10 +3,15 @@
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
-  <url>http://www.keil.com/pack/</url>
+  <url>https://www.keil.com/pack/</url>
   <license>LICENSE.txt</license>
 
   <releases>
+    <release version="2.7.2" date="2022-06-20">
+      Added Renesas DA16200 WiFi driver
+      Updated Inventek ISM43362 WiFi driver (version 1.14.0):
+      - Added statically allocated control block for asynchronous thread if FreeRTOS is used
+    </release>
     <release version="2.7.1" date="2022-04-26">
       Added support for Arm Cortex-M85 processor based devices
       Added support for Arm China Star-MC1 processor based devices
@@ -448,8 +453,29 @@
 
     <!-- CMSIS-Driver WiFi -->
 
+    <!-- DA16200 -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="DA16200" Capiversion="1.1.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+      <description>Renesas DA16200 WiFi Driver (UART)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_WiFi_DA16200_UART   /* Driver WiFi DA16200 (UART) */
+      </RTE_Components_h>
+      <files>
+        <file category="header"  name="WiFi/DA16200/Config/WiFi_DA16200_Config.h" attr="config" version="1.0.0"/>
+        <file category="source"  name="WiFi/DA16200/Config/WiFi_DA16200_HW.c"     attr="config" version="1.0.0"/>
+        <file category="include" name="WiFi/DA16200/"/>
+        <file category="source"  name="WiFi/DA16200/WiFi_DA16200.c"/>
+        <file category="source"  name="WiFi/DA16200/WiFi_DA16200_Os.c"/>
+        <file category="source"  name="WiFi/DA16200/DA16200.c"/>
+        <file category="source"  name="WiFi/DA16200/DA16200_Serial.c"/>
+        <file category="include" name="WiFi/DA16200/BufList/"/>
+        <file category="source"  name="WiFi/DA16200/BufList/BufList.c"/>
+        <file category="source"  name="WiFi/DA16200/BufList/LinkList.c"/>
+      </files>
+    </component>
+
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.13.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.14.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

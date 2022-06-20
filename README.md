@@ -39,6 +39,7 @@ All drivers refer the API Interface header file defintions published in the CMSI
 - SPI_MultiSlave
 
 ## WiFi - WiFi device drivers
+- DA16200
 - ISM43362
 - ESP32
 - ESP8266

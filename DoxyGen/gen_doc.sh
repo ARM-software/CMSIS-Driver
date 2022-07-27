@@ -64,8 +64,13 @@ function doxygen {
 }
 
 if [[ $REGEN != 0 ]]; then
-    echo "Cleaning existing documentation ..."
-    find "${DIRNAME}/../Documentation/" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+    if [[ -d "${DIRNAME}/../Documentation/" ]]; then
+        echo "Cleaning existing documentation ..."
+        find "${DIRNAME}/../Documentation/" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+    else
+        echo "Creating Documentation folder ..."
+        mkdir -p "${DIRNAME}/../Documentation/"
+    fi
 fi
 
 echo "Generating documentation ..."

@@ -596,6 +596,7 @@ CASE_SENSE_NAMES       = YES
 # The default value is: NO.
 
 HIDE_SCOPE_NAMES       = NO
+
 # If the HIDE_COMPOUND_REFERENCE tag is set to NO (default) then doxygen will
 # append additional text to a page's title, such as Class Reference. If set to
 # YES the compound reference will be hidden.

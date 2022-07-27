@@ -25,7 +25,6 @@ File/Directory            | Content
 \b I2C/                   | \ref driver_I2C driver implementations
 \b NAND/                  | \ref driver_NAND driver implementations
 \b SPI/                   | \ref driver_SPI driver implementations
-\b Utilities/             | Utilities for generating the pack
 \b WiFi/                  | \ref driver_WiFi driver implementations
 
 \section rev_hist Revision History

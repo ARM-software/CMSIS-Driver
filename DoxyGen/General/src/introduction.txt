@@ -1,43 +1,33 @@
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
-\mainpage
+\mainpage Overview
 
-The <a href="http://arm-software.github.io/CMSIS_5/Driver/html/index.html" target="_blank"><b>CMSIS-Driver specification</b></a>
-is a software API that describes peripheral driver interfaces for middleware stacks and user applications.
+The **[CMSIS-Driver specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html)** defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.
 
-This software pack contains actual CMSIS-Driver implementations for various devices. It is publicly hosted on GitHub and
-interested parties are welcome to push their drivers to this repository:
-<a href="https://github.com/arm-software/CMSIS-Driver" target="_blank"><b>https://github.com/arm-software/CMSIS-Driver</b></a>.
+This documentation covers a set of reference CMSIS-Driver implementations for external peripheral devices.
 
+The implementations are maintained in a public **[GitHub repository](https://github.com/arm-software/CMSIS-Driver)**. Their releases in **[CMSIS Pack format](https://www.open-cmsis-pack.org/)** are also available on **[CMSIS Packs page](https://developer.arm.com/tools-and-software/embedded/cmsis/cmsis-packs)** under *Arm* - *CMSIS Drivers for external devices* category and can be used in environments supporting the CMSIS-Pack concept.
 
-\section License License
+Interested parties are welcome to contribute their drivers to the referenced repository.
 
-The CMSIS is provided free of charge by Arm under Apache 2.0 license. 
-View the <a href="LICENSE.txt">Apache 2.0 License</a>.
+\section driver_pack_content Pack Content
 
+The <b>ARM::CMSIS-Driver</b> Pack contains the following items:
 
-\section driver_pack_content ARM::CMSIS-Driver Pack
+File/Directory            | Content
+:-------------------------|:---------------------------------------------------------------------------------
+\b ARM.CMSIS-Driver.pdsc  | Package description file in CMSIS-Pack format.
+\b LICENSE.txt            | CMSIS license agreement (Apache 2.0)
+\b Config/                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations
+\b Documentation/         | This documentation
+\b ETH/                   | \ref driver_eth driver implementations
+\b Flash/                 | \ref driver_Flash memory driver implementations
+\b I2C/                   | \ref driver_I2C driver implementations
+\b NAND/                  | \ref driver_NAND driver implementations
+\b SPI/                   | \ref driver_SPI driver implementations
+\b WiFi/                  | \ref driver_WiFi driver implementations
 
-The <b>ARM::CMSIS-Driver</b> Pack contains the following:
-
-File/Directory           | Content                                                                           
-:------------------------|:---------------------------------------------------------------------------------
-\b ARM.CMSIS-Driver.pdsc | Package description file in CMSIS-Pack format.                                                         
-\b LICENSE.txt           | CMSIS license agreement (Apache 2.0)
-\b Config                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations                            
-\b Documentation         | This documentation
-\b ETH                   | \ref driver_eth driver implementations
-\b Flash                 | \ref driver_Flash memory driver implementations
-\b I2C                   | \ref driver_I2C driver implementations
-\b NAND                  | \ref driver_NAND driver implementations
-\b SPI                   | \ref driver_SPI driver implementations
-\b Utilities             | Utilities for generating the pack
-\b WiFi                  | \ref driver_WiFi driver implementations
-
-<hr>
-
-Revision History
-----------------
+\section rev_hist Revision History
 
 <table class="cmtable" summary="Revision History">
     <tr>
@@ -188,6 +178,12 @@ Revision History
       </td>
     </tr>
 </table>
+
+\section License License
+
+The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license.
+See the <a href="LICENSE.txt">Apache 2.0 License</a>.
+
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -196,7 +192,7 @@ Revision History
 
 \section driver_eth_devices Driver Implementations
 
-The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
 
 <table class="cmtable" summary="Ethernet Drivers">
     <tr>
@@ -207,70 +203,70 @@ The \ref driver_pack_content contains implementations of <a href="https://arm-so
     <tr>
       <td>\b KSZ8851SNL/SNLI</td>
       <td>
-       Ethernet PHY and MAC interfaces for <a href="https://www.microchip.com/KSZ8851" target="_blank"><b>KSZ8851</b></a>.
+       Ethernet PHY and MAC interfaces for the Microchip <a href="https://www.microchip.com/KSZ8851" target="_blank"><b>KSZ8851</b></a>.
       </td>
     </tr>
     \anchor driver_LAN9220
     <tr>
       <td>\b LAN9220</td>
       <td>
-       Ethernet PHY and MAC interfaces for <a href="https://www.microchip.com/LAN9220" target="_blank"><b>LAN9220</b></a>.
+       Ethernet PHY and MAC interfaces for the Microchip <a href="https://www.microchip.com/LAN9220" target="_blank"><b>LAN9220</b></a>.
       </td>
     </tr>
     \anchor driver_DP83848C
     <tr>
       <td>\b DP83848C</td>
       <td>
-       Ethernet PHY interface for <a href="http://www.ti.com/product/DP83848C" target="_blank"><b>DP83848C</b></a>.
+       Ethernet PHY interface for the Texas Instruments <a href="http://www.ti.com/product/DP83848C" target="_blank"><b>DP83848C</b></a>.
       </td>
     </tr>
     \anchor driver_KSZ8061RNB
     <tr>
       <td>\b KSZ8061RNB</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/KSZ8061" target="_blank"><b>KSZ8061</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/KSZ8061" target="_blank"><b>KSZ8061</b></a>.
       </td>
     </tr>
     \anchor driver_KSZ8081RNA
     <tr>
       <td>\b KSZ8081RNA</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/KSZ8081" target="_blank"><b>KSZ8081</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/KSZ8081" target="_blank"><b>KSZ8081</b></a>.
       </td>
     </tr>
     \anchor driver_LAN8710A
     <tr>
       <td>\b LAN8710A</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8710A" target="_blank"><b>LAN8710A</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8710A" target="_blank"><b>LAN8710A</b></a>.
       </td>
     </tr>
     \anchor driver_LAN8720
     <tr>
       <td>\b LAN8720</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>LAN8720</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>LAN8720</b></a>.
       </td>
     </tr>
     \anchor driver_LAN8740A
     <tr>
       <td>\b LAN8740A</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8740A" target="_blank"><b>LAN8740A</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8740A" target="_blank"><b>LAN8740A</b></a>.
       </td>
     </tr>
     \anchor driver_LAN8742A
     <tr>
       <td>\b LAN8742A</td>
       <td>
-       Ethernet PHY interface for <a href="https://www.microchip.com/LAN8742A" target="_blank"><b>LAN8742A</b></a>.
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8742A" target="_blank"><b>LAN8742A</b></a>.
       </td>
     </tr>
     \anchor driver_ST802RT1
     <tr>
       <td>\b ST802RT1</td>
       <td>
-       Ethernet PHY interface for <a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf" target="_blank"><b>ST802RT1</b></a>.
+       Ethernet PHY interface for the STMicroelectronics <a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf" target="_blank"><b>ST802RT1</b></a>.
       </td>
     </tr>
 </table>
@@ -315,17 +311,66 @@ extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
 /**
 \page driver_WiFi WiFi
 
-\section driver_DA16200 DA16200
+\section driver_wifi_devices Driver Implementations
+
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__wifi__interface__gr.html" target="_blank"><b>CMSIS-WiFi drivers</b></a> for the following devices:
+<table class="cmtable" summary="WiFi Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>\ref driver_DA16200 </td>
+      <td>
+       WiFi Driver for the Renesas DA16200.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ESP32</td>
+      <td>
+       WiFi Driver for the Espressif ESP32.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ESP8266</td>
+      <td>
+       WiFi Driver for the Espressif ESP8266.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ISM43362</td>
+      <td>
+       WiFi Driver for the Inventek ISM43362.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_WizFi360</td>
+      <td>
+       WiFi Driver for the WizNet WizFi360.</td>
+    </tr>
+</table>
+
+
+
+\subsection driver_DA16200 DA16200
 
 The documentation for the Renesas DA16200 can be found here: https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices
 
 DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer) is required. Firmware image and programing instructions "DA16200 DA16600 FreeRTOS Getting Started Guide" are also available on the above web site.
 
-\section driver_ISM43362 ISM43362
+\subsection driver_ESP32 ESP32
+
+The documentation for the Espressif ESP32 can be found here: https://www.espressif.com/en/products/hardware/esp-wroom-32/overview
+
+\subsection driver_ESP8266 ESP8266
+
+The documentation for the Espressif ESP8266 can be found here: https://www.espressif.com/en/products/hardware/esp8266ex/overview/
+
+\subsection driver_ISM43362 ISM43362
 
 The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
 
-\subsection ismart43362_e_firmware_download Flashing a different firmware to ISMART43362-E Shield
+\subsubsection ismart43362_e_firmware_download Flashing a different firmware to ISMART43362-E Shield
 
 The ISMART43362-E Shield has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
 flashed with the firmware for UART communication. To enable SPI communication, follow these steps to flash the module:
@@ -364,15 +409,7 @@ flashed with the firmware for UART communication. To enable SPI communication, f
 
 \note Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!
 
-\section driver_ESP32 ESP32
-
-The documentation for the Espressif ESP32 can be found here: https://www.espressif.com/en/products/hardware/esp-wroom-32/overview
-
-\section driver_ESP8266 ESP8266
-
-The documentation for the Espressif ESP8266 can be found here: https://www.espressif.com/en/products/hardware/esp8266ex/overview/
-
-\section driver_WizFi360 WizFi360
+\subsection driver_WizFi360 WizFi360
 
 The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
@@ -7,113 +7,8 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.7.2" date="2022-06-20">
-      Added Renesas DA16200 WiFi driver
-      Updated Inventek ISM43362 WiFi driver (version 1.14.0):
-      - Added statically allocated control block for asynchronous thread if FreeRTOS is used
-    </release>
-    <release version="2.7.1" date="2022-04-26">
-      Added support for Arm Cortex-M85 processor based devices
-      Added support for Arm China Star-MC1 processor based devices
-    </release>
-    <release version="2.7.0" date="2022-04-06">
-      Added PHY_LAN8740A driver
-      Added ETH_LAN91C111 driver
-      Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
-      - Corrected invalid power status in MAC_PowerControl
-      Updated ESP8266 WiFi driver:
-      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Fixed return string null terminator in GetModuleInfo
-      - Fixed SocketSendTo for stream socket lengths above 2048 bytes
-      - Enabled placement of USART transfer buffers in appropriate RAM by using section
-        ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
-      Updated Inventek ISM43362 WiFi driver (version 1.13.0):
-      - Supports also ISM43340 Module
-      - Added configuration for asynchronous thread stack size
-      - Added support for 5 GHz channels on Access Point
-      - Fixed socket connect operation for non-blocking mode
-      - Enabled placement of SPI transfer buffers in appropriate RAM by using section
-        ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
-      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation:
-        SocketConnect does not work if first or last octet of IP address is 0
-        (for example IPs 0.x.y.z or x.y.z.0 do not work)
-      - Detected shield firmware limitation: SocketConnect does not work if 
-        certain IP address octets contain value 0 or 255
-        (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
-      - Updated CMSIS Driver Validation test results
-    </release>
-    <release version="2.6.1" date="2020-07-13">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Added auto protocol selection in SocketCreate
-      - Fixed socket default timeout (zero == no time out)
-      - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
-      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
-      - Corrected Initialize function failure if called shortly after reset
-      - Corrected default protocol selection in SocketCreate function
-      - Detected STM firmware limitation: SocketConnect does not 
-        work if any of IP address octets is 255 (for example IP like x.y.z.255)
-    </release>
-    <release version="2.6.0" date="2020-04-29">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
-      - Added DHCP setting before station Activate
-      - Added read of DHCP assigned IPs after station activate
-      - Fixed serial tx busy flag handling
-      - Fixed function AT_Resp_ConnectAP for NULL argument
-      - Enhanced serial communication startup procedure
-      Updated Inventek ISM43362 WiFi driver (version 1.8.0):
-      - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
-      - Corrected GetModuleInfo return string termination
-      - Corrected functionality when DATARDY line is used in polling mode
-      - Corrected SocketConnect function never returning 0 in non-blocking mode
-      - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
-      - Corrected delay after module reset
-      - For non-STM firmware variant only firmware version 6.2.1.7 is supported
-      Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
-    </release>
-    <release version="2.5.0" date="2019-12-02">
-      Added Espressif ESP32 WiFi driver
-      Added Espressif ESP8266 WiFi driver
-      Added Wiznet WizFi360 WiFi driver
-      Updated Inventek ISM43362 WiFi driver (version 1.3.0):
-      - Fixed SocketClose functionality
-      - Fixed Activate function not to set password if OPEN security is used
-      - Updated Initialization function to handle unavailable reset pin
-      - Added debug of SPI traffic with Event Recorder
-      - Added CMSIS Driver Validation test results
-    </release>
-    <release version="2.4.1" date="2019-07-11">
-      Updated Inventek ISM43362 WiFi driver (version 1.0.0)
-      Corrected PHY_LAN8742A power down bit definition
-    </release>
-    <release version="2.4.0" date="2019-03-15">
-      Added Inventek ISM43362 WiFi driver
-      Updated conditions to support Cortex-M1
-    </release>
-    <release version="2.3.0" date="2018-06-15">
-      Updated PHY_KSZ8081RNA to support 50MHz reference clock
-      NAND MemoryBus driver updated:
-      - Fixed Ready/Busy configuration handling
-      - Enhanced compatibility for ARM Compiler 6
-      Flash Drivers updated:
-      - Added data cache handling to memory bus based drivers.
-      - Fixed warnings flagged by ARM Compiler 6
-    </release>
-    <release version="2.2.1" date="2018-03-20">
-      Added web link to hardware documentation for CMSIS-Driver components.
-    </release>
-    <release version="2.2.0" date="2018-03-19">
-      Updated component description setting the vendor explicitly to 'Cvendor="Keil"' to make migration automatic for existing project.
-      - if a driver component is no longer found in an existing project, please select the available component with the same name from the Run Time Environment.
-    </release>
-    <release version="2.1.0" date="2018-02-21">
-      Added LAN9220 Ethernet MAC+PHY driver
-      Updated I2C and SPI multi-slave wrapper configuration options moved into separate file.
-    </release>
-    <release version="2.0.0" date="2018-02-09">
-      Initial release
-      - the drivers were previously included in pack: Keil::MDK-Middleware.
+    <release version="0.0.0">
+      Active development ...
     </release>
   </releases>
 
@@ -430,7 +325,7 @@
         #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/General/html/driver_I2C.html"/>
+        <file category="doc"    name="Documentation/html/driver_I2C.html"/>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
       </files>
@@ -444,7 +339,7 @@
         #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/General/html/driver_SPI.html"/>
+        <file category="doc"    name="Documentation/html/driver_SPI.html"/>
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>

@@ -6,13 +6,15 @@
 # Pre-requisites:
 # - bash shell (for Windows: install git for Windows)
 # - doxygen 1.9.2
+# - git
+# - gh cli
 
 set -o pipefail
 
-DIRNAME=$(dirname $(readlink -f $0))
+DIRNAME=$(dirname $(realpath $0))
 DOXYGEN=$(which doxygen)
 REQ_DXY_VERSION="1.9.2"
-REQUIRED_GEN_PACK_LIB="0.1.0"
+REQUIRED_GEN_PACK_LIB="0.0.0"
 
 ############ gen-pack library ###########
 
@@ -43,6 +45,7 @@ function load_lib() {
 
 load_lib
 find_git
+find_ghcli
 
 #########################################
 
@@ -69,18 +72,18 @@ echo "Generating documentation ..."
 
 pushd $DIRNAME > /dev/null
 
-rm -rf ${DIRNAME}/../docs/html
+rm -rf ${DIRNAME}/../Documentation/html
 sed -e "s/{projectNumber}/${VERSION}/" "${DIRNAME}/driver.dxy.in" \
   > "${DIRNAME}/driver.dxy"
 
-git_changelog -f html 1> history.txt 2>/dev/null
+git_changelog -f html > src/history.txt
 
 echo "${DOXYGEN} driver.dxy"
 "${DOXYGEN}" driver.dxy
 popd > /dev/null
 
 if [[ $2 != 0 ]]; then
-  cp -f "${DIRNAME}/Doxygen_Templates/search.css" "${DIRNAME}/../docs/html/search/"
+  cp -f "${DIRNAME}/Doxygen_Templates/search.css" "${DIRNAME}/../Documentation/html/search/"
 fi
 
 projectName=$(grep -E "PROJECT_NAME\s+=" "${DIRNAME}/driver.dxy" | sed -r -e 's/[^"]*"([^"]+)"/\1/')
@@ -94,6 +97,6 @@ sed -e "s/{datetime}/${datetime}/" "${DIRNAME}/Doxygen_Templates/footer.js.in" \
   | sed -e "s/{projectName}/${projectName}/" \
   | sed -e "s/{projectNumber}/${VERSION}/" \
   | sed -e "s/{projectNumberFull}/${VERSION_FULL}/" \
-  > "${DIRNAME}/../docs/html/footer.js"
+  > "${DIRNAME}/../Documentation/html/footer.js"
 
 exit 0

@@ -1,0 +1,85 @@
+<table class="cmtable" summary="Revision History">
+<tr>
+  <th>Version</th>
+  <th>Description</th>
+</tr>
+<tr>
+  <td>vARM.CMSIS-Driver.0.0.10</td>
+  <td>
+    added packaging batch file
+  </td>
+</tr>
+<tr>
+  <td>v2.7.2</td>
+  <td>
+    Update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.7.1</td>
+  <td>
+    Merge branch 'develop'
+  </td>
+</tr>
+<tr>
+  <td>v2.7.0</td>
+  <td>
+    Update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.6.1</td>
+  <td>
+    Update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.6.0</td>
+  <td>
+    Update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.5.0</td>
+  <td>
+    Update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.4.1</td>
+  <td>
+    update documentation hosted on github
+  </td>
+</tr>
+<tr>
+  <td>v2.4.0</td>
+  <td>
+    add link to doc in ISM43362 component
+  </td>
+</tr>
+<tr>
+  <td>v2.3.0</td>
+  <td>
+    finalize for public version 2.3.0
+  </td>
+</tr>
+<tr>
+  <td>v2.2.0</td>
+  <td>
+    adding doxygen based documentation
+  </td>
+</tr>
+<tr>
+  <td>v2.1.0</td>
+  <td>
+    Public Release Version 2.1.0
+  </td>
+</tr>
+<tr>
+  <td>v2.0.0</td>
+  <td>
+    release date set
+  </td>
+</tr>
+</table>
+

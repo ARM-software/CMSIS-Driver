@@ -38,27 +38,27 @@ PROJECT_NAME           = "CMSIS-Driver Implementations"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = "Version 2.7.2"
+PROJECT_NUMBER         = "Version {projectNumber}"
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "MCU independent CMSIS driver implementations"
+PROJECT_BRIEF          = "MCU independent CMSIS-Driver implementations"
 
-# With the PROJECT_LOGO tag one can specify an logo or icon that is included in
-# the documentation. The maximum height of the logo should not exceed 55 pixels
-# and the maximum width should not exceed 200 pixels. Doxygen will copy the logo
-# to the output directory.
+# With the PROJECT_LOGO tag one can specify a logo or an icon that is included
+# in the documentation. The maximum height of the logo should not exceed 55
+# pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
+# the logo to the output directory.
 
-PROJECT_LOGO           = ../Doxygen_Templates/cmsis_logo_white_small.png
+PROJECT_LOGO           = Doxygen_Templates/cmsis_logo_white_small.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = ../../Documentation/General
+OUTPUT_DIRECTORY       = ../Documentation/
 
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create 4096 sub-
 # directories (in 2 levels) under the output directory of each output format and
@@ -263,8 +263,6 @@ TAB_SIZE               = 2
 
 ALIASES                = 
 
-
-
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
 # instance, some of the names that are used will be different. The list of all
@@ -305,7 +303,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 # parses. With this tag you can assign which parser to use for a given
 # extension. Doxygen has a built-in mapping, but you can override or extend it
 # using this tag. The format is ext=language, where ext is a file extension, and
-# language is one of the parsers supported by doxygen: IDL, Java, Javascript,
+# language is one of the parsers supported by doxygen: IDL, Java, JavaScript,
 # Csharp (C#), C, C++, Lex, D, PHP, md (Markdown), Objective-C, Python, Slice,
 # VHDL, Fortran (fixed format Fortran: FortranFixed, free formatted Fortran:
 # FortranFree, unknown formatted Fortran: Fortran. In the later case the parser
@@ -322,7 +320,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 #
 # Note see also the list of default file extension mappings.
 
-EXTENSION_MAPPING      = 
+EXTENSION_MAPPING      =
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -774,7 +772,7 @@ FILE_VERSION_FILTER    =
 # DoxygenLayout.xml, doxygen will parse it automatically even if the LAYOUT_FILE
 # tag is left empty.
 
-LAYOUT_FILE            = ../Doxygen_Templates/Layout_forUser.xml
+LAYOUT_FILE            = Doxygen_Templates/Layout_forUser.xml
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files containing
 # the reference definitions. This must be a list of .bib files. The .bib
@@ -1260,7 +1258,7 @@ HTML_FILE_EXTENSION    = .html
 # of the possible markers and block names see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_HEADER            = ../Doxygen_Templates/header.html
+HTML_HEADER            = Doxygen_Templates/header.html
 
 # The HTML_FOOTER tag can be used to specify a user-defined HTML footer for each
 # generated HTML page. If the tag is left blank doxygen will generate a standard
@@ -1270,7 +1268,7 @@ HTML_HEADER            = ../Doxygen_Templates/header.html
 # that doxygen normally uses.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_FOOTER            = ../Doxygen_Templates/footer.html
+HTML_FOOTER            = Doxygen_Templates/footer.html
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading style
 # sheet that is used by each HTML page. It can be used to fine-tune the look of
@@ -1295,7 +1293,7 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = ../Doxygen_Templates/extra_stylesheet.css
+HTML_EXTRA_STYLESHEET  = Doxygen_Templates/extra_stylesheet.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1305,13 +1303,14 @@ HTML_EXTRA_STYLESHEET  = ../Doxygen_Templates/extra_stylesheet.css
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = ../Doxygen_Templates/tabs.css \
-                         ../Doxygen_Templates/search.css \
-                         ../Doxygen_Templates/navtree.css \
-                         ../Doxygen_Templates/tab_b.png \
-                         ../Doxygen_Templates/printComponentTabs.js \
-                         ../Doxygen_Templates/navtree.js \
-                         "../../LICENSE.txt" \
+HTML_EXTRA_FILES       = Doxygen_Templates/tabs.css \
+                         Doxygen_Templates/search.css \
+                         Doxygen_Templates/navtree.css \
+                         Doxygen_Templates/tab_b.png \
+                         Doxygen_Templates/navtree.js \
+                         Doxygen_Templates/version.css \
+                         Doxygen_Templates/dropdown.png \
+                         ../LICENSE.txt
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to
@@ -1775,7 +1774,7 @@ MATHJAX_CODEFILE       =
 SEARCHENGINE           = YES
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
-# implemented using a web server instead of a web client using Javascript. There
+# implemented using a web server instead of a web client using JavaScript. There
 # are two flavors of web server based searching depending on the EXTERNAL_SEARCH
 # setting. When disabled, doxygen will generate a PHP script for searching and
 # an index file used by the script. When EXTERNAL_SEARCH is enabled the indexing

@@ -45,11 +45,6 @@ jobs:
           which packchk
           packchk --version
           
-      - name: Install gen-pack
-        run: |
-          mkdir -p ~/.local/share/gen-pack/0.0.0
-          git clone -b gen_doc https://github.com/Open-CMSIS-Pack/gen-pack.git ~/.local/share/gen-pack/0.0.0/
-
       - name: Generate doxygen
         run: |
           echo "::add-matcher::.github/doxygen.json"

@@ -1,0 +1,680 @@
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\mainpage Overview
+
+The **[CMSIS-Driver specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html)** defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.
+
+This documentation covers a set of reference CMSIS-Driver implementations for external peripheral devices.
+
+The implementations are maintained in a public **[GitHub repository](https://github.com/arm-software/CMSIS-Driver)**. Their releases in **[CMSIS Pack format](https://www.open-cmsis-pack.org/)** are also available on **[CMSIS Packs page](https://developer.arm.com/tools-and-software/embedded/cmsis/cmsis-packs)** under *Arm* - *CMSIS Drivers for external devices* category and can be used in environments supporting the CMSIS-Pack concept.
+
+Interested parties are welcome to contribute their drivers to the referenced repository.
+
+\section driver_pack_content Pack Content
+
+The <b>ARM::CMSIS-Driver</b> Pack contains the following items:
+
+File/Directory            | Content
+:-------------------------|:---------------------------------------------------------------------------------
+\b ARM.CMSIS-Driver.pdsc  | Package description file in CMSIS-Pack format.
+\b LICENSE.txt            | CMSIS license agreement (Apache 2.0)
+\b Config/                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations
+\b Documentation/         | This documentation
+\b ETH/                   | \ref driver_eth driver implementations
+\b Flash/                 | \ref driver_Flash memory driver implementations
+\b I2C/                   | \ref driver_I2C driver implementations
+\b NAND/                  | \ref driver_NAND driver implementations
+\b SPI/                   | \ref driver_SPI driver implementations
+\b WiFi/                  | \ref driver_WiFi driver implementations
+
+\section License License
+
+The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license.
+See the <a href="LICENSE.txt">Apache 2.0 License</a>.
+
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_eth Ethernet
+
+\section driver_eth_devices Driver Implementations
+
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
+
+<table class="cmtable" summary="Ethernet Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    \anchor driver_KSZ8851SNL
+    <tr>
+      <td>\b KSZ8851SNL/SNLI</td>
+      <td>
+       Ethernet PHY and MAC interfaces for the Microchip <a href="https://www.microchip.com/KSZ8851" target="_blank"><b>KSZ8851</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN9220
+    <tr>
+      <td>\b LAN9220</td>
+      <td>
+       Ethernet PHY and MAC interfaces for the Microchip <a href="https://www.microchip.com/LAN9220" target="_blank"><b>LAN9220</b></a>.
+      </td>
+    </tr>
+    \anchor driver_DP83848C
+    <tr>
+      <td>\b DP83848C</td>
+      <td>
+       Ethernet PHY interface for the Texas Instruments <a href="http://www.ti.com/product/DP83848C" target="_blank"><b>DP83848C</b></a>.
+      </td>
+    </tr>
+    \anchor driver_KSZ8061RNB
+    <tr>
+      <td>\b KSZ8061RNB</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/KSZ8061" target="_blank"><b>KSZ8061</b></a>.
+      </td>
+    </tr>
+    \anchor driver_KSZ8081RNA
+    <tr>
+      <td>\b KSZ8081RNA</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/KSZ8081" target="_blank"><b>KSZ8081</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8710A
+    <tr>
+      <td>\b LAN8710A</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8710A" target="_blank"><b>LAN8710A</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8720
+    <tr>
+      <td>\b LAN8720</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8720A" target="_blank"><b>LAN8720</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8740A
+    <tr>
+      <td>\b LAN8740A</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8740A" target="_blank"><b>LAN8740A</b></a>.
+      </td>
+    </tr>
+    \anchor driver_LAN8742A
+    <tr>
+      <td>\b LAN8742A</td>
+      <td>
+       Ethernet PHY interface for the Microchip <a href="https://www.microchip.com/LAN8742A" target="_blank"><b>LAN8742A</b></a>.
+      </td>
+    </tr>
+    \anchor driver_ST802RT1
+    <tr>
+      <td>\b ST802RT1</td>
+      <td>
+       Ethernet PHY interface for the STMicroelectronics <a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf" target="_blank"><b>ST802RT1</b></a>.
+      </td>
+    </tr>
+</table>
+
+\section driver_eth_multiple Multiple Driver Instances
+
+CMSIS-Driver API supports multiple driver instances. The Ethernet drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c ETH_LAN9220.c file as \c ETH2_LAN9220.c.</li>
+ <li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+ <li>Specify the driver parameters for the second instance. For example, in \c ETH2_LAN9220.c new values to the following parameters are needed instead of default ones:
+   \code
+    #define ETH_MAC_NUM             1
+    #define ETH_PHY_NUM             1
+    #define LAN9220_BASE            (0x53000000UL)
+  \endcode
+ </li>
+ <li>Now both Ethernet instances can be accessed from the  application. For example:
+\code
+#include "Driver_ETH_MAC.h"
+#include "Driver_ETH_PHY.h"
+ 
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC0;
+extern ARM_DRIVER_ETH_MAC Driver_ETH_MAC1;
+ 
+extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY0;
+extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
+ 
+#define eth0    (&Driver_ETH_MAC0)
+#define eth1    (&Driver_ETH_MAC1)
+ 
+#define phy0    (&Driver_ETH_PHY0)
+#define phy1    (&Driver_ETH_PHY1)
+\endcode
+ </li>
+</ul>
+
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_WiFi WiFi
+
+\section driver_wifi_devices Driver Implementations
+
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__wifi__interface__gr.html" target="_blank"><b>CMSIS-WiFi drivers</b></a> for the following devices:
+<table class="cmtable" summary="WiFi Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>\ref driver_DA16200 </td>
+      <td>
+       WiFi Driver for the Renesas DA16200.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ESP32</td>
+      <td>
+       WiFi Driver for the Espressif ESP32.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ESP8266</td>
+      <td>
+       WiFi Driver for the Espressif ESP8266.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_ISM43362</td>
+      <td>
+       WiFi Driver for the Inventek ISM43362.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_WizFi360</td>
+      <td>
+       WiFi Driver for the WizNet WizFi360.</td>
+    </tr>
+</table>
+
+
+
+\subsection driver_DA16200 DA16200
+
+The documentation for the Renesas DA16200 can be found here: https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices
+
+DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer) is required. Firmware image and programing instructions "DA16200 DA16600 FreeRTOS Getting Started Guide" are also available on the above web site.
+
+\subsection driver_ESP32 ESP32
+
+The documentation for the Espressif ESP32 can be found here: https://www.espressif.com/en/products/hardware/esp-wroom-32/overview
+
+\subsection driver_ESP8266 ESP8266
+
+The documentation for the Espressif ESP8266 can be found here: https://www.espressif.com/en/products/hardware/esp8266ex/overview/
+
+\subsection driver_ISM43362 ISM43362
+
+The documentation for the Inventek ISM43362 can be found here: https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/
+
+\subsubsection ismart43362_e_firmware_download Flashing a different firmware to ISMART43362-E Shield
+
+The ISMART43362-E Shield has two options to communicate with the underlying target hardware: UART and SPI. By default, the module is
+flashed with the firmware for UART communication. To enable SPI communication, follow these steps to flash the module:
+
+\b Prepare \b the \b hardware
+- Set the power supply jumper on ISMART43362-E to connect 5V_USB and 5V_BOARD.
+- Set the SW3 switch to position 1 (factory default position).
+
+\b Prepare \b the \b software
+- Download
+  [ISM43362_M3G_L44_SPI_C6.2.1.7.zip](https://www.inventeksys.com/iwin/wp-content/uploads/ISM43362_M3G_L44_SPI_C6.2.1.7.zip)
+  and extract it locally.
+- Download [eS-WIFi_Demo](https://www.inventeksys.com/iwin/wp-content/uploads/eS-WIFi_Demo.zip)
+- Unzip the file and install the application on your PC. 
+- Start es-WiFi Demo and select <b>Menu - Install Drivers</b> and install both, CYW9WCD1EVAL1 and BCM9WCD1EVAL1:
+  \image html ISM43362_install_drivers.png
+- Connect the ISMART43362-E to the PC using the Mini-USB connector. In Device Manager, you should see WICED USB Serial Port
+  (COMx).
+- If not already done, assign a low COM port number.
+- In the es-WiFi Demo application, execute:
+  - Go to <b>Setup - Serial Port - Configure/Open</b>:
+    \image html ISM43362_set_COM_port_conf.png
+  - Check the follwoing settings (Serial Port being the one added just now):
+    \image html ISM43362_set_COM_port.png
+  - Go to <b>Menu - Firmware - Update</b>:
+    \image html ISM43362_update_firmware.png
+  - Select the binary image file extracted in the first step (ISM43362_M3G_L44_SPI_C6.2.1.7.bin). Make sure it is an SPI
+    firmware variant:
+    \image html ISM43362_module_detected.png
+- After the firmware is updated, the console will show the message "Resetting...":
+  \image html ISM43362_update_firmware_resetting.png
+  You can now disconnect the module from the PC as it contains the new SPI firmware.
+
+  If you want to flash a different firmware later, please visit
+  [Inventek's Firmware page](https://www.inventeksys.com/iwin/firmware/) for the latest binary files.
+
+\note Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!
+
+\subsection driver_WizFi360 WizFi360
+
+The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
+
+The latest firmware images are available on GitHub: https://github.com/wizfi/Release. Instructions on how to flash the
+firmware onto the device can be found on the WIZnet Wiki:
+https://wizwiki.net/wiki/lib/exe/fetch.php/products:wizfi360:wizfi360ds:wizfi360fug_v124e.pdf.
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_Flash Flash
+
+\section driver_Flash_devices Driver Implementations
+
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__flash__interface__gr.html" target="_blank"><b>CMSIS-Flash drivers</b></a> for the following devices:
+
+<table class="cmtable" summary="Flash Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    \anchor driver_AM29x800BB
+    <tr>
+      <td>\b AM29x800BB</td>
+      <td>Flash interface for Parallel NOR Flash <b>AM29x800BB</b>. This product is discontinued.</td>
+    </tr>
+    \anchor driver_AT45DB641E
+    <tr>
+      <td>\b AT45DB641E</td>
+      <td>Flash interface for SPI Serial DataFlash <a href="https://www.adestotech.com/wp-content/uploads/DS-45DB641E-027.pdf" target="_blank"><b>AT45DB641E</b></a>.</td>
+    </tr>
+    \anchor driver_AT45DB642D
+    <tr>
+      <td>\b AT45DB642D</td>
+      <td>Flash interface for SPI Serial DataFlash <a href="https://www.adestotech.com/wp-content/uploads/doc3542.pdf" target="_blank"><b>AT45DB642D</b></a>.
+      </td>
+    </tr>
+    \anchor driver_M29EW28F128
+    <tr>
+      <td>\b M29EW28F128</td>
+      <td>Flash interface for Parallel NOR Flash <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/pc28f128m29ewhf" target="_blank"><b>M29EW28F128</b></a>.
+      </td>
+    </tr>
+    \anchor driver_M29W640FB
+    <tr>
+      <td>\b M29W640FB</td>
+      <td>Flash interface for Parallel NOR Flash <a href="https://www.micron.com/parts/nor-flash/parallel-nor-flash/m29w640fb70n6e" target="_blank"><b>M29W640FB</b></a>.
+      </td>
+    </tr>
+    \anchor driver_N25Q032A
+    <tr>
+      <td>\b N25Q032A</td>
+      <td> Serial NOR Flash. <a href="https://www.micron.com/parts/nor-flash/serial-nor-flash/n25q032a11ef440e" target="_blank"><b>Device info</b></a>.
+      </td>
+    </tr>
+    \anchor driver_S29GL064Nx2
+    <tr>
+      <td>\b S29GL064Nx2</td>
+      <td>Flash interface for Parallel NOR Flash <a href="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash" target="_blank"><b>S29GL064N</b></a>.
+      </td>
+</table>
+
+\section driver_Flash_multiple Multiple Driver Instances
+
+CMSIS-Driver API supports multiple driver instances. The Flash drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:
+<ul>
+ <li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+ <li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy \c AT45DB641E.c file as \c AT45DB641E_2.c.</li>
+ <li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+ <li>Specify the driver parameters for the second instance based on the hardware design. For example, in \c AT45DB641E_2.c the values for the flash driver number and SPI driver number need to be configured as shown below:
+   \code
+    #define DRIVER_FLASH_NUM        1
+    #define DRIVER_SPI_NUM          1
+  \endcode
+ </li>
+ <li>Now both Flash instances can be accessed from the application. For example:
+\code
+#include "Driver_Flash.h"
+ 
+/* Flash driver instances */
+extern ARM_DRIVER_FLASH Driver_Flash0;
+extern ARM_DRIVER_FLASH Driver_Flash1;
+ 
+#define flash0  (&Driver_Flash0)
+#define flash1  (&Driver_Flash1)
+\endcode
+ </li>
+</ul>
+
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_I2C I2C
+
+The I2C MultiSlave wrapper (I2C_MultiSlave.c) resides on top of an arbitrary I2C CMSIS-Driver and exports maximum of
+eight I2C CMSIS-Drivers (with I2C Master functionality only). Slave functionalities are disabled and calling slave functions
+will return with an error. An I2C slave device connects to one of the exported driver and uses it as any other CMSIS I2C
+driver (in master mode only). The wrapper provides multi-thread protection.
+
+Each slave can use its own bus speed configuration, but the MultiSlave wrapper will limit the bus speed to the lowest
+requested frequency (assuming that three slaves are present and if two slaves configure bus speed \c ARM_I2C_BUS_SPEED_FAST
+(400 KHz) and one slave \c ARM_I2C_BUS_SPEED_STANDARD (100 kHz), then the actual bus speed will be
+\c ARM_I2C_BUS_SPEED_STANDARD).
+
+The wrapper is configured using the I2C_MultiSlave_Config.h file, which contains the following options:
+- \c \#define \c I2C_DRIVER specifies the underlying I2C CMSIS-Driver, which controls the I2C peripheral and accesses the
+  bus. The wrapper connects to that driver.
+- \c \#define \c I2C_ENABLE_SLAVE_x enables each connected slave on the I2C bus. This basically means that the driver control
+  block \c Driver_I2Cn will be exported by the wrapper for each particular slave.
+- \c \#define \c I2C_DRIVER_SLAVE_x sets the exported control block number n, for example \c Driver_I2Cn. The user
+  application connects to this driver.
+  
+<b>Code example</b>
+
+This is a demo application which demonstrates the usage of the I2C MultiSlave driver wrapper. It consists of two threads that
+periodically access two I2C slave devices.
+
+\code
+#include <string.h>
+#include "cmsis_os2.h"
+ 
+#include "RTE_Components.h"
+#include  CMSIS_device_header
+ 
+#include "Driver_I2C.h"                 // ::CMSIS Driver:I2C
+ 
+/* Thread prototypes */
+static void Thread_A (void *argument);
+static void Thread_B (void *argument);
+static void app_main (void *argument);
+ 
+/* A and B Thread IDs */
+static osThreadId_t ThreadId_A;
+static osThreadId_t ThreadId_B;
+ 
+/* I2C A Driver, controls Slave Device 0, uses underlying Driver_I2C1 (see I2C_MultiSlave_Config.h) */
+extern ARM_DRIVER_I2C         Driver_I2C10;
+#define I2C_A               (&Driver_I2C10)
+ 
+/* I2C B Driver, controls Slave Device 1, uses underlying Driver_I2C1 (see I2C_MultiSlave_Config.h) */
+extern ARM_DRIVER_I2C         Driver_I2C11;
+#define I2C_B               (&Driver_I2C11)
+ 
+/*----------------------------------------------------------------------------
+ * I2C Thread A
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_A (void *argument) {
+  uint8_t addr;
+  uint8_t reg;
+  uint8_t val;
+  (void)argument;
+ 
+  /* Initialize and configure I2C */
+  I2C_A->Initialize  (NULL);
+  I2C_A->PowerControl(ARM_POWER_FULL);
+  I2C_A->Control     (ARM_I2C_BUS_SPEED, ARM_I2C_BUS_SPEED_FAST);
+  I2C_A->Control     (ARM_I2C_BUS_CLEAR, 0);
+ 
+  /* Periodically read device register at address 0x0F */
+  addr = 0x68;
+  reg  = 0x0F;
+ 
+  while(1) {
+    I2C_A->MasterTransmit(addr, &reg, 1, true);
+    while (I2C_A->GetStatus().busy);
+ 
+    I2C_A->MasterReceive (addr, &val, 1, false);
+    while (I2C_B->GetStatus().busy);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * I2C Thread B
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void Thread_B (void *argument) {
+  uint8_t addr;
+  uint8_t reg;
+  uint8_t val;
+  (void)argument;
+ 
+  /* Initialize and configure I2C */
+  I2C_B->Initialize  (NULL);
+  I2C_B->PowerControl(ARM_POWER_FULL);
+  I2C_B->Control     (ARM_I2C_BUS_SPEED, ARM_I2C_BUS_SPEED_STANDARD);
+  I2C_B->Control     (ARM_I2C_BUS_CLEAR, 0);
+ 
+  /* Periodically write device register at address 0x02 */
+  addr = 0x44;
+  reg  = 0x02;
+  val  = 0xA5;
+ 
+  while(1) {
+    I2C_A->MasterTransmit(addr, &reg, 1, true);
+    while (I2C_A->GetStatus().busy);
+ 
+    I2C_A->MasterTransmit(addr, &val, 1, false);
+    while (I2C_B->GetStatus().busy);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * Application main thread
+ *---------------------------------------------------------------------------*/
+__NO_RETURN static void app_main (void *argument) {
+  (void)argument;
+ 
+  /* Create SPI threads */
+  ThreadId_A = osThreadNew(Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew(Thread_B, NULL, NULL);
+ 
+  osDelay(osWaitForever);
+ 
+  for (;;) {}
+}
+ 
+int main (void) {
+ 
+  // System Initialization
+  SystemCoreClockUpdate();
+ 
+  osKernelInitialize();                 // Initialize CMSIS-RTOS
+  osThreadNew(app_main, NULL, NULL);    // Create application main thread
+  osKernelStart();                      // Start thread execution
+  for (;;) {}
+}
+\endcode
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_NAND NAND
+
+This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus.
+*/
+
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_SPI SPI
+
+The SPI MultiSlave wrapper (SPI_MultiSlave.c) resides on top of an arbitrary SPI CMSIS-Driver and exports a maximum of four
+SPI CMSIS-Drivers with SPI Master functionality only. Slave functionalities are disabled and calling the slave functions will
+return with an error. An SPI slave device connects to one of the exported drivers and uses it as any other SPI CMSIS-Driver
+(in master mode only). The wrapper provides multi thread protection.
+
+Each slave can use a different bus configuration. The MultiSlave wrapper will detect which slave device is addressed by a
+particular function call and reconfigure the SPI bus accordingly. When using the SPI MultiSlave wrapper, the slave select
+mode must always be configured as \c ARM_SPI_SS_MASTER_SW. Since the underlying bus controlling SPI driver can only control
+one slave select line at the time, the slave select line for each particular slave device is instead controlled by
+the MultiSlave wrapper using the function SPI_Control_SlaveSelect that must be implemented in the user application. A
+function prototype can be found in the SPI_Multislave.h header file and must be included in the project.
+
+When called from different threads, the MultiSlave wrapper can be busy (if any data transfer is in progress). In such a case,
+transfer operation will be queued and executed immediately after the busy slave is deselected. The transfer queue operates
+as a FIFO, so transfers will be executed in the same call order as expected by the application.
+
+The wrapper is configured using the SPI_MultiSlave_Config.h file, which contains the following options:
+- \c \#define \c SPI_DRIVER specifies the underlying SPI CMSIS-Driver, which actually controls the SPI peripheral and the
+  accesses the bus. The wrapper will connect to that driver.
+- \c \#define \c SPI_ENABLE_SLAVE_x enables each SPI bus connected slave. This basically means that the driver control block
+  Driver_SPIn will be exported by the wrapper for each particular slave.
+- \c \#define \c SPI_DRIVER_SLAVE_x sets the exported control block number n, for example Driver_SPIn. The application
+  connects to this driver.
+
+<b>Code example</b>
+
+This is a demo application which demonstrates the usage of the SPI MultiSlave driver wrapper. It consists of two threads that
+periodically access two SPI slave devices.
+
+\code
+#include <string.h>
+#include "cmsis_os2.h"
+ 
+#include "RTE_Components.h"
+#include  CMSIS_device_header
+#include "stm32f2xx_hal.h"
+ 
+#include "SPI_MultiSlave.h"             // Keil::CMSIS Driver:SPI:Multi-Slave
+ 
+/* Thread prototypes */
+__NO_RETURN static void Thread_A (void *argument);
+__NO_RETURN static void Thread_B (void *argument);
+__NO_RETURN static void app_main (void *argument);
+ 
+/* A and B Thread IDs */
+static osThreadId_t ThreadId_A;
+static osThreadId_t ThreadId_B;
+ 
+/* SPI A Driver, controls Slave Device 0, uses underlying Driver_SPI1 (see SPI_MultiSlaveConfig.h) */
+extern ARM_DRIVER_SPI         Driver_SPI10;
+#define SPI_A               (&Driver_SPI10)
+ 
+/* SPI B Driver, controls Slave Device 1, uses underlying Driver_SPI1 (see SPI_MultiSlaveConfig.h) */
+extern ARM_DRIVER_SPI         Driver_SPI11;
+#define SPI_B               (&Driver_SPI11)
+ 
+/*
+  Slave select pin control function.
+
+  \param[in]    driver    SPI Driver Instance
+  \param[in]    ss_state  Slave Select signal state (ARM_SPI_SS_INACTIVE | ARM_SPI_SS_ACTIVE)
+*/
+void SPI_Control_SlaveSelect (uint32_t device, uint32_t ss_state) {
+  GPIO_TypeDef* GPIOx;
+  uint16_t pin;
+ 
+  if (device == 0) {
+    /* Select Device 0 SS pin (SPI_A) */
+    GPIOx = GPIOE;
+    pin   = GPIO_PIN_0;
+  }
+  else {
+    /* Select Device 1 SS pin (SPI_B) */
+    GPIOx = GPIOE;
+    pin   = GPIO_PIN_15;
+  }
+ 
+  if (ss_state == ARM_SPI_SS_INACTIVE) {
+    /* Set GPIO pin high */
+    HAL_GPIO_WritePin(GPIOx, pin, GPIO_PIN_SET);
+  } else {
+    /* Set GPIO pin low */
+    HAL_GPIO_WritePin(GPIOx, pin, GPIO_PIN_RESET);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * SPI Thread A
+ *---------------------------------------------------------------------------*/
+static void Thread_A (void *argument) {
+  char *p = "Sending data to Slave Device 0";
+  (void)argument;
+  
+  /* Initialize and configure SPI A */
+  SPI_A->Initialize(NULL);
+  SPI_A->PowerControl(ARM_POWER_FULL);
+  SPI_A->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL0_CPHA0  \
+                                     | ARM_SPI_DATA_BITS(8) \
+                                     | ARM_SPI_MSB_LSB      \
+                                     | ARM_SPI_SS_MASTER_SW,
+                                     10000000);
+ 
+  SPI_A->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+ 
+  while(1) {
+    /* Send to Slave Device 0 */
+    SPI_A->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
+    SPI_A->Send(p, strlen(p));
+ 
+    /* Wait until SPI A busy (or alternatively, wait for SPI event) */
+    while (SPI_A->GetStatus().busy);
+    SPI_A->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * SPI Thread B
+ *---------------------------------------------------------------------------*/
+static void Thread_B (void *argument) {
+  char *p = "Sending data to Slave Device 1";
+  (void)argument;
+ 
+  /* Initialize and configure SPI B */
+  SPI_B->Initialize(NULL);
+  SPI_B->PowerControl(ARM_POWER_FULL);
+  SPI_B->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1  \
+                                     | ARM_SPI_DATA_BITS(8) \
+                                     | ARM_SPI_MSB_LSB      \
+                                     | ARM_SPI_SS_MASTER_SW,
+                                     15000000);
+ 
+  SPI_B->Control(ARM_SPI_SET_DEFAULT_TX_VALUE, 0xFF);
+ 
+  while(1) {
+    /* Send to Slave Device 1 */
+    SPI_B->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);
+    SPI_B->Send(p, strlen(p));
+ 
+    /* Wait until SPI B busy (or alternatively, wait for SPI event) */
+    while (SPI_B->GetStatus().busy);
+    SPI_B->Control (ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
+ 
+    osDelay(10);
+  }
+}
+ 
+/*----------------------------------------------------------------------------
+ * Application main thread
+ *---------------------------------------------------------------------------*/
+static void app_main (void *argument) {
+  (void)argument;
+ 
+  /* Create SPI threads */
+  ThreadId_A = osThreadNew(Thread_A, NULL, NULL);
+  ThreadId_B = osThreadNew(Thread_B, NULL, NULL);
+ 
+  osDelay(osWaitForever);
+ 
+  for (;;) {}
+}
+ 
+int main (void) {
+  
+  // System Initialization
+  SystemCoreClockUpdate();
+ 
+  osKernelInitialize();                 // Initialize CMSIS-RTOS
+  osThreadNew(app_main, NULL, NULL);    // Create application main thread
+  osKernelStart();                      // Start thread execution
+  for (;;) {}
+}
+\endcode
+*/

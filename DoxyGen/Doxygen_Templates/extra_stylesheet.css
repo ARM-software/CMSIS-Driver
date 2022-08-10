@@ -154,7 +154,8 @@ table.cmtable {
 table.cmtable td, table.cmtable th {
        border: 1px solid var(--arm_light_gray);
        padding: 7px 10px 5px;
-       text-align:left;
+       text-align: left;
+       vertical-align: baseline;
 }
 
 table.cmtable th {
@@ -703,7 +704,7 @@ table.memberdecls {
     display: inline-block;
     vertical-align: middle;
     padding-bottom:6px;
-} 
+}
 
 .memtemplate {
 	font-size: 80%;

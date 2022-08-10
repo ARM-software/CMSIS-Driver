@@ -11,6 +11,8 @@ jobs:
   pack:
     name: Generate pack
     runs-on: ubuntu-20.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -22,7 +24,7 @@ jobs:
           git fetch --tags --force
 
       - name: Install packages
-        run: |
+        run: |  
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y libclang1-9 libclang-cpp1-9 p7zip libxml2-utils
           sudo pip install LinkChecker
@@ -119,34 +121,21 @@ jobs:
           ref: gh-pages
 
       - name: Publish documentation
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         run: |
-          rm -rf main
-          mkdir main
-          pushd main
-          tar -xvjf /tmp/doc.tbz2
-          popd
+          rm -rf ${GITHUB_REF_NAME}
+          mkdir ${GITHUB_REF_NAME}
+          tar -xvjf /tmp/doc.tbz2 -C ${GITHUB_REF_NAME}
+          if ${{ github.event_name == 'release' }}; then
+            rm -f latest
+            ln -s ${RELEASE} latest          
+            MSG="release"
+          else
+            MSG="branch"
+          fi
           ./update_versions.sh
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "Update main documentation"
-          git push
-
-      - name: Publish documentation
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          RELEASE=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
-          rm -rf ${RELEASE}
-          mkdir -p ${RELEASE}
-          rm -f latest
-          ln -s ${RELEASE} latest
-          pushd ${RELEASE}
-          tar -xvjf /tmp/doc.tbz2
-          popd
-          ./update_versions.sh
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add .
-          git commit -m "Update documentation for release ${RELEASE}"
+          git commit -m "Update documentation for ${MSG} ${GITHUB_REF_NAME}"
           git push

@@ -4,7 +4,7 @@ LINES=($(grep -n 'list of versions' version.js | cut -d: -f1))
 VERSIONS_BEGIN=$(expr ${LINES[0]} - 1)
 VERSIONS_END=$(expr ${LINES[1]} + 1)
 
-VERSIONS=(master $(find -maxdepth 1 -mindepth 1 -type d -name "*\.*\.*") $(find -maxdepth 1 -mindepth 1 -type l))
+VERSIONS=($(find -maxdepth 1 -mindepth 1 -type d) $(find -maxdepth 1 -mindepth 1 -type l))
 declare -A versions
 for folder in ${VERSIONS[*]#./}; do
   if [ -f $folder/footer.js ]; then

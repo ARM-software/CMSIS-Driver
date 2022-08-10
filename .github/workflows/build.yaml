@@ -104,10 +104,10 @@ jobs:
       - name: Update release description
         if: ${{ github.event_name == 'release' }}
         run: |
-          CURRENT="$(gh release view ${{ github.ref }} --json body -t "{{.body}}")"
+          CURRENT="$(gh release view ${GITHUB_REF_NAME} --json body -t "{{.body}}")"
           if [[ -z "$CURRENT" ]]; then
-            DESC=$(git tag -l -n99 --format "%(contents)" ${{ github.ref }})
-            gh release edit -n "$DESC"
+            DESC=$(git tag -l -n99 --format "%(contents)" ${GITHUB_REF_NAME})
+            gh release edit -n "${DESC}"
           fi
 
       - uses: actions/checkout@v2
@@ -123,7 +123,7 @@ jobs:
           tar -xvjf /tmp/doc.tbz2 -C ${GITHUB_REF_NAME}
           if ${{ github.event_name == 'release' }}; then
             rm -f latest
-            ln -s ${RELEASE} latest          
+            ln -s ${GITHUB_REF_NAME} latest          
             MSG="release"
           else
             MSG="branch"

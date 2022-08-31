@@ -32,6 +32,8 @@ File/Directory            | Content
 The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license.
 See the <a href="LICENSE.txt">Apache 2.0 License</a>.
 
+\subpage rev_hist
+
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/

@@ -25,10 +25,7 @@
 var NAVTREE =
 [
   [ "CMSIS-Driver Implementations", "index.html", [
-    [ "Overview", "index.html", [
-      [ "Pack Content", "index.html#driver_pack_content", null ],
-      [ "License", "index.html#License", null ]
-    ] ],
+    [ "Overview", "index.html", "index" ],
     [ "Ethernet", "driver_eth.html", [
       [ "Driver Implementations", "driver_eth.html#driver_eth_devices", null ],
       [ "Multiple Driver Instances", "driver_eth.html#driver_eth_multiple", null ]
@@ -50,8 +47,7 @@ var NAVTREE =
     ] ],
     [ "I2C", "driver_I2C.html", null ],
     [ "NAND", "driver_NAND.html", null ],
-    [ "SPI", "driver_SPI.html", null ],
-    [ "Revision History", "rev_hist.html", null ]
+    [ "SPI", "driver_SPI.html", null ]
   ] ]
 ];
 

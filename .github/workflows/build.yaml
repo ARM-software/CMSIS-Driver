@@ -26,7 +26,7 @@ jobs:
           doxygen-version: 1.9.2                                  # default
           packchk-version: 1.3.95                                 # default
           gen-doc-script: ./DoxyGen/gen_doc.sh                    # skipped by default
-          check-links-script: ./Documentation/check_links.sh      # skipped by default
+          check-links-script: ./DoxyGen/check_links.sh            # skipped by default
           doc-path: ./Documentation/html                          # skipped by default
           gen-pack-script: ./gen_pack.sh                          # skipped by default
           gen-pack-output: ./output                               # skipped by default

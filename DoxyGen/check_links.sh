@@ -3,7 +3,7 @@
 set -o pipefail
 
 DIRNAME=$(dirname $(realpath $0))
-REQUIRED_GEN_PACK_LIB="0.2.1"
+REQUIRED_GEN_PACK_LIB="0.2.2"
 
 ############ gen-pack library ###########
 
@@ -37,4 +37,4 @@ find_linkchecker
 
 #########################################
 
-check_links "${DIRNAME}/../Documentation/index.html" "${DIRNAME}" 
+check_links "${DIRNAME}/../Documentation/index.html" "${DIRNAME}"

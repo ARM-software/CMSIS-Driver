@@ -165,7 +165,7 @@ $(document).ready(function(){initNavTree('rev_hist.html',''); initResizable(); }
 <li>Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length</li>
 </ul>
 </li>
-<li>Updated Inventek ISM43362 WiFi driver (version 1.8.0):<ul>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.9.0):<ul>
 <li>Corrected Initialize function failure if called shortly after reset</li>
 <li>Corrected default protocol selection in SocketCreate function</li>
 <li>Detected STM firmware limitation: SocketConnect does not work if any of IP address octets is 255 (for example IP like x.y.z.255)   </li>
@@ -202,42 +202,63 @@ $(document).ready(function(){initNavTree('rev_hist.html',''); initResizable(); }
 <li>Added Espressif ESP32 WiFi driver</li>
 <li>Added Espressif ESP8266 WiFi driver</li>
 <li>Added Wiznet WizFi360 WiFi driver</li>
-<li>Updated Inventek ISM43362 WiFi driver   </li>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.3.0):<ul>
+<li>Fixed SocketClose functionality</li>
+<li>Fixed Activate function not to set password if OPEN security is used</li>
+<li>Updated Initialization function to handle unavailable reset pin</li>
+<li>Added debug of SPI traffic with Event Recorder</li>
+<li>Added CMSIS Driver Validation test results</li>
 </ul>
+</li>
+</ul>
+<p class="endtd"></p>
 </td></tr>
 <tr>
 <td>v2.4.1 </td><td><ul>
-<li>CMSIS-Driver WiFi implementation for Inventek ISM43362 via SPI (CMSIS-Driver SPI) updated to API version 1.0.0 from ARM.CMSIS.5.6.0.pack.</li>
-<li>Corrected PHY_LAN8742A power down bit definition.   </li>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.0.0)</li>
+<li>Corrected PHY_LAN8742A power down bit definition   </li>
 </ul>
 </td></tr>
 <tr>
 <td>v2.4.0 </td><td><ul>
-<li>Added CMSIS-Driver WiFi implementation for Inventek ISM43362 via SPI (CMSIS-Driver SPI).   </li>
+<li>Added CMSIS-Driver WiFi implementation for Inventek ISM43362 via SPI (CMSIS-Driver SPI)   </li>
 </ul>
 </td></tr>
 <tr>
-<td>v2.3.0 </td><td>Updated PHY_KSZ8081RNA<ul>
-<li>Added support for 50MHz reference clock Updated NAND MemoryBus driver:<ul>
-<li>Fixed Ready/Busy configuration handling.</li>
-<li>Enhanced compatibility for ARM Compiler 6. Updated Flash Drivers:</li>
-<li>Added data cache handling to memory bus based drivers.</li>
-<li>Fixed warnings flagged by ARM Compiler 6.   </li>
+<td>v2.3.0 </td><td><ul>
+<li>Updated PHY_KSZ8081RNA:<ul>
+<li>Added support for 50MHz reference clock</li>
+</ul>
+</li>
+<li>Updated NAND MemoryBus driver:<ul>
+<li>Fixed Ready/Busy configuration handling</li>
+<li>Enhanced compatibility for ARM Compiler 6</li>
+</ul>
+</li>
+<li>Updated Flash Drivers:<ul>
+<li>Added data cache handling to memory bus based drivers</li>
+<li>Fixed warnings flagged by ARM Compiler 6   </li>
 </ul>
 </li>
 </ul>
 </td></tr>
 <tr>
-<td>v2.2.0 </td><td><p class="starttd">CMSIS-Driver implementation for non-MCU devices from MDK-Middleware pack have been moved to git-hub and are now shipped as a separate pack.</p>
-<p class="endtd">What's new:</p><ul>
-<li>Cvendor explicitly set to "Keil" to ease project migration.</li>
-<li>doxygen based documentation: &ndash; added links to hardware parts. &ndash; added Multi-Slave I2C and SPI usage instructions.   </li>
+<td>v2.2.0 </td><td><ul>
+<li>Cvendor explicitly set to "Keil" to ease project migration If a driver component is no longer found in an existing project, please select the available component with the same name from the Run Time Environment.</li>
+<li>doxygen based documentation:<ul>
+<li>added links to hardware parts</li>
+<li>added Multi-Slave I2C and SPI usage instructions   </li>
+</ul>
+</li>
 </ul>
 </td></tr>
 <tr>
-<td>v2.1.0 </td><td><p class="starttd">CMSIS-Driver implementation for non-MCU devices from MDK-Middleware pack have been moved to git-hub and are now shipped as a separate pack.</p>
-<p class="endtd">What's new:</p><ul>
-<li>Added LAN9220 Ethernet MAC+PHY driver   </li>
+<td>v2.1.0 </td><td><ul>
+<li>Added LAN9220 Ethernet MAC+PHY driver</li>
+<li>Updated I2C and SPI multi-slave wrapper:<ul>
+<li>configuration options moved into separate file   </li>
+</ul>
+</li>
 </ul>
 </td></tr>
 <tr>

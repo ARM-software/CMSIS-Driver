@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          
+
       - name: Fetch tags
         if: ${{ github.event_name == 'release' }}
         run: |
@@ -28,6 +28,6 @@ jobs:
           gen-doc-script: ./DoxyGen/gen_doc.sh                    # skipped by default
           check-links-script: ./DoxyGen/check_links.sh            # skipped by default
           doc-path: ./Documentation/html                          # skipped by default
-          gen-pack-script: ./gen_pack.sh                          # skipped by default
+          gen-pack-script: ./gen_pack.sh --no-preprocess          # skipped by default
           gen-pack-output: ./output                               # skipped by default
           gh-pages-branch: gh-pages                               # default

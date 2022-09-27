@@ -1,13 +1,13 @@
 #!/bin/bash
-# Version: 2.1
-# Date: 2022-08-09
+# Version: 2.2
+# Date: 2022-09-26
 # This bash script generates a CMSIS-Driver Software Pack
 #
 
 set -o pipefail
 
 # Set version of gen pack library
-REQUIRED_GEN_PACK_LIB="0.2.2"
+REQUIRED_GEN_PACK_LIB="0.4.0"
 
 # Set default command line arguments
 DEFAULT_ARGS=(-c "")
@@ -45,6 +45,15 @@ PACK_PATCH_FILES=""
 # Specify addition argument to packchk
 PACKCHK_ARGS=(-x M353 -x M364 -x M324 -x M382 -x M363 -x M362 -x M336)
 
+# custom preprocessing steps
+function preprocess() {
+  ./DoxyGen/gen_doc.sh
+}
+
+# custom post-processing steps
+# function postprocess() {
+# }
+
 ############ DO NOT EDIT BELOW ###########
 
 function install_lib() {
@@ -55,13 +64,17 @@ function install_lib() {
 }
 
 function load_lib() {
+  if [[ -d ${GEN_PACK_LIB} ]]; then
+    . "${GEN_PACK_LIB}/gen-pack"
+    return 0
+  fi
   local GLOBAL_LIB="/usr/local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
   local USER_LIB="${HOME}/.local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
   if [[ ! -d "${GLOBAL_LIB}" && ! -d "${USER_LIB}" ]]; then
     echo "Required gen_pack lib not found!" >&2
     install_lib "${REQUIRED_GEN_PACK_LIB}" "${USER_LIB}"
-  fi 
-  
+  fi
+
   if [[ -d "${GLOBAL_LIB}" ]]; then
     . "${GLOBAL_LIB}/gen-pack"
   elif [[ -d "${USER_LIB}" ]]; then

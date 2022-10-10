@@ -1,108 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package schemaVersion="1.7.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd">
   <name>CMSIS-Driver</name>
   <description>CMSIS Drivers for external devices</description>
   <vendor>ARM</vendor>
-  <url>http://www.keil.com/pack/</url>
+  <url>https://www.keil.com/pack/</url>
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="2.7.0-rc0">
-      Added ETH_LAN91C111 driver
-      Updated ETH_KSZ8851SNL and ETH_LAN9220 drivers:
-      - Corrected invalid power status in MAC_PowerControl
-      Updated ESP8266 WiFi driver:
-      - Fixed Activate to use BSSID specified in SetOption with ARM_WIFI_BSSID
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Fixed return string null terminator in GetModuleInfo
-      - Fixed SocketSendTo for stream socket lengths above 2048 bytes
-      - Enabled placement of USART transfer buffers in appropriate RAM by using section
-        ".bss.driver.usartn" (n = USART driver instance number) in the linker scatter file
-      Updated Inventek ISM43362 WiFi driver (version 1.11.0):
-      - Supports also ISM43340 Module
-      - Added support for 5 GHz channels on Access Point
-      - Fixed socket connect operation for non-blocking mode
-      - Enabled placement of SPI transfer buffers in appropriate RAM by using section
-        ".bss.driver.spin" (n = SPI driver instance number) in the linker scatter file
-      - Detected ISM43362 Module on STMicroelectronics B-L475E-IOT01A1 firmware limitation:
-        SocketConnect does not work if first or last octet of IP address is 0
-        (for example IPs 0.x.y.z or x.y.z.0 do not work)
-      - Detected shield firmware limitation: SocketConnect does not work if 
-        certain IP address octets contain value 0 or 255
-        (combinations that do not work: 0.x.y.z, x.y.z.0, 255.x.y.z)
-      - Updated CMSIS Driver Validation test results
-    </release>
-    <release version="2.6.1" date="2020-07-13">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - Added auto protocol selection in SocketCreate
-      - Fixed socket default timeout (zero == no time out)
-      - Fixed SocketRecv/RecvFrom non blocking mode when received less than buffer length
-      Updated Inventek ISM43362 WiFi driver (version 1.9.0):
-      - Corrected Initialize function failure if called shortly after reset
-      - Corrected default protocol selection in SocketCreate function
-      - Detected STM firmware limitation: SocketConnect does not 
-        work if any of IP address octets is 255 (for example IP like x.y.z.255)
-    </release>
-    <release version="2.6.0" date="2020-04-29">
-      Updated ESP8266, ESP32 and WizFi360 WiFi drivers:
-      - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
-      - Added DHCP setting before station Activate
-      - Added read of DHCP assigned IPs after station activate
-      - Fixed serial tx busy flag handling
-      - Fixed function AT_Resp_ConnectAP for NULL argument
-      - Enhanced serial communication startup procedure
-      Updated Inventek ISM43362 WiFi driver (version 1.8.0):
-      - API V1.1: SocketSend/SendTo and SocketRecv/RecvFrom (support for polling)
-      - Corrected GetModuleInfo return string termination
-      - Corrected functionality when DATARDY line is used in polling mode
-      - Corrected SocketConnect function never returning 0 in non-blocking mode
-      - Corrected SocketRecv/SocketRecvFrom function polling if called without previous Bind
-      - Corrected delay after module reset
-      - For non-STM firmware variant only firmware version 6.2.1.7 is supported
-      Documented firmware update procedure for Inventek ISMART43362-E WiFi Shield
-    </release>
-    <release version="2.5.0" date="2019-12-02">
-      Added Espressif ESP32 WiFi driver
-      Added Espressif ESP8266 WiFi driver
-      Added Wiznet WizFi360 WiFi driver
-      Updated Inventek ISM43362 WiFi driver (version 1.3.0):
-      - Fixed SocketClose functionality
-      - Fixed Activate function not to set password if OPEN security is used
-      - Updated Initialization function to handle unavailable reset pin
-      - Added debug of SPI traffic with Event Recorder
-      - Added CMSIS Driver Validation test results
-    </release>
-    <release version="2.4.1" date="2019-07-11">
-      Updated Inventek ISM43362 WiFi driver (version 1.0.0)
-      Corrected PHY_LAN8742A power down bit definition
-    </release>
-    <release version="2.4.0" date="2019-03-15">
-      Added Inventek ISM43362 WiFi driver
-      Updated conditions to support Cortex-M1
-    </release>
-    <release version="2.3.0" date="2018-06-15">
-      Updated PHY_KSZ8081RNA to support 50MHz reference clock
-      NAND MemoryBus driver updated:
-      - Fixed Ready/Busy configuration handling
-      - Enhanced compatibility for ARM Compiler 6
-      Flash Drivers updated:
-      - Added data cache handling to memory bus based drivers.
-      - Fixed warnings flagged by ARM Compiler 6
-    </release>
-    <release version="2.2.1" date="2018-03-20">
-      Added web link to hardware documentation for CMSIS-Driver components.
-    </release>
-    <release version="2.2.0" date="2018-03-19">
-      Updated component description setting the vendor explicitly to 'Cvendor="Keil"' to make migration automatic for existing project.
-      - if a driver component is no longer found in an existing project, please select the available component with the same name from the Run Time Environment.
-    </release>
-    <release version="2.1.0" date="2018-02-21">
-      Added LAN9220 Ethernet MAC+PHY driver
-      Updated I2C and SPI multi-slave wrapper configuration options moved into separate file.
-    </release>
-    <release version="2.0.0" date="2018-02-09">
-      Initial release
-      - the drivers were previously included in pack: Keil::MDK-Middleware.
+    <release version="0.0.0">
+      Active development ...
     </release>
   </releases>
 
@@ -114,7 +20,7 @@
 
   <conditions>
     <condition id="Cortex-M Device">
-      <description>Cortex-M processor based device: Cortex-M0, Cortex-M0+, Cortex-M1, Cortex-M3, Cortex-M4, Cortex-M7, Cortex-M23, Cortex-M33, SC000 or SC3000</description>
+      <description>Cortex-M processor based device: Cortex-M0/M0+/M1/M3/M4/M7/M23/M33/M35P/M55/M85, ARMV8MBL/ML, Star-MC1, SC000/300</description>
       <accept Dcore="Cortex-M0"/>
       <accept Dcore="Cortex-M0+"/>
       <accept Dcore="Cortex-M1"/>
@@ -125,8 +31,10 @@
       <accept Dcore="Cortex-M33"/>
       <accept Dcore="Cortex-M35P"/>
       <accept Dcore="Cortex-M55"/>
+      <accept Dcore="Cortex-M85"/>
       <accept Dcore="ARMV8MBL"/>
       <accept Dcore="ARMV8MML"/>
+      <accept Dcore="Star-MC1"/>
       <accept Dcore="SC000"/>
       <accept Dcore="SC300"/>
     </condition>
@@ -238,7 +146,7 @@
         <file category="source" name="ETH/PHY_KSZ8061RNB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.3.0" condition="CMSIS Core">
       <description>Ethernet PHY KSZ8081RNA Driver</description>
       <RTE_Components_h>
@@ -250,7 +158,7 @@
         <file category="source" name="ETH/PHY_KSZ8081RNA.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8710A Driver</description>
       <RTE_Components_h>
@@ -262,7 +170,7 @@
         <file category="source" name="ETH/PHY_LAN8710A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8720 Driver</description>
       <RTE_Components_h>
@@ -274,7 +182,19 @@
         <file category="source" name="ETH/PHY_LAN8720.c"/>
       </files>
     </component>
-    
+
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
+      <description>Ethernet PHY LAN8740A Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8740A        /* Driver PHY LAN8740A */
+      </RTE_Components_h>
+      <files>
+        <file category="doc" name="https://www.microchip.com/LAN8740A"/>
+        <file category="source" name="ETH/PHY_LAN8740A.c"/>
+      </files>
+    </component>
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8742A Driver</description>
       <RTE_Components_h>
@@ -286,7 +206,7 @@
         <file category="source" name="ETH/PHY_LAN8742A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY ST802RT1 Driver</description>
       <RTE_Components_h>
@@ -311,7 +231,7 @@
         <file category="source" name="Flash/AM29x800BB/AM29x800BB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB641E" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
       <description>AT45DB641E Flash (SPI)</description>
       <RTE_Components_h>
@@ -323,7 +243,7 @@
         <file category="source" name="Flash/AT45DB641E/AT45DB641E.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB642D" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
       <description>AT45DB642D Flash (SPI)</description>
       <RTE_Components_h>
@@ -335,7 +255,7 @@
         <file category="source" name="Flash/AT45DB642D/AT45DB642D.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29EW28F128" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>M29EW 128Mb Flash (16-bit Bus): JS28F128M29EW, PC28F128M29EW, RC28F128M29EW</description>
       <RTE_Components_h>
@@ -347,7 +267,7 @@
         <file category="source" name="Flash/M29EW28F128/M29EW28F128.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29W640FB" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>M29W640FB Flash (16-bit Bus)</description>
       <RTE_Components_h>
@@ -359,7 +279,7 @@
         <file category="source" name="Flash/M29W640FB/M29W640FB.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="N25Q032A" Capiversion="2.0.0" Cversion="1.1.0" condition="CMSIS Core and SPI Driver">
       <description>N25Q032A Flash (SPI)</description>
       <RTE_Components_h>
@@ -371,7 +291,7 @@
         <file category="source" name="Flash/N25Q032A/N25Q032A.c"/>
       </files>
     </component>
-    
+
     <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="S29GL064Nx2" Capiversion="2.0.0" Cversion="1.4.0" condition="CMSIS Core">
       <description>S29GL064N Dual Flash (32-bit Bus)</description>
       <RTE_Components_h>
@@ -405,7 +325,7 @@
         #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/General/html/driver_I2C.html"/>
+        <file category="doc"    name="Documentation/html/driver_I2C.html"/>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
       </files>
@@ -419,7 +339,7 @@
         #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/General/html/driver_SPI.html"/>
+        <file category="doc"    name="Documentation/html/driver_SPI.html"/>
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>
@@ -428,8 +348,29 @@
 
     <!-- CMSIS-Driver WiFi -->
 
+    <!-- DA16200 -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="DA16200" Capiversion="1.1.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+      <description>Renesas DA16200 WiFi Driver (UART)</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_WiFi_DA16200_UART   /* Driver WiFi DA16200 (UART) */
+      </RTE_Components_h>
+      <files>
+        <file category="header"  name="WiFi/DA16200/Config/WiFi_DA16200_Config.h" attr="config" version="1.0.0"/>
+        <file category="source"  name="WiFi/DA16200/Config/WiFi_DA16200_HW.c"     attr="config" version="1.0.0"/>
+        <file category="include" name="WiFi/DA16200/"/>
+        <file category="source"  name="WiFi/DA16200/WiFi_DA16200.c"/>
+        <file category="source"  name="WiFi/DA16200/WiFi_DA16200_Os.c"/>
+        <file category="source"  name="WiFi/DA16200/DA16200.c"/>
+        <file category="source"  name="WiFi/DA16200/DA16200_Serial.c"/>
+        <file category="include" name="WiFi/DA16200/BufList/"/>
+        <file category="source"  name="WiFi/DA16200/BufList/BufList.c"/>
+        <file category="source"  name="WiFi/DA16200/BufList/LinkList.c"/>
+      </files>
+    </component>
+
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.12.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.14.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -438,7 +379,7 @@
       <files>
         <file category="other"   name="WiFi/ISM43362/WiFi_ISM43362.scvd"/>
         <file category="include" name="WiFi/ISM43362/"/>
-        <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.1.0"/>
+        <file category="header"  name="WiFi/ISM43362/Config/WiFi_ISM43362_Config.h" attr="config" version="1.2.0"/>
         <file category="source"  name="WiFi/ISM43362/Config/WiFi_ISM43362_HW.c"     attr="config" version="1.1.0"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362.c"/>
         <file category="source"  name="WiFi/ISM43362/WiFi_ISM43362_Buf.c"/>

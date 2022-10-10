@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2020 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        13. February 2020
- * $Revision:    V1.1
+ * $Date:        4. April 2022
+ * $Revision:    V1.2
  *
  * Project:      WiFi Driver Configuration for 
  *               Inventek ISM43362-M3G-L44 WiFi Module (SPI variant)
@@ -65,6 +65,9 @@
 // Interval in which asynchronous events are polled and also interval 
 // in which long blocking socket receive is split
 #define WIFI_ISM43362_ASYNC_INTERVAL       (8)
+
+// Asynchronous thread stack size (default: 1024)
+#define WIFI_ISM43362_ASYNC_THREAD_STACK_SIZE  (1024)
 
 // Asynchronous thread priority (default: osPriorityAboveNormal)
 // This priority should be above user threads

@@ -3,7 +3,7 @@
 This repository contains MCU independent device driver implementations and template files. 
 The drivers are implemented using the [CMSIS-Driver API specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html).
 
-This pack's documentation can be found here: https://arm-software.github.io/CMSIS-Driver/General/html/index.html
+This pack's documentation can be found here: https://arm-software.github.io/CMSIS-Driver/latest/index.html
 
 All drivers refer the API Interface header file defintions published in the CMSIS pack (https://github.com/ARM-software/CMSIS_5).
 
@@ -16,6 +16,7 @@ All drivers refer the API Interface header file defintions published in the CMSI
 - PHY_KSZ8081RNA
 - PHY_LAN8710A
 - PHY_LAN8720
+- PHY_LAN8740A
 - PHY_LAN8742A
 - PHY_ST802RT1
 
@@ -38,6 +39,7 @@ All drivers refer the API Interface header file defintions published in the CMSI
 - SPI_MultiSlave
 
 ## WiFi - WiFi device drivers
+- DA16200
 - ISM43362
 - ESP32
 - ESP8266

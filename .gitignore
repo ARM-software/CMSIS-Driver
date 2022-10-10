@@ -1,1 +1,7 @@
-Documentation/
+build
+output
+Documentation/html
+DoxyGen/driver.dxy
+DoxyGen/src/history.txt
+*.bak
+/linkchecker-out.csv

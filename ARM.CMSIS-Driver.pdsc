@@ -14,7 +14,7 @@
 
   <requirements>
     <packages>
-      <package vendor="ARM" name="CMSIS" version="5.7.0-0"/>
+      <package vendor="ARM" name="CMSIS" version="5.9.0-0"/>
     </packages>
   </requirements>
 
@@ -38,29 +38,18 @@
       <accept Dcore="SC000"/>
       <accept Dcore="SC300"/>
     </condition>
-    <condition id="CMSIS RTOS">
-      <description>CMSIS RTOS (API1 or API2)</description>
-      <accept Cclass="CMSIS" Cgroup="RTOS"/>
-      <accept Cclass="CMSIS" Cgroup="RTOS2"/>
-    </condition>
-    <condition id="CMSIS RTOS2">
-      <description>CMSIS RTOS (API2 only)</description>
-      <require Cclass="CMSIS" Cgroup="RTOS2"/>
-    </condition>
     <condition id="CMSIS Core">
       <description>CMSIS Core for Cortex-M</description>
       <require condition="Cortex-M Device"/>
       <require Cclass="CMSIS" Cgroup="CORE"/>
     </condition>
+    <condition id="CMSIS RTOS2">
+      <description>CMSIS RTOS2</description>
+      <require Cclass="CMSIS" Cgroup="RTOS2"/>
+    </condition>
     <condition id="CMSIS Core and SPI Driver">
       <description>CMSIS Core for Cortex-M and SPI Driver</description>
       <require condition="CMSIS Core"/>
-      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
-    </condition>
-    <condition id="CMSIS Core with RTOS and SPI Driver">
-      <description>CMSIS Core with RTOS for Cortex-M and SPI Driver</description>
-      <require condition="CMSIS Core"/>
-      <require condition="CMSIS RTOS"/>
       <require Cclass="CMSIS Driver" Cgroup="SPI"/>
     </condition>
     <condition id="CMSIS Core with RTOS2 and SPI Driver">
@@ -86,7 +75,7 @@
   <components>
 
     <!-- CMSIS-Driver Ethernet -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.2.0" Cversion="6.7.0" condition="CMSIS Core with RTOS and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.2.0" Cversion="6.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
       <description>Ethernet MAC + PHY KSZ8851SNL/SNLI Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

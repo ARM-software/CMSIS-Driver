@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2023 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        25. March 2022
- * $Revision:    V6.7
+ * $Date:        6. December 2023
+ * $Revision:    V6.8
  *
  * Driver:       Driver_ETH_MACn (default: Driver_ETH_MAC0),
                  Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -36,6 +36,8 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 6.8
+ *    Removed support for CMSIS-RTOS v1
  *  Version 6.7
  *    Corrected invalid power status in MAC_PowerControl
  *  Version 6.6
@@ -60,13 +62,7 @@
 
 #include <string.h>
 
-#include "RTE_Components.h"
-
-#ifdef RTE_CMSIS_RTOS2
 #include "cmsis_os2.h"
-#else
-#include "cmsis_os.h"
-#endif
 
 #ifdef __clang__
   #define __rbit(v)     __builtin_arm_rbit(v)
@@ -244,11 +240,7 @@ static uint32_t crc32_data (const uint8_t *data, uint32_t len) {
   \return      current system timer count
 */
 static uint32_t get_sys_tick (void) {
-#if defined (RTE_CMSIS_RTOS2)
   return (osKernelGetSysTimerCount());
-#else
-  return (osKernelSysTick());
-#endif
 }
 
 /**
@@ -257,11 +249,7 @@ static uint32_t get_sys_tick (void) {
   \return      tx timeout in system timer counts
 */
 static uint32_t get_tx_timeout (void) {
-#if defined (RTE_CMSIS_RTOS2)
   return ((uint32_t)(((uint64_t)TX_TIMEOUT * osKernelGetSysTimerFreq()) / 1000000U));
-#else
-  return (osKernelSysTickMicroSec(TX_TIMEOUT));
-#endif
 }
 
 /* Ethernet Driver functions */

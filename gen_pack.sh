@@ -50,7 +50,10 @@ PACK_BASE_FILES="
 # Specify file names to be deleted from pack build directory
 # Default: empty
 #
-PACK_DELETE_FILES=""
+PACK_DELETE_FILES="
+  Documentation/Doxygen
+  Documentation/README.md
+"
 
 # Specify patches to be applied
 # Default: empty
@@ -85,7 +88,7 @@ PACK_CHANGELOG_MODE="tag"
 function preprocess() {
   # add custom steps here to be executed
   # before populating the pack build folder
-  ./DoxyGen/gen_doc.sh
+  ./Documentation/Doxygen/gen_doc.sh
   return 0
 }
 

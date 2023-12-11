@@ -1,3 +1,1 @@
-function writeVersionDropdown() {
-    // stub only, do nothing
-}
+function writeVersionDropdown() {}

@@ -1,7 +1,7 @@
 build
 output
 Documentation/html
-DoxyGen/driver.dxy
-DoxyGen/src/history.txt
+Documentation/Doxygen/driver.dxy
+Documentation/Doxygen/src/history.txt
 *.bak
-/linkchecker-out.csv
+linkchecker-out.csv

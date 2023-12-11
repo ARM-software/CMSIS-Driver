@@ -51,14 +51,14 @@ PROJECT_BRIEF          = "MCU independent CMSIS-Driver implementations"
 # pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
 # the logo to the output directory.
 
-PROJECT_LOGO           = Doxygen_Templates/cmsis_logo_white_small.png
+PROJECT_LOGO           = style_template/cmsis_logo_white_small.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = ../Documentation/
+OUTPUT_DIRECTORY       = ../
 
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create 4096 sub-
 # directories (in 2 levels) under the output directory of each output format and
@@ -772,7 +772,7 @@ FILE_VERSION_FILTER    =
 # DoxygenLayout.xml, doxygen will parse it automatically even if the LAYOUT_FILE
 # tag is left empty.
 
-LAYOUT_FILE            = Doxygen_Templates/Layout_forUser.xml
+LAYOUT_FILE            = style_template/layout.xml
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files containing
 # the reference definitions. This must be a list of .bib files. The .bib
@@ -1014,7 +1014,7 @@ EXAMPLE_RECURSIVE      = NO
 # that contain images that are to be included in the documentation (see the
 # \image command).
 
-IMAGE_PATH             = images
+IMAGE_PATH             = src/images
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -1259,7 +1259,7 @@ HTML_FILE_EXTENSION    = .html
 # of the possible markers and block names see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_HEADER            = Doxygen_Templates/header.html
+HTML_HEADER            = style_template/header.html
 
 # The HTML_FOOTER tag can be used to specify a user-defined HTML footer for each
 # generated HTML page. If the tag is left blank doxygen will generate a standard
@@ -1269,7 +1269,7 @@ HTML_HEADER            = Doxygen_Templates/header.html
 # that doxygen normally uses.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_FOOTER            = Doxygen_Templates/footer.html
+HTML_FOOTER            = style_template/footer.html
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading style
 # sheet that is used by each HTML page. It can be used to fine-tune the look of
@@ -1294,7 +1294,7 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = Doxygen_Templates/extra_stylesheet.css
+HTML_EXTRA_STYLESHEET  = style_template/extra_stylesheet.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1304,14 +1304,14 @@ HTML_EXTRA_STYLESHEET  = Doxygen_Templates/extra_stylesheet.css
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = Doxygen_Templates/tabs.css \
-                         Doxygen_Templates/search.css \
-                         Doxygen_Templates/navtree.css \
-                         Doxygen_Templates/tab_b.png \
-                         Doxygen_Templates/navtree.js \
-                         Doxygen_Templates/version.css \
-                         Doxygen_Templates/dropdown.png \
-                         ../LICENSE.txt
+HTML_EXTRA_FILES       = style_template/tabs.css \
+                         style_template/search.css \
+                         style_template/navtree.css \
+                         style_template/tab_b.png \
+                         style_template/navtree.js \
+                         style_template/version.css \
+                         style_template/dropdown.png \
+                         ../../LICENSE
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to

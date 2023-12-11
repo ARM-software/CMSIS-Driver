@@ -2,7 +2,7 @@
 /**
 \mainpage Overview
 
-The **[CMSIS-Driver specification](http://arm-software.github.io/CMSIS_5/Driver/html/index.html)** defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.
+The **[CMSIS-Driver specification](http://arm-software.github.io/CMSIS_6/latest/Driver/index.html)** defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.
 
 This documentation covers a set of reference CMSIS-Driver implementations for external peripheral devices.
 
@@ -30,7 +30,7 @@ File/Directory            | Content
 \section License License
 
 The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license.
-See the <a href="LICENSE.txt">Apache 2.0 License</a>.
+See the <a href="LICENSE">Apache 2.0 License</a>.
 
 \subpage rev_hist
 
@@ -42,7 +42,7 @@ See the <a href="LICENSE.txt">Apache 2.0 License</a>.
 
 \section driver_eth_devices Driver Implementations
 
-The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__eth__interface__gr.html" target="_blank"><b>CMSIS-Ethernet drivers</b></a> for the following devices:
 
 <table class="cmtable" summary="Ethernet Drivers">
     <tr>
@@ -163,7 +163,7 @@ extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
 
 \section driver_wifi_devices Driver Implementations
 
-The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__wifi__interface__gr.html" target="_blank"><b>CMSIS-WiFi drivers</b></a> for the following devices:
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__wifi__interface__gr.html" target="_blank"><b>CMSIS-WiFi drivers</b></a> for the following devices:
 <table class="cmtable" summary="WiFi Drivers">
     <tr>
       <th>Driver</th>
@@ -274,7 +274,7 @@ https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/documents#firmware-update-g
 
 \section driver_Flash_devices Driver Implementations
 
-The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_5/Driver/html/group__flash__interface__gr.html" target="_blank"><b>CMSIS-Flash drivers</b></a> for the following devices:
+The \ref driver_pack_content contains implementations of <a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__flash__interface__gr.html" target="_blank"><b>CMSIS-Flash drivers</b></a> for the following devices:
 
 <table class="cmtable" summary="Flash Drivers">
     <tr>

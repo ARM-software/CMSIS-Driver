@@ -86,7 +86,7 @@
   <components>
 
     <!-- CMSIS-Driver Ethernet -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.1.0" Cversion="6.7.0" condition="CMSIS Core with RTOS and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.2.0" Cversion="6.7.0" condition="CMSIS Core with RTOS and SPI Driver">
       <description>Ethernet MAC + PHY KSZ8851SNL/SNLI Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -94,11 +94,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/KSZ8851"/>
-        <file category="source" name="ETH/ETH_KSZ8851SNL.c"/>
+        <file category="source" name="Ethernet/KSZ8851SNL/ETH_KSZ8851SNL.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.1.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
       <description>Ethernet MAC + PHY LAN91C111 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -106,11 +106,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN91C111"/>
-        <file category="source" name="ETH/ETH_LAN91C111.c"/>
+        <file category="source" name="Ethernet/LAN91C111/ETH_LAN91C111.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.1.0" Cversion="1.1.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.2.0" Cversion="1.1.0" condition="CMSIS Core">
       <description>Ethernet MAC + PHY LAN9220 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -118,12 +118,12 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN9220"/>
-        <file category="source" name="ETH/ETH_LAN9220.c"/>
+        <file category="source" name="Ethernet/LAN9220/ETH_LAN9220.c"/>
       </files>
     </component>
 
     <!-- CMSIS-Driver Ethernet PHY -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="DP83848C" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="DP83848C" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY DP83848C Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -131,11 +131,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="http://www.ti.com/product/DP83848C"/>
-        <file category="source" name="ETH/PHY_DP83848C.c"/>
+        <file category="source" name="Ethernet_PHY/DP83848C/PHY_DP83848C.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8061RNB" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8061RNB" Capiversion="2.2.0" Cversion="1.3.0" condition="CMSIS Core">
       <description>Ethernet PHY KSZ8061RNB Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -143,11 +143,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/KSZ8061"/>
-        <file category="source" name="ETH/PHY_KSZ8061RNB.c"/>
+        <file category="source" name="Ethernet_PHY/KSZ8061RNB/PHY_KSZ8061RNB.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.0.0" Cversion="6.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.2.0" Cversion="6.3.0" condition="CMSIS Core">
       <description>Ethernet PHY KSZ8081RNA Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -155,11 +155,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/KSZ8081"/>
-        <file category="source" name="ETH/PHY_KSZ8081RNA.c"/>
+        <file category="source" name="Ethernet_PHY/KSZ8081RNA/PHY_KSZ8081RNA.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8710A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -167,11 +167,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8710A"/>
-        <file category="source" name="ETH/PHY_LAN8710A.c"/>
+        <file category="source" name="Ethernet_PHY/LAN8710A/PHY_LAN8710A.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8720 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -179,11 +179,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8720A"/>
-        <file category="source" name="ETH/PHY_LAN8720.c"/>
+        <file category="source" name="Ethernet_PHY/LAN8720/PHY_LAN8720.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.0.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8740A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -191,11 +191,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8740A"/>
-        <file category="source" name="ETH/PHY_LAN8740A.c"/>
+        <file category="source" name="Ethernet_PHY/LAN8740A/PHY_LAN8740A.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.0.0" Cversion="1.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.2.0" Cversion="1.3.0" condition="CMSIS Core">
       <description>Ethernet PHY LAN8742A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -203,11 +203,11 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8742A"/>
-        <file category="source" name="ETH/PHY_LAN8742A.c"/>
+        <file category="source" name="Ethernet_PHY/LAN8742A/PHY_LAN8742A.c"/>
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.0.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
       <description>Ethernet PHY ST802RT1 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -215,7 +215,7 @@
       </RTE_Components_h>
       <files>
         <file category="doc" name="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf"/>
-        <file category="source" name="ETH/PHY_ST802RT1.c"/>
+        <file category="source" name="Ethernet_PHY/ST802RT1/PHY_ST802RT1.c"/>
       </files>
     </component>
 

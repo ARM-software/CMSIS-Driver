@@ -22,7 +22,8 @@ PACK_BUILD=./build
 PACK_DIRS="
   Config
   Documentation
-  ETH
+  Ethernet
+  Ethernet_PHY
   Flash
   I2C
   NAND

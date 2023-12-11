@@ -5,7 +5,7 @@ The drivers are implemented using the [CMSIS-Driver API specification](http://ar
 
 This pack's documentation can be found here: https://arm-software.github.io/CMSIS-Driver/latest/index.html
 
-All drivers refer the API Interface header file defintions published in the CMSIS pack (https://github.com/ARM-software/CMSIS_5).
+All drivers refer the API Interface header file definitions published in the CMSIS pack (https://github.com/ARM-software/CMSIS_6).
 
 ## ETH - Ethernet MAC & PHY or Ethernet PHY drivers
 - ETH_KSZ8851SNL

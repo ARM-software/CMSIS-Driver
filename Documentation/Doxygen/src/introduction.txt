@@ -20,7 +20,8 @@ File/Directory            | Content
 \b LICENSE.txt            | CMSIS license agreement (Apache 2.0)
 \b Config/                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations
 \b Documentation/         | This documentation
-\b ETH/                   | \ref driver_eth driver implementations
+\b Ethernet/              | \ref driver_eth driver implementations
+\b Ethernet_PHY/          | \ref driver_eth PHY driver implementations
 \b Flash/                 | \ref driver_Flash memory driver implementations
 \b I2C/                   | \ref driver_I2C driver implementations
 \b NAND/                  | \ref driver_NAND driver implementations

@@ -34,40 +34,40 @@
       <accept Dcore="Cortex-M85"/>
       <accept Dcore="ARMV8MBL"/>
       <accept Dcore="ARMV8MML"/>
+      <accept Dcore="ARMV81MML"/>
       <accept Dcore="Star-MC1"/>
       <accept Dcore="SC000"/>
       <accept Dcore="SC300"/>
     </condition>
-    <condition id="CMSIS Core">
-      <description>CMSIS Core for Cortex-M</description>
+    <condition id="Device CMSIS_Core">
+      <description>Device and CMSIS Core</description>
       <require condition="Cortex-M Device"/>
       <require Cclass="CMSIS" Cgroup="CORE"/>
     </condition>
-    <condition id="CMSIS RTOS2">
-      <description>CMSIS RTOS2</description>
+    <condition id="Device CMSIS_Core SPI_Driver">
+      <description>Device and CMSIS Core and SPI Driver</description>
+      <require condition="Cortex-M Device"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
+    </condition>
+    <condition id="Device CMSIS_Core CMSIS_RTOS2">
+      <description>Device and CMSIS Core with RTOS2</description>
+      <require condition="Cortex-M Device"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
       <require Cclass="CMSIS" Cgroup="RTOS2"/>
     </condition>
-    <condition id="CMSIS Core and SPI Driver">
-      <description>CMSIS Core for Cortex-M and SPI Driver</description>
-      <require condition="CMSIS Core"/>
+    <condition id="Device CMSIS_Core CMSIS_RTOS2 SPI_Driver">
+      <description>Device and CMSIS Core with RTOS2 and SPI Driver</description>
+      <require condition="Cortex-M Device"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="CMSIS" Cgroup="RTOS2"/>
       <require Cclass="CMSIS Driver" Cgroup="SPI"/>
     </condition>
-    <condition id="CMSIS Core with RTOS2 and SPI Driver">
-      <description>CMSIS Core with RTOS2 for Cortex-M and SPI Driver</description>
-      <require condition="CMSIS Core"/>
-      <require condition="CMSIS RTOS2"/>
-      <require Cclass="CMSIS Driver" Cgroup="SPI"/>
-    </condition>
-    <condition id="CMSIS Core with RTOS2 and I2C Driver">
-      <description>CMSIS Core with RTOS2 for Cortex-M and I2C Driver</description>
-      <require condition="CMSIS Core"/>
-      <require condition="CMSIS RTOS2"/>
-      <require Cclass="CMSIS Driver" Cgroup="I2C"/>
-    </condition>
-    <condition id="CMSIS Core with RTOS2 and USART Driver">
-      <description>CMSIS Core with RTOS2 for Cortex-M and USART Driver</description>
-      <require condition="CMSIS Core"/>
-      <require condition="CMSIS RTOS2"/>
+    <condition id="Device CMSIS_Core CMSIS_RTOS2 USART_Driver">
+      <description>Device and CMSIS Core with RTOS2 and USART Driver</description>
+      <require condition="Cortex-M Device"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="CMSIS" Cgroup="RTOS2"/>
       <require Cclass="CMSIS Driver" Cgroup="USART"/>
     </condition>
   </conditions>
@@ -75,7 +75,7 @@
   <components>
 
     <!-- CMSIS-Driver Ethernet -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.2.0" Cversion="6.8.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="KSZ8851SNL" Capiversion="2.2.0" Cversion="6.8.0" condition="Device CMSIS_Core CMSIS_RTOS2 SPI_Driver">
       <description>Ethernet MAC + PHY KSZ8851SNL/SNLI Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -87,7 +87,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
       <description>Ethernet MAC + PHY LAN91C111 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -99,7 +99,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.2.0" Cversion="1.1.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.2.0" Cversion="1.1.0" condition="Device CMSIS_Core">
       <description>Ethernet MAC + PHY LAN9220 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -112,7 +112,7 @@
     </component>
 
     <!-- CMSIS-Driver Ethernet PHY -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="DP83848C" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="DP83848C" Capiversion="2.2.0" Cversion="6.2.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY DP83848C Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -124,7 +124,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8061RNB" Capiversion="2.2.0" Cversion="1.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8061RNB" Capiversion="2.2.0" Cversion="1.3.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY KSZ8061RNB Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -136,7 +136,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.2.0" Cversion="6.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="KSZ8081RNA" Capiversion="2.2.0" Cversion="6.3.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY KSZ8081RNA Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -148,7 +148,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8710A" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY LAN8710A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -160,7 +160,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8720" Capiversion="2.2.0" Cversion="6.2.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY LAN8720 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -172,7 +172,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.2.0" Cversion="1.0.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8740A" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY LAN8740A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -184,7 +184,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.2.0" Cversion="1.3.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8742A" Capiversion="2.2.0" Cversion="1.3.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY LAN8742A Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -196,7 +196,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.2.0" Cversion="6.2.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="ST802RT1" Capiversion="2.2.0" Cversion="6.2.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY ST802RT1 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -209,7 +209,7 @@
     </component>
 
     <!-- CMSIS-Driver Flash -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AM29x800BB" Capiversion="2.3.0" Cversion="1.4.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AM29x800BB" Capiversion="2.3.0" Cversion="1.4.0" condition="Device CMSIS_Core">
       <description>AM29x800BB Flash (16-bit Bus)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -221,7 +221,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB641E" Capiversion="2.3.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB641E" Capiversion="2.3.0" Cversion="1.3.0" condition="Device CMSIS_Core SPI_Driver">
       <description>AT45DB641E Flash (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -233,7 +233,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB642D" Capiversion="2.3.0" Cversion="1.3.0" condition="CMSIS Core and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="AT45DB642D" Capiversion="2.3.0" Cversion="1.3.0" condition="Device CMSIS_Core SPI_Driver">
       <description>AT45DB642D Flash (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -245,7 +245,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29EW28F128" Capiversion="2.3.0" Cversion="1.4.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29EW28F128" Capiversion="2.3.0" Cversion="1.4.0" condition="Device CMSIS_Core">
       <description>M29EW 128Mb Flash (16-bit Bus): JS28F128M29EW, PC28F128M29EW, RC28F128M29EW</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -257,7 +257,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29W640FB" Capiversion="2.3.0" Cversion="1.4.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="M29W640FB" Capiversion="2.3.0" Cversion="1.4.0" condition="Device CMSIS_Core">
       <description>M29W640FB Flash (16-bit Bus)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -269,7 +269,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="N25Q032A" Capiversion="2.3.0" Cversion="1.1.0" condition="CMSIS Core and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="N25Q032A" Capiversion="2.3.0" Cversion="1.1.0" condition="Device CMSIS_Core SPI_Driver">
       <description>N25Q032A Flash (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -281,7 +281,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="S29GL064Nx2" Capiversion="2.3.0" Cversion="1.4.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Flash" Csub="S29GL064Nx2" Capiversion="2.3.0" Cversion="1.4.0" condition="Device CMSIS_Core">
       <description>S29GL064N Dual Flash (32-bit Bus)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -294,7 +294,7 @@
     </component>
 
     <!-- CMSIS-Driver NAND -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="NAND" Csub="Memory Bus" Capiversion="2.4.0" Cversion="1.1.0" condition="CMSIS Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="NAND" Csub="Memory Bus" Capiversion="2.4.0" Cversion="1.1.0" condition="Device CMSIS_Core">
       <description>NAND Flash connected to Memory Bus</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -307,7 +307,7 @@
     </component>
 
     <!-- CMSIS-Driver I2C -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="I2C" Csub="Multi-Slave" Capiversion="2.4.0" Cversion="1.0.1" condition="CMSIS Core with RTOS2 and I2C Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="I2C" Csub="Multi-Slave" Capiversion="2.4.0" Cversion="1.0.1" condition="Device CMSIS_Core CMSIS_RTOS2">
       <description>I2C Master to Multi-Slave Driver Wrapper</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -321,7 +321,7 @@
     </component>
 
     <!-- CMSIS-Driver SPI -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="SPI" Csub="Multi-Slave" Capiversion="2.3.0" Cversion="1.0.1" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="SPI" Csub="Multi-Slave" Capiversion="2.3.0" Cversion="1.0.1" condition="Device CMSIS_Core CMSIS_RTOS2">
       <description>SPI Master to Multi-Slave Driver Wrapper</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -338,7 +338,7 @@
     <!-- CMSIS-Driver WiFi -->
 
     <!-- DA16200 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="DA16200" Capiversion="1.1.0" Cvariant="UART" Cversion="1.0.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="DA16200" Capiversion="1.1.0" Cvariant="UART" Cversion="1.0.0" condition="Device CMSIS_Core CMSIS_RTOS2 USART_Driver">
       <description>Renesas DA16200 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -359,7 +359,7 @@
     </component>
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.15.0" condition="CMSIS Core with RTOS2 and SPI Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.15.0" condition="Device CMSIS_Core CMSIS_RTOS2 SPI_Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -377,7 +377,7 @@
     </component>
 
     <!-- ESP32 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP32" Capiversion="1.1.0" Cvariant="UART" Cversion="1.7.0" condition="Device CMSIS_Core CMSIS_RTOS2 USART_Driver">
       <description>Espressif ESP32 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_ESP32_UART   /* Driver WiFi ESP32 (UART) */
@@ -396,7 +396,7 @@
     </component>
 
     <!-- ESP8266 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ESP8266" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="Device CMSIS_Core CMSIS_RTOS2 USART_Driver">
       <description>Espressif ESP8266 WiFi Driver (UART)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -416,7 +416,7 @@
     </component>
 
     <!-- WizFi360 -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="CMSIS Core with RTOS2 and USART Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="WizFi360" Capiversion="1.1.0" Cvariant="UART" Cversion="1.8.0" condition="Device CMSIS_Core CMSIS_RTOS2 USART_Driver">
       <description>WIZnet WizFi360 WiFi Driver (UART)</description>
       <RTE_Components_h>
         #define RTE_Drivers_WiFi_WIZFI360_UART   /* Driver WiFi WIZFI360 (UART) */

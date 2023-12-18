@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. June 2022
- * $Revision:    V1.14
+ * $Date:        18. December 2023
+ * $Revision:    V1.15
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -98,6 +98,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.15
+ *    - Aligned with CMSIS v6
  *  Version 1.14
  *    - Added statically allocated control block for asynchronous thread if FreeRTOS is used
  *  Version 1.13
@@ -372,9 +374,7 @@ static const osThreadAttr_t thread_async_poll_attr = {
 #endif
   .stack_mem  = &async_thread_stack_mem,        // memory for stack
   .stack_size = sizeof(async_thread_stack_mem), // size of stack
-  .priority   = WIFI_ISM43362_ASYNC_PRIORITY,   // initial thread priority
-  .tz_module  = 0U,                             // TrustZone module identifier
-  .reserved   = 0U                              // reserved (must be 0)
+  .priority   = WIFI_ISM43362_ASYNC_PRIORITY    // initial thread priority
 };
 
 #if    (WIFI_ISM43362_DEBUG_EVR == 1)

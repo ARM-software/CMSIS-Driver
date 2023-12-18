@@ -17,8 +17,8 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        2. September 2021
- * $Revision:    V1.0
+ * $Date:        18. December 2023
+ * $Revision:    V1.1
  *
  * Driver:       Driver_ETH_MACn (default: Driver_ETH_MAC0),
  *               Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -36,6 +36,8 @@
  * -------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Replaced __rbit macro with CMSIS __RBIT
  *  Version 1.0
  *    Initial release
  */
@@ -75,10 +77,6 @@
 
 /* LAN91C111 Register Access */
 #define LREG(object, reg)       (*((object volatile *)(CMSDK_ETH_BASE+reg)))
-
-#ifdef __clang__
-  #define __rbit(v)             __builtin_arm_rbit(v)
-#endif
 
 /* Memory Buffer configuration */
 #define ETH_BUF_SIZE        1536        /* Packet Transmit buffer size   */
@@ -142,7 +140,7 @@ static void MAC_SelectBank (uint8_t bank) {
 static uint32_t crc32_8bit_rev (uint32_t crc32, uint8_t val) {
   uint32_t n;
 
-  crc32 ^= __rbit (val);
+  crc32 ^= __RBIT (val);
   for (n = 8; n; n--) {
     if (crc32 & 0x80000000) {
       crc32 <<= 1;

@@ -87,7 +87,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="ETH_LAN91C111" Capiversion="2.2.0" Cversion="1.1.0" condition="Device CMSIS_Core">
       <description>Ethernet MAC + PHY LAN91C111 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
@@ -99,7 +99,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.2.0" Cversion="1.1.0" condition="Device CMSIS_Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet" Csub="LAN9220" Capiversion="2.2.0" Cversion="1.2.0" condition="Device CMSIS_Core">
       <description>Ethernet MAC + PHY LAN9220 Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

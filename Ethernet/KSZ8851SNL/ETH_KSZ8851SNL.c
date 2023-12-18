@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        6. December 2023
+ * $Date:        18. December 2023
  * $Revision:    V6.8
  *
  * Driver:       Driver_ETH_MACn (default: Driver_ETH_MAC0),
@@ -38,6 +38,7 @@
 /* History:
  *  Version 6.8
  *    Removed support for CMSIS-RTOS v1
+ *    Replaced __rbit macro with CMSIS __RBIT
  *  Version 6.7
  *    Corrected invalid power status in MAC_PowerControl
  *  Version 6.6
@@ -62,10 +63,10 @@
 
 #include <string.h>
 
+#include "cmsis_compiler.h"
 #include "cmsis_os2.h"
 
 #ifdef __clang__
-  #define __rbit(v)     __builtin_arm_rbit(v)
   #pragma clang diagnostic ignored "-Wpadded"
   #pragma clang diagnostic ignored "-Wconversion"
   #pragma clang diagnostic ignored "-Wmissing-field-initializers"
@@ -206,7 +207,7 @@ static void reg_wr (uint8_t reg, uint16_t val) {
 static uint32_t crc32_8bit_rev (uint32_t crc32, uint8_t val) {
   uint32_t n;
 
-  crc32 ^= __rbit (val);
+  crc32 ^= __RBIT (val);
   for (n = 8; n; n--) {
     if (crc32 & 0x80000000) {
       crc32 <<= 1;

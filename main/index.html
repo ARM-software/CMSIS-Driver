@@ -107,7 +107,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
   <div class="headertitle"><div class="title">Overview </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p >The <b><a href="http://arm-software.github.io/CMSIS_5/Driver/html/index.html">CMSIS-Driver specification</a></b> defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.</p>
+<div class="textblock"><p >The <b><a href="http://arm-software.github.io/CMSIS_6/latest/Driver/index.html">CMSIS-Driver specification</a></b> defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.</p>
 <p >This documentation covers a set of reference CMSIS-Driver implementations for external peripheral devices.</p>
 <p >The implementations are maintained in a public <b><a href="https://github.com/arm-software/CMSIS-Driver">GitHub repository</a></b>. Their releases in <b><a href="https://www.open-cmsis-pack.org/">CMSIS Pack format</a></b> are also available on <b><a href="https://developer.arm.com/tools-and-software/embedded/cmsis/cmsis-packs">CMSIS Packs page</a></b> under <em>Arm</em> - <em>CMSIS Drivers for external devices</em> category and can be used in environments supporting the CMSIS-Pack concept.</p>
 <p >Interested parties are welcome to contribute their drivers to the referenced repository.</p>
@@ -126,21 +126,23 @@ Pack Content</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyLeft"><b>Documentation/</b>   </td><td class="markdownTableBodyLeft">This documentation    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>ETH/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_eth.html">Ethernet</a> driver implementations    </td></tr>
+<td class="markdownTableBodyLeft"><b>Ethernet/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_eth.html">Ethernet</a> driver implementations    </td></tr>
 <tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><b>Ethernet_PHY/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_eth.html">Ethernet</a> PHY driver implementations    </td></tr>
+<tr class="markdownTableRowOdd">
 <td class="markdownTableBodyLeft"><b>Flash/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_Flash.html">Flash</a> memory driver implementations    </td></tr>
-<tr class="markdownTableRowOdd">
+<tr class="markdownTableRowEven">
 <td class="markdownTableBodyLeft"><b>I2C/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_I2C.html">I2C</a> driver implementations    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>NAND/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_NAND.html">NAND</a> driver implementations    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>SPI/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_SPI.html">SPI</a> driver implementations    </td></tr>
+<td class="markdownTableBodyLeft"><b>NAND/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_NAND.html">NAND</a> driver implementations    </td></tr>
 <tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><b>SPI/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_SPI.html">SPI</a> driver implementations    </td></tr>
+<tr class="markdownTableRowOdd">
 <td class="markdownTableBodyLeft"><b>WiFi/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_WiFi.html">WiFi</a> driver implementations   </td></tr>
 </table>
 <h1><a class="anchor" id="License"></a>
 License</h1>
-<p >The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license. See the <a href="LICENSE.txt">Apache 2.0 License</a>.</p>
+<p >The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license. See the <a href="LICENSE">Apache 2.0 License</a>.</p>
 <p ><a class="el" href="rev_hist.html">Revision History</a> </p>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2022 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2023 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -205,7 +205,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,14)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,15)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };

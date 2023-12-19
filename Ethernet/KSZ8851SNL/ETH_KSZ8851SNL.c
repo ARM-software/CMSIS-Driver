@@ -78,8 +78,8 @@
 #include "Driver_ETH_MAC.h"
 #include "Driver_ETH_PHY.h"
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,7) /* driver version */
-#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,7) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,8) /* driver version */
+#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(6,8) /* driver version */
 
 /* Default ethernet driver number */
 #ifndef ETH_NUM

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2022 Arm Limited. All rights reserved.
+ * Copyright (c) 2013-2023 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -52,8 +52,8 @@
 #include "ETH_LAN9220.h"
 
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
-#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) /* driver version */
+#define ARM_ETH_PHY_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) /* driver version */
 
 
 /* Ethernet MAC driver number (default) */

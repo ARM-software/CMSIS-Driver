@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['wifi_0',['WiFi',['../driver_WiFi.html',1,'']]]
+  ['usb_0',['USB',['../driver_USB.html',1,'']]]
 ];

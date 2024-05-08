@@ -30,6 +30,12 @@ var NAVTREE =
       [ "Driver Implementations", "driver_eth.html#driver_eth_devices", null ],
       [ "Multiple Driver Instances", "driver_eth.html#driver_eth_multiple", null ]
     ] ],
+    [ "USB", "driver_USB.html", [
+      [ "Driver Implementations", "driver_USB.html#driver_usb", [
+        [ "EHCI_TT", "driver_USB.html#driver_EHCI_TT", null ],
+        [ "OHCI", "driver_USB.html#driver_OHCI", null ]
+      ] ]
+    ] ],
     [ "WiFi", "driver_WiFi.html", [
       [ "Driver Implementations", "driver_WiFi.html#driver_wifi_devices", [
         [ "DA16200", "driver_WiFi.html#driver_DA16200", null ],

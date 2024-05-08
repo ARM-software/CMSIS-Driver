@@ -26,6 +26,7 @@ File/Directory            | Content
 \b I2C/                   | \ref driver_I2C driver implementations
 \b NAND/                  | \ref driver_NAND driver implementations
 \b SPI/                   | \ref driver_SPI driver implementations
+\b USB/                   | \ref driver_USB driver implementations
 \b WiFi/                  | \ref driver_WiFi driver implementations
 
 \section License License
@@ -156,6 +157,86 @@ extern ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;
  </li>
 </ul>
 
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page driver_USB USB
+
+\section driver_usb Driver Implementations
+
+The \ref driver_pack_content provides implementations of <a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__usb__interface__gr.html" target="_blank"><b>CMSIS-USB drivers</b></a> for the following controllers:
+<table class="cmtable" summary="USB Drivers">
+    <tr>
+      <th>Driver</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>\ref driver_EHCI_TT </td>
+      <td>
+        USB Host Driver for the EHCI with Transaction Translator (TT) host controller.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref driver_OHCI</td>
+      <td>
+        USB Host Driver for the OHCI host controller.
+      </td>
+    </tr>
+</table>
+
+\subsection driver_EHCI_TT EHCI_TT
+
+Enhanced Host Controller Interface (EHCI) with TT is EHCI controller with integrated Transaction Translator that supports high/full/low-speed devices.
+
+It is usually used in embedded devices to remove the requirement of having additional host controller (OHCI) for handling full/low-speed devices separately.
+
+This driver exports up to 2 driver instances thus it can support 2 EHCI with TT host controllers.
+
+It requires Host Controller Interface (HCI) sub-driver providing hardware specifics.
+
+It is configured via define values in the <b>USBH_EHCI_TT_Config.h</b> configuration file.
+
+<b>Configuration</b>
+
+ - <b>USBH0 Driver</b>:
+   - <b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver
+   - <b>EHCI registers base address</b>: Specifies absolute address at which EHCI controller registers are located
+
+ - <b>USBH1 Driver</b> (can be enabled/disabled): 
+   - <b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver
+   - <b>EHCI registers base address</b>: Specifies absolute address at which EHCI controller registers are located
+
+Configuration not exposed through Configuration Wizard:
+ - <b>USBH_EHCI_TT_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per instance).
+
+\note If EHCI controller has limitations regarding communication area positioning, for example if EHCI controller can only access 
+      dedicated RAM memory, then section named <b>.driver.usbh0_ehci_com_area</b> or <b>.driver.usbh1_ehci_com_area</b> has to be located in that RAM memory.
+
+\subsection driver_OHCI OHCI
+
+Open Host Controller Interface (OHCI) is host controller interface that supports full/low-speed devices.
+
+This driver exports up to 2 driver instances thus it can support 2 OHCI host controllers.
+
+It requires Host Controller Interface (HCI) sub-driver providing hardware specifics.
+
+It is configured via define values in the <b>USBH_OHCI_Config.h</b> configuration file.
+
+<b>Configuration</b>
+
+- <b>USBH0 Driver</b>:
+  - <b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver
+  - <b>OHCI registers base address</b>: Specifies absolute address at which OHCI controller registers are located
+
+Configuration not exposed through Configuration Wizard:
+ - <b>USBH1_OHCI_ENABLED</b>: Enables or disables USBH1 Driver (Driver_USBH1)
+ - <b>USBH1_OHCI_HCI_DRV_NUM</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver
+ - <b>USBH1_OHCI_BASE_ADDR</b>: Specifies absolute address at which OHCI controller registers are located
+ - <b>USBH_OHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per instance).
+
+\note If OHCI controller has limitations regarding communication area positioning, for example if OHCI controller can only access 
+      dedicated RAM memory, then section named <b>.driver.usbh0_ohci_hcca</b> has to be located in that RAM memory.
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/

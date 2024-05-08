@@ -37,6 +37,7 @@ PACK_DIRS="
   I2C
   NAND
   SPI
+  USB
   WiFi
 "
 

@@ -7,7 +7,7 @@ var NAVTREEINDEX0 =
 "driver_NAND.html":[6],
 "driver_SPI.html":[7],
 "driver_USB.html":[2],
-"driver_USB.html#driver_EHCI_TT":[2,0,0],
+"driver_USB.html#driver_EHCI":[2,0,0],
 "driver_USB.html#driver_OHCI":[2,0,1],
 "driver_USB.html#driver_usb":[2,0],
 "driver_WiFi.html":[3],

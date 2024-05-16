@@ -113,55 +113,59 @@ Driver Implementations</h1>
 <tr>
 <th>Driver </th><th>Description  </th></tr>
 <tr>
-<td><a class="el" href="driver_USB.html#driver_EHCI_TT">EHCI_TT</a>  </td><td>USB Host Driver for the EHCI with Transaction Translator (TT) host controller.   </td></tr>
+<td><a class="el" href="driver_USB.html#driver_EHCI">EHCI</a>  </td><td>USB Host Driver for the EHCI with Transaction Translator (TT) host controller.   </td></tr>
 <tr>
 <td><a class="el" href="driver_USB.html#driver_OHCI">OHCI</a> </td><td>USB Host Driver for the OHCI host controller.   </td></tr>
 </table>
-<h2><a class="anchor" id="driver_EHCI_TT"></a>
-EHCI_TT</h2>
+<h2><a class="anchor" id="driver_EHCI"></a>
+EHCI</h2>
 <p >Enhanced Host Controller Interface (EHCI) with TT is EHCI controller with integrated Transaction Translator that supports high/full/low-speed devices.</p>
 <p >It is usually used in embedded devices to remove the requirement of having additional host controller (OHCI) for handling full/low-speed devices separately.</p>
 <p >This driver exports up to 2 driver instances thus it can support 2 EHCI with TT host controllers.</p>
-<p >It requires Host Controller Interface (HCI) sub-driver providing hardware specifics.</p>
-<p >It is configured via define values in the <b>USBH_EHCI_TT_Config.h</b> configuration file.</p>
+<p >It requires hardware-specific functions implementation that are available in the template module <b>USBH_EHCI_HW.c</b>.</p>
+<p >It is configured via define values in the <b>USBH_EHCI_Config.h</b> configuration file.</p>
 <p ><b>Configuration</b></p>
 <ul>
-<li><b>USBH0 Driver</b>:<ul>
-<li><b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver</li>
-<li><b>EHCI registers base address</b>: Specifies absolute address at which EHCI controller registers are located</li>
+<li><b>USB Host Controller 0</b>:<ul>
+<li><b>Driver number</b>: Specifies the exported Driver_USBH# instance</li>
+<li><b>EHCI registers base address</b>: Specifies the absolute address at which EHCI controller registers are located</li>
+<li><b>Relocated EHCI communication area</b>: Specifies if the communication area is located at a specific address (via the linker script)</li>
+<li><b>EHCI communication area section name</b>: Specifies the section name of the EHCI communication area</li>
 </ul>
 </li>
-<li><b>USBH1 Driver</b> (can be enabled/disabled):<ul>
-<li><b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver</li>
-<li><b>EHCI registers base address</b>: Specifies absolute address at which EHCI controller registers are located</li>
+<li><b>USB Host Controller 1</b> (can be enabled/disabled):<ul>
+<li><b>Driver number</b>: Specifies the exported Driver_USBH# instance</li>
+<li><b>EHCI registers base address</b>: Specifies the absolute address at which EHCI controller registers are located</li>
+<li><b>Relocated EHCI communication area</b>: Specifies if the communication area is located at a specific address (via the linker script)</li>
+<li><b>EHCI communication area section name</b>: Specifies the section name of the EHCI communication area</li>
 </ul>
 </li>
+<li><b>USBH_EHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per controller)</li>
 </ul>
-<p >Configuration not exposed through Configuration Wizard:</p><ul>
-<li><b>USBH_EHCI_TT_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per instance).</li>
-</ul>
-<dl class="section note"><dt>Note</dt><dd>If EHCI controller has limitations regarding communication area positioning, for example if EHCI controller can only access dedicated RAM memory, then section named <b>.driver.usbh0_ehci_com_area</b> or <b>.driver.usbh1_ehci_com_area</b> has to be located in that RAM memory.</dd></dl>
 <h2><a class="anchor" id="driver_OHCI"></a>
 OHCI</h2>
-<p >Open Host Controller Interface (OHCI) is host controller interface that supports full/low-speed devices.</p>
+<p >Open Host Controller Interface (OHCI) is a host controller interface that supports full/low-speed devices.</p>
 <p >This driver exports up to 2 driver instances thus it can support 2 OHCI host controllers.</p>
-<p >It requires Host Controller Interface (HCI) sub-driver providing hardware specifics.</p>
+<p >It requires hardware-specific functions implementation that are available in the template module <b>USBH_OHCI_HW.c</b>.</p>
 <p >It is configured via define values in the <b>USBH_OHCI_Config.h</b> configuration file.</p>
 <p ><b>Configuration</b></p>
 <ul>
-<li><b>USBH0 Driver</b>:<ul>
-<li><b>HCI Driver Number</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver</li>
-<li><b>OHCI registers base address</b>: Specifies absolute address at which OHCI controller registers are located</li>
+<li><b>USB Host Controller 0</b>:<ul>
+<li><b>Driver number</b>: Specifies the exported Driver_USBH# instance</li>
+<li><b>OHCI registers base address</b>: Specifies the absolute address at which OHCI controller registers are located</li>
+<li><b>Relocated OHCI communication area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script)</li>
+<li><b>OHCI communication area section name</b>: Specifies the section name of the OHCI communication area</li>
 </ul>
 </li>
+<li><b>USB Host Controller 1</b> (can be enabled/disabled):<ul>
+<li><b>Driver number</b>: Specifies the exported Driver_USBH# instance</li>
+<li><b>OHCI registers base address</b>: Specifies the absolute address at which OHCI controller registers are located</li>
+<li><b>Relocated OHCI communication area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script)</li>
+<li><b>OHCI communication area section name</b>: Specifies the section name of the OHCI communication area</li>
 </ul>
-<p >Configuration not exposed through Configuration Wizard:</p><ul>
-<li><b>USBH1_OHCI_ENABLED</b>: Enables or disables USBH1 Driver (Driver_USBH1)</li>
-<li><b>USBH1_OHCI_HCI_DRV_NUM</b>: Specifies instance of the Host Controller Interface (HCI) sub-driver</li>
-<li><b>USBH1_OHCI_BASE_ADDR</b>: Specifies absolute address at which OHCI controller registers are located</li>
-<li><b>USBH_OHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per instance).</li>
+</li>
+<li><b>USBH_OHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per controller) </li>
 </ul>
-<dl class="section note"><dt>Note</dt><dd>If OHCI controller has limitations regarding communication area positioning, for example if OHCI controller can only access dedicated RAM memory, then section named <b>.driver.usbh0_ohci_hcca</b> has to be located in that RAM memory. </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

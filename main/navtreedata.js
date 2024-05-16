@@ -32,7 +32,7 @@ var NAVTREE =
     ] ],
     [ "USB", "driver_USB.html", [
       [ "Driver Implementations", "driver_USB.html#driver_usb", [
-        [ "EHCI_TT", "driver_USB.html#driver_EHCI_TT", null ],
+        [ "EHCI", "driver_USB.html#driver_EHCI", null ],
         [ "OHCI", "driver_USB.html#driver_OHCI", null ]
       ] ]
     ] ],

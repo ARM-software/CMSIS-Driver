@@ -1,12 +1,4 @@
-/******************************************************************************
- * @file     USBH_EHCI_TT_Regs.h
- * @brief    USB Host EHCI Controller Registers
- *           for customized EHCI with internal Transaction Translator (TT)
- *           (with full/low speed support)
- * @version  V1.0
- * @date     8. May 2024
- ******************************************************************************/
-/*
+/* -----------------------------------------------------------------------------
  * Copyright (c) 2024 Arm Limited (or its affiliates).
  * All rights reserved.
  *
@@ -23,7 +15,15 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *
+ *
+ * $Date:        15. May 2024
+ * $Revision:    V1.0
+ *
+ * Project:      USB Host EHCI Controller Driver Registers header
+ *               for customized EHCI with internal Transaction Translator (TT)
+ *               (with full/low speed support)
+ * -------------------------------------------------------------------------- */
 
 #ifndef USBH_EHCI_TT_REGS_H_
 #define USBH_EHCI_TT_REGS_H_

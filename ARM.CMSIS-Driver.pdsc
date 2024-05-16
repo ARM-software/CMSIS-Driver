@@ -14,7 +14,7 @@
   <releases>
     <release version="0.0.0">
       Active development ...
-      - Added USB Host EHCI_TT driver
+      - Added USB Host EHCI (TT) driver
       - Added USB Host OHCI driver
     </release>
   </releases>
@@ -46,9 +46,6 @@
       <accept Dcore="SC000"/>
       <accept Dcore="SC300"/>
     </condition>
-    <condition id="NXP Device">
-      <accept Dvendor="NXP:11"/>
-    </condition>
     <condition id="Device CMSIS_Core">
       <description>Device and CMSIS Core</description>
       <require condition="Cortex-M Device"/>
@@ -79,12 +76,6 @@
       <require Cclass="CMSIS" Cgroup="CORE"/>
       <require Cclass="CMSIS" Cgroup="RTOS2"/>
       <require Cclass="CMSIS Driver" Cgroup="USART"/>
-    </condition>
-    <condition id="NXP Device CMSIS_Core CMSIS_RTOS2">
-      <description>NXP Device and CMSIS Core with RTOS2</description>
-      <require condition="NXP Device"/>
-      <require Cclass="CMSIS" Cgroup="CORE"/>
-      <require Cclass="CMSIS" Cgroup="RTOS2"/>
     </condition>
   </conditions>
 
@@ -353,33 +344,33 @@
 
     <!-- CMSIS-Driver USB Host -->
 
-    <!-- EHCI_TT -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="USB Host" Csub="EHCI_TT" Capiversion="2.3.0" Cversion="1.0.0" condition="NXP Device CMSIS_Core CMSIS_RTOS2">
+    <!-- EHCI -->
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="USB Host" Csub="EHCI" Cvariant="TT" Capiversion="2.4.0" Cversion="1.0.0" condition="Device CMSIS_Core CMSIS_RTOS2">
       <description>USB Host EHCI Controller Driver for customized EHCI with internal Transaction Translator (TT)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
-        #define RTE_Drivers_USBH0_EHCI_TT (1U)  /* Driver USBH0 */
-        #define RTE_Drivers_USBH1_EHCI_TT (1U)  /* Driver USBH1 */
+        #define RTE_Drivers_USBH_EHCI           /* Driver USBH EHCI (TT) */
       </RTE_Components_h>
       <files>
-        <file category="include" name="USB/EHCI_TT/"/>
-        <file category="header"  name="USB/EHCI_TT/Config/USBH_EHCI_TT_Config.h" attr="config" version="1.0.0"/>
-        <file category="source"  name="USB/EHCI_TT/USBH_EHCI_TT.c"/>
+        <file category="header" name="USB/EHCI/Interface/USBH_EHCI_HW.h"/>
+        <file category="header" name="USB/EHCI/Config/USBH_EHCI_Config.h" attr="config"   version="1.0.0"/>
+        <file category="source" name="USB/EHCI/Template/USBH_EHCI_HW.c"   attr="template" version="1.0.0" select="Implementation of Host Controller hardware specifics for EHCI"/>
+        <file category="source" name="USB/EHCI/Source/USBH_EHCI_TT.c"/>
       </files>
     </component>
 
     <!-- OHCI -->
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="USB Host" Csub="OHCI" Capiversion="2.3.0" Cversion="1.0.0" condition="NXP Device CMSIS_Core CMSIS_RTOS2">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="USB Host" Csub="OHCI" Capiversion="2.4.0" Cversion="1.0.0" condition="Device CMSIS_Core CMSIS_RTOS2">
       <description>USB Host OHCI Controller Driver</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
-        #define RTE_Drivers_USBH0_OHCI  (1U)    /* Driver USBH0 */
-        #define RTE_Drivers_USBH1_OHCI  (1U)    /* Driver USBH1 */
+        #define RTE_Drivers_USBH_OHCI           /* Driver USBH OHCI */
       </RTE_Components_h>
       <files>
-        <file category="include" name="USB/OHCI/"/>
-        <file category="header"  name="USB/OHCI/Config/USBH_OHCI_Config.h" attr="config" version="1.0.0"/>
-        <file category="source"  name="USB/OHCI/USBH_OHCI.c"/>
+        <file category="header" name="USB/OHCI/Interface/USBH_OHCI_HW.h"/>
+        <file category="header" name="USB/OHCI/Config/USBH_OHCI_Config.h" attr="config"   version="1.0.0"/>
+        <file category="source" name="USB/OHCI/Template/USBH_OHCI_HW.c"   attr="template" version="1.0.0" select="Implementation of Host Controller hardware specifics for OHCI"/>
+        <file category="source" name="USB/OHCI/Source/USBH_OHCI.c"/>
       </files>
     </component>
 

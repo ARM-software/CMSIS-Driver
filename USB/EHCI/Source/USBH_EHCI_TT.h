@@ -1,12 +1,4 @@
-/******************************************************************************
- * @file     USBH_EHCI_TT.h
- * @brief    USB Host EHCI Controller Driver header
- *           for customized EHCI with internal Transaction Translator (TT)
- *           (with full/low speed support)
- * @version  V1.0
- * @date     8. May 2024
- ******************************************************************************/
-/*
+/* -----------------------------------------------------------------------------
  * Copyright (c) 2024 Arm Limited (or its affiliates).
  * All rights reserved.
  *
@@ -23,12 +15,15 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-
-/* History:
- *  Version 1.0
- *    Initial release
- */
+ *
+ *
+ * $Date:        15. May 2024
+ * $Revision:    V1.0
+ *
+ * Project:      USB Host EHCI Controller Driver header
+ *               for customized EHCI with internal Transaction Translator (TT)
+ *               (with full/low speed support)
+ * -------------------------------------------------------------------------- */
 
 #ifndef USBH_EHCI_TT_H_
 #define USBH_EHCI_TT_H_
@@ -39,14 +34,19 @@ extern "C"
 #endif
 
 #include "Driver_USBH.h"
-#include "USBH_EHCI_TT_Config.h"
+#include "USBH_EHCI_Config.h"
+
+// Configuration macros *******************************************************
+
+#define USBHn_DRIVER_(n)              Driver_USBH##n
+#define USBHn_DRIVER(n)               USBHn_DRIVER_(n)
 
 // Global driver structures ***************************************************
 
-extern    ARM_DRIVER_USBH Driver_USBH0;
+extern  ARM_DRIVER_USBH USBHn_DRIVER(USBH0_EHCI_DRV_NUM);
 
-#if      (USBH1_EHCI_TT_ENABLED == 1)
-extern    ARM_DRIVER_USBH Driver_USBH1;
+#if    (USBH1_EHCI_ENABLED == 1)
+extern  ARM_DRIVER_USBH USBHn_DRIVER(USBH1_EHCI_DRV_NUM);
 #endif
 
 #ifdef  __cplusplus

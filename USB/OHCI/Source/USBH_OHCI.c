@@ -1,10 +1,4 @@
-/******************************************************************************
- * @file     USBH_OHCI.c
- * @brief    USB Host OHCI Controller Driver
- * @version  V1.0
- * @date     8. May 2024
- ******************************************************************************/
-/*
+/* -----------------------------------------------------------------------------
  * Copyright (c) 2024 Arm Limited (or its affiliates).
  * All rights reserved.
  *
@@ -21,7 +15,13 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *
+ *
+ * $Date:        16. May 2024
+ * $Revision:    V1.0
+ *
+ * Project:      USB Host OHCI Controller Driver
+ * -------------------------------------------------------------------------- */
 
 /* History:
  *  Version 1.0
@@ -35,6 +35,7 @@
 
 #include "USBH_OHCI_Config.h"
 #include "USBH_OHCI_Regs.h"
+#include "USBH_OHCI_HW.h"
 
 #include "cmsis_os2.h"
 #include "cmsis_compiler.h"
@@ -80,11 +81,21 @@ static ARM_USBH_CAPABILITIES usbh_driver_capabilities[USBH_OHCI_INSTANCES] = {
 
 // Macros
 
-#define USBHn_DRIVER_HCI_(n)            Driver_USBH##n##_HCI
-#define USBHn_DRIVER_HCI(n)             USBHn_DRIVER_HCI_(n)
+#define USBHn_OHCI_HCCA_SECTION_(x)     __attribute__((section(x)))
 
-#define USBHn_DRIVER_(n)                Driver_USBH##n
-#define USBHn_DRIVER(n)                 USBHn_DRIVER_(n)
+#if    (USBH0_OHCI_HCCA_RELOC == 1)
+#define USBH0_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
+#else 
+#define USBH0_OHCI_HCCA_SECTION(x)
+#endif
+
+#if    (USBH1_OHCI_ENABLED == 1)
+#if    (USBH1_OHCI_HCCA_RELOC == 1)
+#define USBH1_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
+#else 
+#define USBH1_OHCI_HCCA_SECTION(x)
+#endif
+#endif
 
 #ifndef USBH_OHCI_MEM_HCCA_SIZE
 #define USBH_OHCI_MEM_HCCA_SIZE         (256U)
@@ -110,6 +121,7 @@ typedef struct {
 
 // Structure containing configuration values for OHCI Compliant Controller
 typedef struct {
+  uint32_t              ctrl;                               // controller index (used for hardware specific driver)
   uint32_t             *ptr_OHCI;                           // pointer to memory mapped reg base address
   uint16_t              max_ED;                             // maximum Endpoint Descriptors
   uint16_t              max_TD;                             // maximum Transfer Descriptors
@@ -120,6 +132,7 @@ typedef struct {
   uint32_t             *ptr_TD;                             // pointer to TD memory start
   uint32_t             *ptr_ITD;                            // pointer to ITD memory start
   USBH_TransferInfo_t  *ptr_TI;                             // pointer to Transfer Info (TI) array start
+  USBH_OHCI_Interrupt_t irq_handler;                        // pointer to OHCI Interrupt Handler Routine
 } USBH_OHCI_t;
 
 // HCCA Communication structure
@@ -129,12 +142,17 @@ typedef struct {
   uint32_t              td   [USBH_OHCI_MEM_TD_SIZE   / 4];
 } USBH_OHCI_HCCA_t;
 
-// USB Host 0 information
-extern ARM_DRIVER_USBH_HCI  USBHn_DRIVER_HCI(USBH0_OHCI_HCI_DRV_NUM);
+// Local functions prototypes
+static void Driver_USBH0_IRQ_Handler (void);
+#if   (USBH1_OHCI_ENABLED == 1)
+static void Driver_USBH1_IRQ_Handler (void);
+#endif
 
+// USB Host 0 information
 static USBH_TransferInfo_t  usbh0_transfer_info    [USBH_OHCI_MAX_PIPES];
-static USBH_OHCI_HCCA_t     usbh0_ohci_hcca         __attribute__((section(".driver.usbh0_ohci_hcca"))) __ALIGNED(USBH_OHCI_MEM_HCCA_SIZE);
-static const USBH_OHCI_t    usbh0_ohci = {         (uint32_t *)USBH0_OHCI_BASE_ADDR,
+static USBH_OHCI_HCCA_t     usbh0_ohci_hcca         USBH0_OHCI_HCCA_SECTION(USBH0_OHCI_HCCA_SECTION_NAME) __ALIGNED(USBH_OHCI_MEM_HCCA_SIZE);
+static const USBH_OHCI_t    usbh0_ohci = {          USBH0_OHCI_DRV_NUM,
+                                                   (uint32_t *)USBH0_OHCI_BASE_ADDR,
                                                     USBH_OHCI_MAX_PIPES,
                                                     USBH_OHCI_MAX_PIPES,
                                                     0U,
@@ -143,18 +161,16 @@ static const USBH_OHCI_t    usbh0_ohci = {         (uint32_t *)USBH0_OHCI_BASE_A
                                                    &usbh0_ohci_hcca.ed[0],
                                                    &usbh0_ohci_hcca.td[0],
                                                     NULL,
-                                                   &usbh0_transfer_info[0]
+                                                   &usbh0_transfer_info[0],
+                                                    Driver_USBH0_IRQ_Handler
                                                  };
-
-static void USBH0_IRQ_Handler (void);
 
 // USB Host 1 information
 #if   (USBH1_OHCI_ENABLED == 1)
-extern ARM_DRIVER_USBH_HCI  USBHn_DRIVER_HCI(USBH1_OHCI_HCI_DRV_NUM);
-
 static USBH_TransferInfo_t  usbh1_transfer_info    [USBH_OHCI_MAX_PIPES];
-static USBH_OHCI_HCCA_t     usbh1_ohci_hcca         __attribute__((section(".driver.usbh1_ohci_hcca"))) __ALIGNED(USBH_OHCI_MEM_HCCA_SIZE);
-static const USBH_OHCI_t    usbh1_ohci = {         (uint32_t *)USBH1_OHCI_BASE_ADDR,
+static USBH_OHCI_HCCA_t     usbh1_ohci_hcca         USBH1_OHCI_HCCA_SECTION(USBH1_OHCI_HCCA_SECTION_NAME) __ALIGNED(USBH_OHCI_MEM_HCCA_SIZE);
+static const USBH_OHCI_t    usbh1_ohci = {          USBH1_OHCI_DRV_NUM,
+                                                   (uint32_t *)USBH1_OHCI_BASE_ADDR,
                                                     USBH_OHCI_MAX_PIPES,
                                                     USBH_OHCI_MAX_PIPES,
                                                     0U,
@@ -163,20 +179,12 @@ static const USBH_OHCI_t    usbh1_ohci = {         (uint32_t *)USBH1_OHCI_BASE_A
                                                    &usbh1_ohci_hcca.ed[0],
                                                    &usbh1_ohci_hcca.td[0],
                                                     NULL,
-                                                   &usbh1_transfer_info[0]
+                                                   &usbh1_transfer_info[0],
+                                                    Driver_USBH1_IRQ_Handler
                                                  };
-
-static void USBH1_IRQ_Handler (void);
 #endif // (USBH1_OHCI_ENABLED == 1)
 
 // USB Hosts information
-static const ARM_DRIVER_USBH_HCI * const usbh_hci_hcd_ptr[USBH_OHCI_INSTANCES] = {
-       &USBHn_DRIVER_HCI(USBH0_OHCI_HCI_DRV_NUM)
-#if   (USBH_OHCI_INSTANCES >= 2)
-     , &USBHn_DRIVER_HCI(USBH1_OHCI_HCI_DRV_NUM)
-#endif
-};
-
 static const USBH_OHCI_t * const usbh_ohci_ptr[USBH_OHCI_INSTANCES] = {
        &usbh0_ohci
 #if   (USBH_OHCI_INSTANCES >= 2)
@@ -187,13 +195,6 @@ static const USBH_OHCI_t * const usbh_ohci_ptr[USBH_OHCI_INSTANCES] = {
 static USBH_OHCI_Registers_t      *usbh_ohci_reg_ptr[USBH_OHCI_INSTANCES];
 static ARM_USBH_SignalPortEvent_t  signal_port_event[USBH_OHCI_INSTANCES];
 static ARM_USBH_SignalPipeEvent_t  signal_pipe_event[USBH_OHCI_INSTANCES];
-
-static void (* const USBH_IRQ_Handler[USBH_OHCI_INSTANCES]) (void)= {
-       USBH0_IRQ_Handler
-#if   (USBH_OHCI_INSTANCES >= 2)
-     , USBH1_IRQ_Handler
-#endif
-};
 
 /* USBH Transfer and Endpoint Helper Functions ------------*/
 
@@ -1040,8 +1041,13 @@ static ARM_DRIVER_VERSION USBH1_HW_GetVersion (void) { return usbh_driver_versio
   \return      \ref ARM_USBH_CAPABILITIES
 */
 static ARM_USBH_CAPABILITIES USBH_HW_GetCapabilities  (uint8_t ctrl) {
+  uint32_t port_num = (usbh_ohci_reg_ptr[ctrl]->HcRhDescriptorA & 0xFU);
 
-  usbh_driver_capabilities[ctrl].port_mask = ((usbh_hci_hcd_ptr[ctrl])->GetCapabilities()).port_mask;
+  if (port_num == 0U) {
+    port_num = 1U;
+  }
+
+  usbh_driver_capabilities[ctrl].port_mask = (1U << port_num) - 1U;
 
   return usbh_driver_capabilities[ctrl];
 }
@@ -1061,17 +1067,26 @@ static ARM_USBH_CAPABILITIES USBH1_HW_GetCapabilities (void)         { return US
   \return      \ref execution_status
 */
 static int32_t USBH_HW_Initialize (uint8_t ctrl, ARM_USBH_SignalPortEvent_t cb_port_event, ARM_USBH_SignalPipeEvent_t cb_pipe_event) {
+  int32_t ret;
+
+  if (ctrl >= USBH_OHCI_INSTANCES) { return ARM_DRIVER_ERROR; }
 
   usbh_ohci_reg_ptr[ctrl] = (USBH_OHCI_Registers_t *)((uint32_t)(usbh_ohci_ptr[ctrl])->ptr_OHCI);
 
   signal_port_event[ctrl] = cb_port_event;
   signal_pipe_event[ctrl] = cb_pipe_event;
 
+  (void)USBH_HW_GetCapabilities(ctrl);
+
   USBH_OHCI_TI_ClearAll (ctrl);
 
-  if (usbh_hci_hcd_ptr[ctrl] == NULL) { return ARM_DRIVER_ERROR; }
+  ret = USBH_OHCI_HW_Initialize((uint8_t)(usbh_ohci_ptr[ctrl])->ctrl, (usbh_ohci_ptr[ctrl])->irq_handler);
 
-  return ((usbh_hci_hcd_ptr[ctrl])->Initialize ((ARM_USBH_HCI_Interrupt_t)USBH_IRQ_Handler[ctrl]));
+  if (ret != 0) {
+    return ARM_DRIVER_ERROR;
+  }
+
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event, ARM_USBH_SignalPipeEvent_t cb_pipe_event) { return USBH_HW_Initialize (0, cb_port_event, cb_pipe_event); }
 #if   (USBH_OHCI_INSTANCES >= 2)
@@ -1085,8 +1100,15 @@ static int32_t USBH1_HW_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event, AR
   \return      \ref execution_status
 */
 static int32_t USBH_HW_Uninitialize (uint8_t ctrl) {
+  int32_t ret;
 
-  return ((usbh_hci_hcd_ptr[ctrl])->Uninitialize ());
+  ret = USBH_OHCI_HW_Uninitialize((uint8_t)(usbh_ohci_ptr[ctrl])->ctrl);
+
+  if (ret != 0) {
+    return ARM_DRIVER_ERROR;
+  }
+
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_Uninitialize (void) { return USBH_HW_Uninitialize(0); }
 #if   (USBH_OHCI_INSTANCES >= 2)
@@ -1102,9 +1124,6 @@ static int32_t USBH1_HW_Uninitialize (void) { return USBH_HW_Uninitialize(1); }
 */
 static int32_t USBH_HW_PowerControl (uint8_t ctrl, ARM_POWER_STATE state) {
   int32_t status;
-
-  status = (usbh_hci_hcd_ptr[ctrl])->PowerControl (state);
-  if (status != ARM_DRIVER_OK) { return status; }
 
   switch (state) {
     case ARM_POWER_OFF:
@@ -1132,12 +1151,22 @@ static int32_t USBH_HW_PowerControl (uint8_t ctrl, ARM_POWER_STATE state) {
       usbh_ohci_reg_ptr[ctrl]->HcFmInterval       = USBH_OHCI_HcFmInterval_FSMPS(0x2778) | USBH_OHCI_HcFmInterval_FI(0x2EDF);
       usbh_ohci_reg_ptr[ctrl]->HcPeriodicStart    = 0;
       usbh_ohci_reg_ptr[ctrl]->HcLSThreshold      = USBH_OHCI_HcLSThreshold_LST(0x0628);
+
+      status = USBH_OHCI_HW_PowerControl((uint8_t)(usbh_ohci_ptr[ctrl])->ctrl, 0U);
+      if (status != 0) {
+        return ARM_DRIVER_ERROR;
+      }
       break;
 
     case ARM_POWER_LOW:
       return ARM_DRIVER_ERROR;
 
     case ARM_POWER_FULL:
+      status = USBH_OHCI_HW_PowerControl((uint8_t)(usbh_ohci_ptr[ctrl])->ctrl, 1U);
+      if (status != 0) {
+        return ARM_DRIVER_ERROR;
+      }
+
       // Initialize memories
       USBH_OHCI_HCCA_Clear     (ctrl);
       USBH_OHCI_TD_ClearAll    (ctrl);
@@ -1203,7 +1232,7 @@ static int32_t USBH_HW_PortVbusOnOff (uint8_t ctrl, uint8_t port, bool vbus) {
     }
   }
 
-  return (usbh_hci_hcd_ptr[ctrl])->PortVbusOnOff(port, vbus);
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_PortVbusOnOff (uint8_t port, bool vbus) { return USBH_HW_PortVbusOnOff(0, port, vbus); }
 #if   (USBH_OHCI_INSTANCES >= 2)
@@ -1849,12 +1878,12 @@ static void USBH_HW_IRQ_Handler (uint8_t ctrl) {
 //  }
   }
 }
-static void USBH0_IRQ_Handler (void) { USBH_HW_IRQ_Handler (0); }
+static void Driver_USBH0_IRQ_Handler (void) { USBH_HW_IRQ_Handler(0U); }
 #if   (USBH_OHCI_INSTANCES >= 2)
-static void USBH1_IRQ_Handler (void) { USBH_HW_IRQ_Handler (1); }
+static void Driver_USBH1_IRQ_Handler (void) { USBH_HW_IRQ_Handler(1U); }
 #endif
 
-ARM_DRIVER_USBH Driver_USBH0 = {
+ARM_DRIVER_USBH USBHn_DRIVER(USBH0_OHCI_DRV_NUM) = {
   USBH0_HW_GetVersion,
   USBH0_HW_GetCapabilities,
   USBH0_HW_Initialize,
@@ -1876,7 +1905,7 @@ ARM_DRIVER_USBH Driver_USBH0 = {
 };
 
 #if (USBH_OHCI_INSTANCES >= 2)
-ARM_DRIVER_USBH Driver_USBH1 = {
+ARM_DRIVER_USBH USBHn_DRIVER(USBH1_OHCI_DRV_NUM) = {
   USBH1_HW_GetVersion,
   USBH1_HW_GetCapabilities,
   USBH1_HW_Initialize,

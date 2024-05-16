@@ -1,12 +1,4 @@
-/******************************************************************************
- * @file     USBH_EHCI_TT.c
- * @brief    USB Host EHCI Controller Driver
- *           for customized EHCI with internal Transaction Translator (TT)
- *           (with full/low speed support)
- * @version  V1.0
- * @date     8. May 2024
- ******************************************************************************/
-/*
+/* -----------------------------------------------------------------------------
  * Copyright (c) 2024 Arm Limited (or its affiliates).
  * All rights reserved.
  *
@@ -23,7 +15,15 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *
+ *
+ * $Date:        16. May 2024
+ * $Revision:    V1.0
+ *
+ * Project:      USB Host EHCI Controller Driver
+ *               for customized EHCI with internal Transaction Translator (TT)
+ *               (with full/low speed support)
+ * -------------------------------------------------------------------------- */
 
 /* History:
  *  Version 1.0
@@ -35,8 +35,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "USBH_EHCI_TT_Config.h"
+#include "USBH_EHCI_Config.h"
 #include "USBH_EHCI_TT_Regs.h"
+#include "USBH_EHCI_HW.h"
 
 #include "cmsis_os2.h"
 #include "cmsis_compiler.h"
@@ -47,9 +48,9 @@ static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, AR
 
 // Compile-time configuration *************************************************
 
-// Configuration depending on the USBH_EHCI_TT_Config.h
+// Configuration depending on the USBH_EHCI_Config.h
 
-#if    (USBH1_EHCI_TT_ENABLED == 1)
+#if    (USBH1_EHCI_ENABLED == 1)
 #define USBH_EHCI_TT_INSTANCES         (2U)
 #else
 #define USBH_EHCI_TT_INSTANCES         (1U)
@@ -82,23 +83,33 @@ static ARM_USBH_CAPABILITIES usbh_driver_capabilities[USBH_EHCI_TT_INSTANCES] = 
 
 // Macros
 
-#define USBHn_DRIVER_HCI_(n)            Driver_USBH##n##_HCI
-#define USBHn_DRIVER_HCI(n)             USBHn_DRIVER_HCI_(n)
+#define USBHn_EHCI_COM_AREA_SECTION_(x) __attribute__((section(x)))
 
-#define USBHn_DRIVER_(n)                Driver_USBH##n
-#define USBHn_DRIVER(n)                 USBHn_DRIVER_(n)
+#if    (USBH0_EHCI_COM_AREA_RELOC == 1)
+#define USBH0_EHCI_COM_AREA_SECTION(x)  USBHn_EHCI_COM_AREA_SECTION_(x)
+#else 
+#define USBH0_EHCI_COM_AREA_SECTION(x)
+#endif
+
+#if    (USBH1_EHCI_ENABLED == 1)
+#if    (USBH1_EHCI_COM_AREA_RELOC == 1)
+#define USBH1_EHCI_COM_AREA_SECTION(x)  USBHn_EHCI_COM_AREA_SECTION_(x)
+#else 
+#define USBH1_EHCI_COM_AREA_SECTION(x)
+#endif
+#endif
 
 #ifndef USBH_EHCI_MEM_PFL_SIZE
 #define USBH_EHCI_MEM_PFL_SIZE          (4096U)
 #endif
 #ifndef USBH_EHCI_MEM_QH_SIZE
-#define USBH_EHCI_MEM_QH_SIZE           (USBH_EHCI_TT_MAX_PIPES * 64U)
+#define USBH_EHCI_MEM_QH_SIZE           (USBH_EHCI_MAX_PIPES * 64U)
 #endif
 #ifndef USBH_EHCI_MEM_QTD_SIZE
-#define USBH_EHCI_MEM_QTD_SIZE          (USBH_EHCI_TT_MAX_PIPES * 32U)
+#define USBH_EHCI_MEM_QTD_SIZE          (USBH_EHCI_MAX_PIPES * 32U)
 #endif
 #ifndef USBH_EHCI_MEM_SITD_SIZE
-#define USBH_EHCI_MEM_SITD_SIZE         (2U * (USBH_EHCI_TT_MAX_PIPES - 1) * 32U)
+#define USBH_EHCI_MEM_SITD_SIZE         (2U * (USBH_EHCI_MAX_PIPES - 1) * 32U)
 #endif
 
 // Transfer information structure
@@ -127,6 +138,7 @@ typedef struct {                                            // Additional Pipe E
 
 // Structure containing configuration values for EHCI Compliant Controller
 typedef struct {
+  uint32_t              ctrl;                               // controller index (used for hardware specific driver)
   uint32_t             *ptr_EHCI;                           // pointer to memory mapped reg base address
   uint16_t              max_qH;                             // maximum queue Heads
   uint16_t              max_qTD;                            // maximum queue Transfer Descriptors
@@ -142,6 +154,7 @@ typedef struct {
   uint32_t             *ptr_FSTN;                           // pointer to FSTN memory start
   USBH_TransferInfo_t  *ptr_TI;                             // pointer to Transfer Info (TI) array start
   USBH_PipeEventInfo_t *ptr_PEI;                            // pointer to Pipe Event Info (PEI)
+  USBH_EHCI_Interrupt_t irq_handler;                        // pointer to EHCI Interrupt Handler Routine
 } USBH_EHCI_t;
 
 // Communication structure
@@ -152,17 +165,22 @@ typedef struct {
   uint32_t              sitd [USBH_EHCI_MEM_SITD_SIZE / 4];
 } USBH_EHCI_ComArea_t;
 
-// USB Host 0 information
-extern ARM_DRIVER_USBH_HCI  USBHn_DRIVER_HCI(USBH0_EHCI_TT_HCI_DRV_NUM);
+// Local functions prototypes
+static void Driver_USBH0_IRQ_Handler (void);
+#if   (USBH1_EHCI_ENABLED == 1)
+static void Driver_USBH1_IRQ_Handler (void);
+#endif
 
-static USBH_TransferInfo_t  usbh0_transfer_info    [USBH_EHCI_TT_MAX_PIPES];
+// USB Host 0 information
+static USBH_TransferInfo_t  usbh0_transfer_info    [USBH_EHCI_MAX_PIPES];
 static USBH_PipeEventInfo_t usbh0_pipe_evt_info;
-static USBH_EHCI_ComArea_t  usbh0_ehci_com_area     __attribute__((section(".driver.usbh0_ehci_com_area"))) __ALIGNED(USBH_EHCI_MEM_PFL_SIZE);
-static const USBH_EHCI_t    usbh0_ehci = {         (uint32_t *)USBH0_EHCI_TT_BASE_ADDR,
-                                                    USBH_EHCI_TT_MAX_PIPES,
-                                                    USBH_EHCI_TT_MAX_PIPES,
+static USBH_EHCI_ComArea_t  usbh0_ehci_com_area     USBH0_EHCI_COM_AREA_SECTION(USBH0_EHCI_COM_AREA_SECTION_NAME) __ALIGNED(USBH_EHCI_MEM_PFL_SIZE);
+static const USBH_EHCI_t    usbh0_ehci = {          USBH0_EHCI_DRV_NUM,
+                                                   (uint32_t *)USBH0_EHCI_BASE_ADDR,
+                                                    USBH_EHCI_MAX_PIPES,
+                                                    USBH_EHCI_MAX_PIPES,
                                                     0U,
-                                                    2*(USBH_EHCI_TT_MAX_PIPES-1),
+                                                    2*(USBH_EHCI_MAX_PIPES-1),
                                                     1024U,
                                                     0U, // padding byte
                                                    &usbh0_ehci_com_area.pfl[0],
@@ -172,23 +190,21 @@ static const USBH_EHCI_t    usbh0_ehci = {         (uint32_t *)USBH0_EHCI_TT_BAS
                                                    &usbh0_ehci_com_area.sitd[0],
                                                     NULL,
                                                    &usbh0_transfer_info[0],
-                                                   &usbh0_pipe_evt_info 
+                                                   &usbh0_pipe_evt_info, 
+                                                    Driver_USBH0_IRQ_Handler
                                                  };
 
-static void USBH0_IRQ_Handler (void);
-
 // USB Host 1 information
-#if   (USBH1_EHCI_TT_ENABLED == 1)
-extern ARM_DRIVER_USBH_HCI  USBHn_DRIVER_HCI(USBH1_EHCI_TT_HCI_DRV_NUM);
-
-static USBH_TransferInfo_t  usbh1_transfer_info    [USBH_EHCI_TT_MAX_PIPES];
+#if   (USBH1_EHCI_ENABLED == 1)
+static USBH_TransferInfo_t  usbh1_transfer_info    [USBH_EHCI_MAX_PIPES];
 static USBH_PipeEventInfo_t usbh1_pipe_evt_info;
-static USBH_EHCI_ComArea_t  usbh1_ehci_com_area     __attribute__((section(".driver.usbh1_ehci_com_area"))) __ALIGNED(USBH_EHCI_MEM_PFL_SIZE);
-static const USBH_EHCI_t    usbh1_ehci = {         (uint32_t *)USBH1_EHCI_TT_BASE_ADDR,
-                                                    USBH_EHCI_TT_MAX_PIPES,
-                                                    USBH_EHCI_TT_MAX_PIPES,
+static USBH_EHCI_ComArea_t  usbh1_ehci_com_area     USBH1_EHCI_COM_AREA_SECTION(USBH1_EHCI_COM_AREA_SECTION_NAME) __ALIGNED(USBH_EHCI_MEM_PFL_SIZE);
+static const USBH_EHCI_t    usbh1_ehci = {          USBH1_EHCI_DRV_NUM,
+                                                   (uint32_t *)USBH1_EHCI_BASE_ADDR,
+                                                    USBH_EHCI_MAX_PIPES,
+                                                    USBH_EHCI_MAX_PIPES,
                                                     0U,
-                                                    2*(USBH_EHCI_TT_MAX_PIPES-1),
+                                                    2*(USBH_EHCI_MAX_PIPES-1),
                                                     1024U,
                                                     0U, // padding byte
                                                    &usbh1_ehci_com_area.pfl[0],
@@ -198,20 +214,12 @@ static const USBH_EHCI_t    usbh1_ehci = {         (uint32_t *)USBH1_EHCI_TT_BAS
                                                    &usbh1_ehci_com_area.sitd[0],
                                                     NULL,
                                                    &usbh1_transfer_info[0],
-                                                   &usbh1_pipe_evt_info
+                                                   &usbh1_pipe_evt_info,
+                                                    Driver_USBH1_IRQ_Handler
                                                  };
-
-static void USBH1_IRQ_Handler (void);
-#endif // (USBH1_EHCI_TT_ENABLED == 1)
+#endif // (USBH1_EHCI_ENABLED == 1)
 
 // USB Hosts information
-static const ARM_DRIVER_USBH_HCI * const usbh_hci_hcd_ptr[USBH_EHCI_TT_INSTANCES] = {
-       &USBHn_DRIVER_HCI(USBH0_EHCI_TT_HCI_DRV_NUM)
-#if   (USBH_EHCI_TT_INSTANCES >= 2)
-     , &USBHn_DRIVER_HCI(USBH1_EHCI_TT_HCI_DRV_NUM)
-#endif
-};
-
 static const USBH_EHCI_t * const usbh_ehci_ptr[USBH_EHCI_TT_INSTANCES] = {
        &usbh0_ehci
 #if   (USBH_EHCI_TT_INSTANCES >= 2)
@@ -225,13 +233,6 @@ static ARM_USBH_SignalPipeEvent_t  signal_pipe_event[USBH_EHCI_TT_INSTANCES];
 
 static uint32_t pfl_size[USBH_EHCI_TT_INSTANCES];
 static uint32_t port_act[USBH_EHCI_TT_INSTANCES];
-
-static void (* const USBH_IRQ_Handler[USBH_EHCI_TT_INSTANCES]) (void)= {
-       USBH0_IRQ_Handler
-#if   (USBH_EHCI_TT_INSTANCES >= 2)
-     , USBH1_IRQ_Handler
-#endif
-};
 
 /* USBH Transfer and Endpoint Helper Functions ------------*/
 
@@ -1431,7 +1432,7 @@ static bool USBH_EHCI_qH_SetIntEntries (uint8_t ctrl, USBH_EHCI_qH *ptr_qH, uint
 */
 static void USBH_EHCI_TI_ClearAll (uint8_t ctrl) {
 
-  memset((usbh_ehci_ptr[ctrl])->ptr_TI, 0, (USBH_EHCI_TT_MAX_PIPES)*sizeof(USBH_TransferInfo_t));
+  memset((usbh_ehci_ptr[ctrl])->ptr_TI, 0, (USBH_EHCI_MAX_PIPES)*sizeof(USBH_TransferInfo_t));
 }
 
 /**
@@ -1559,8 +1560,13 @@ static ARM_DRIVER_VERSION USBH1_HW_GetVersion (void) { return usbh_driver_versio
   \return      \ref ARM_USBH_CAPABILITIES
 */
 static ARM_USBH_CAPABILITIES USBH_HW_GetCapabilities (uint8_t ctrl) {
+  uint32_t port_num = (usbh_ehci_reg_ptr[ctrl]->HCSPARAMS & 0xFU);
 
-  usbh_driver_capabilities[ctrl].port_mask = ((usbh_hci_hcd_ptr[ctrl])->GetCapabilities()).port_mask;
+  if (port_num == 0U) {
+    port_num = 1U;
+  }
+
+  usbh_driver_capabilities[ctrl].port_mask = (1U << port_num) - 1U;
 
   return usbh_driver_capabilities[ctrl];
 }
@@ -1580,22 +1586,29 @@ static ARM_USBH_CAPABILITIES USBH1_HW_GetCapabilities (void)         { return US
   \return      \ref execution_status
 */
 static int32_t USBH_HW_Initialize (uint8_t ctrl, ARM_USBH_SignalPortEvent_t cb_port_event, ARM_USBH_SignalPipeEvent_t cb_pipe_event) {
+  int32_t ret;
 
-  if (usbh_hci_hcd_ptr[ctrl] == NULL) { return ARM_DRIVER_ERROR; }
+  if (ctrl >= USBH_EHCI_TT_INSTANCES) { return ARM_DRIVER_ERROR; }
 
   usbh_ehci_reg_ptr[ctrl] = (USBH_EHCI_Registers_t *)((uint32_t)(usbh_ehci_ptr[ctrl])->ptr_EHCI);
 
   signal_port_event[ctrl] = cb_port_event;
   signal_pipe_event[ctrl] = cb_pipe_event;
 
-  usbh_driver_capabilities[ctrl].port_mask = ((usbh_hci_hcd_ptr[ctrl])->GetCapabilities()).port_mask;
+  (void)USBH_HW_GetCapabilities(ctrl);
 
   port_act[ctrl] = 0U;
   pfl_size[ctrl] = USBH_EHCI_PFL_GetSize(ctrl);
 
   USBH_EHCI_TI_ClearAll (ctrl);
 
-  return ((usbh_hci_hcd_ptr[ctrl])->Initialize ((ARM_USBH_HCI_Interrupt_t)USBH_IRQ_Handler[ctrl]));
+  ret = USBH_EHCI_HW_Initialize((uint8_t)(usbh_ehci_ptr[ctrl])->ctrl, (usbh_ehci_ptr[ctrl])->irq_handler);
+
+  if (ret != 0) {
+    return ARM_DRIVER_ERROR;
+  }
+
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event, ARM_USBH_SignalPipeEvent_t cb_pipe_event) { return USBH_HW_Initialize (0, cb_port_event, cb_pipe_event); }
 #if   (USBH_EHCI_TT_INSTANCES >= 2)
@@ -1609,8 +1622,15 @@ static int32_t USBH1_HW_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event, AR
   \return      \ref execution_status
 */
 static int32_t USBH_HW_Uninitialize (uint8_t ctrl) {
+  int32_t ret;
 
-  return ((usbh_hci_hcd_ptr[ctrl])->Uninitialize ());
+  ret = USBH_EHCI_HW_Uninitialize((uint8_t)(usbh_ehci_ptr[ctrl])->ctrl);
+
+  if (ret != 0) {
+    return ARM_DRIVER_ERROR;
+  }
+
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_Uninitialize (void) { return USBH_HW_Uninitialize(0); }
 #if   (USBH_EHCI_TT_INSTANCES >= 2)
@@ -1643,16 +1663,20 @@ static int32_t USBH_HW_PowerControl (uint8_t ctrl, ARM_POWER_STATE state) {
         tout--;
       }
 
-      status = (usbh_hci_hcd_ptr[ctrl])->PowerControl (state);
-      if (status != ARM_DRIVER_OK) { return status; }
+      status = USBH_EHCI_HW_PowerControl((uint8_t)(usbh_ehci_ptr[ctrl])->ctrl, 0U);
+      if (status != 0) {
+        return ARM_DRIVER_ERROR;
+      }
       break;
 
     case ARM_POWER_LOW:
       return ARM_DRIVER_ERROR;
 
     case ARM_POWER_FULL:
-      status = (usbh_hci_hcd_ptr[ctrl])->PowerControl (state);
-      if (status != ARM_DRIVER_OK) { return status; }
+      status = USBH_EHCI_HW_PowerControl((uint8_t)(usbh_ehci_ptr[ctrl])->ctrl, 1U);
+      if (status != 0) {
+        return ARM_DRIVER_ERROR;
+      }
 
       // Initialize memories
       USBH_EHCI_PFL_Clear   (ctrl);
@@ -1719,7 +1743,7 @@ static int32_t USBH_HW_PortVbusOnOff (uint8_t ctrl, uint8_t port, bool vbus) {
     usbh_ehci_reg_ptr[ctrl]->PORTSC[port] &= ~USBH_EHCI_PORTSC_PP_MSK;
   }
 
-  return (usbh_hci_hcd_ptr[ctrl])->PortVbusOnOff(port, vbus);
+  return ARM_DRIVER_OK;
 }
 static int32_t USBH0_HW_PortVbusOnOff (uint8_t port, bool vbus) { return USBH_HW_PortVbusOnOff(0, port, vbus); }
 #if   (USBH_EHCI_TT_INSTANCES >= 2)
@@ -2694,12 +2718,12 @@ static void USBH_HW_IRQ_Handler (uint8_t ctrl) {
     }
   }
 }
-static void USBH0_IRQ_Handler (void) { USBH_HW_IRQ_Handler (0); }
+static void Driver_USBH0_IRQ_Handler (void) { USBH_HW_IRQ_Handler(0U); }
 #if   (USBH_EHCI_TT_INSTANCES >= 2)
-static void USBH1_IRQ_Handler (void) { USBH_HW_IRQ_Handler (1); }
+static void Driver_USBH1_IRQ_Handler (void) { USBH_HW_IRQ_Handler(1U); }
 #endif
 
-ARM_DRIVER_USBH Driver_USBH0 = {
+ARM_DRIVER_USBH USBHn_DRIVER(USBH0_EHCI_DRV_NUM) = {
   USBH0_HW_GetVersion,
   USBH0_HW_GetCapabilities,
   USBH0_HW_Initialize,
@@ -2721,7 +2745,7 @@ ARM_DRIVER_USBH Driver_USBH0 = {
 };
 
 #if (USBH_EHCI_TT_INSTANCES >= 2)
-ARM_DRIVER_USBH Driver_USBH1 = {
+ARM_DRIVER_USBH USBHn_DRIVER(USBH1_EHCI_DRV_NUM) = {
   USBH1_HW_GetVersion,
   USBH1_HW_GetCapabilities,
   USBH1_HW_Initialize,

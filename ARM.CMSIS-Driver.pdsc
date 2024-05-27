@@ -349,7 +349,8 @@
       <description>USB Host EHCI Controller Driver for customized EHCI with internal Transaction Translator (TT)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->
-        #define RTE_Drivers_USBH_EHCI           /* Driver USBH EHCI (TT) */
+        #define RTE_Drivers_USBH_EHCI           /* Driver USBH EHCI */
+        #define RTE_Drivers_USBH_EHCI_TT        /* Driver USBH EHCI (TT) */
       </RTE_Components_h>
       <files>
         <file category="header" name="USB/EHCI/Interface/USBH_EHCI_HW.h"/>

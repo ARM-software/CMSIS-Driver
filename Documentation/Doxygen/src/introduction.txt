@@ -200,18 +200,18 @@ It is configured via define values in the <b>USBH_EHCI_Config.h</b> configuratio
 <b>Configuration</b>
 
  - <b>USB Host Controller 0</b>:
-   - <b>Driver number</b>: Specifies the exported Driver_USBH# instance
-   - <b>EHCI registers base address</b>: Specifies the absolute address at which EHCI controller registers are located
-   - <b>Relocated EHCI communication area</b>: Specifies if the communication area is located at a specific address (via the linker script)
-   - <b>EHCI communication area section name</b>: Specifies the section name of the EHCI communication area
+   - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
+   - <b>EHCI Registers base address</b>: Specifies the absolute address at which EHCI controller registers are located.
+   - <b>Relocate EHCI Communication Area</b>: Specifies if the communication area is located at a specific address (via the linker script):
+     - <b>Section name</b>: Specifies the section name of the EHCI communication area (for positioning via the linker script).
 
  - <b>USB Host Controller 1</b> (can be enabled/disabled): 
-   - <b>Driver number</b>: Specifies the exported Driver_USBH# instance
-   - <b>EHCI registers base address</b>: Specifies the absolute address at which EHCI controller registers are located
-   - <b>Relocated EHCI communication area</b>: Specifies if the communication area is located at a specific address (via the linker script)
-   - <b>EHCI communication area section name</b>: Specifies the section name of the EHCI communication area
+   - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
+   - <b>EHCI Registers base address</b>: Specifies the absolute address at which EHCI controller registers are located.
+   - <b>Relocate EHCI Communication Area</b>: Specifies if the communication area is located at a specific address (via the linker script):
+     - <b>Section name</b>: Specifies the section name of the EHCI communication area (for positioning via the linker script).
 
- - <b>USBH_EHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per controller)
+ - <b>Maximum number of Pipes (per controller)</b>: Specifies the maximum number of pipes that the driver will support (per controller).
 
 \subsection driver_OHCI OHCI
 
@@ -226,18 +226,18 @@ It is configured via define values in the <b>USBH_OHCI_Config.h</b> configuratio
 <b>Configuration</b>
 
  - <b>USB Host Controller 0</b>:
-   - <b>Driver number</b>: Specifies the exported Driver_USBH# instance
-   - <b>OHCI registers base address</b>: Specifies the absolute address at which OHCI controller registers are located
-   - <b>Relocated OHCI communication area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script)
-   - <b>OHCI communication area section name</b>: Specifies the section name of the OHCI communication area
+   - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
+   - <b>OHCI Registers base address</b>: Specifies the absolute address at which OHCI controller registers are located.
+   - <b>Relocate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script):
+     - <b>Section name</b>: Specifies the section name of the OHCI communication area (for positioning via the linker script).
 
  - <b>USB Host Controller 1</b> (can be enabled/disabled): 
-   - <b>Driver number</b>: Specifies the exported Driver_USBH# instance
-   - <b>OHCI registers base address</b>: Specifies the absolute address at which OHCI controller registers are located
-   - <b>Relocated OHCI communication area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script)
-   - <b>OHCI communication area section name</b>: Specifies the section name of the OHCI communication area
+   - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
+   - <b>OHCI Registers base address</b>: Specifies the absolute address at which OHCI controller registers are located.
+   - <b>Relocate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script):
+     - <b>Section name</b>: Specifies the section name of the OHCI communication area (for positioning via the linker script).
 
- - <b>USBH_OHCI_MAX_PIPES</b>: Specifies maximum number of pipes that the driver will support (per controller)
+ - <b>Maximum number of Pipes (per controller)</b>: Specifies the maximum number of pipes that the driver will support (per controller).
 */
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/

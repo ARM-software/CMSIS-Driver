@@ -17,7 +17,7 @@
  * limitations under the License.
  *
  *
- * $Date:        16. May 2024
+ * $Date:        27. May 2024
  * $Revision:    V1.0
  *
  * Project:      Config file for USB Host OHCI Controller Driver
@@ -29,51 +29,54 @@
 #define USBH_OHCI_CONFIG_H_
 
 // <h>USB Host Controller 0
-//   <o>Driver number <0-3>
-//     <i>Specifies the exported Driver_USBH# instance
-//     <i>For example for value 0 the exported driver will be Driver_USBH0
+//   <o>Export control block Driver_USBH# <0-255>
+//     <i>Specifies the exported driver control block number
+//     <i>For example, for value 0 the exported driver control block will be Driver_USBH0
 #define USBH0_OHCI_DRV_NUM              0
 
-//   <o>OHCI registers base address <0-0xFFFFFFFF>
+//   <o>OHCI Registers base address <0-0xFFFFFFFF>
 //     <i>Specifies the absolute address at which OHCI controller registers are located
 #define USBH0_OHCI_BASE_ADDR            0x5000C000
 
-//   <e>Relocated OHCI communication area (HCCA)
+//   <e>Relocate OHCI Communication Area (HCCA)
 //     <i>Specifies if the communication area is located at a specific address
-//     <i>(via the linker script).
+//     <i>(via the linker script)
 #define USBH0_OHCI_HCCA_RELOC           0
 
-//     <s.64>OHCI communication area section name
+//     <s.64>Section name
 //       <i>Specifies the section name of the OHCI communication area
+//       <i>(for positioning via the linker script)
 #define USBH0_OHCI_HCCA_SECTION_NAME    ".driver.usbh0.ohci_hcca"
 //   </e>
 // </h>
 
 // <e>USB Host Controller 1
-//   <i>Enables or disables USB Host Driver 1
+//   <i>Enables or disables USB Host Controller 1 Driver
 #define USBH1_OHCI_ENABLED              0
 
-//   <o>Driver number <0-3>
-//     <i>Specifies the exported Driver_USBH# instance
-//     <i>For example for value 1 the exported driver will be Driver_USBH1
+//   <o>Export control block Driver_USBH# <0-255>
+//     <i>Specifies the exported driver control block number
+//     <i>For example, for value 1 the exported driver control block will be Driver_USBH1
 #define USBH1_OHCI_DRV_NUM              1
 
-//   <o>OHCI registers base address <0-0xFFFFFFFF>
+//   <o>OHCI Registers base address <0-0xFFFFFFFF>
 //     <i>Specifies the absolute address at which OHCI controller registers are located
 #define USBH1_OHCI_BASE_ADDR            0x00000000
 
-//   <e>Relocated OHCI communication area (HCCA)
+//   <e>Relocate OHCI Communication Area (HCCA)
 //     <i>Specifies if the communication area is located at a specific address
-//     <i>(via the linker script).
+//     <i>(via the linker script)
 #define USBH1_OHCI_HCCA_RELOC           0
 
-//     <s.64>OHCI communication area section name
+//     <s.64>Section name
 //       <i>Specifies the section name of the OHCI communication area
+//       <i>(for positioning via the linker script)
 #define USBH1_OHCI_HCCA_SECTION_NAME    ".driver.usbh1.ohci_hcca"
 //   </e>
 // </e>
 
-// <o>Maximum number of pipes (per controller) <1-15>
+// <o>Maximum number of Pipes <1-15>
+//   <i>Specifies the maximum number of pipes that the driver will support (per controller)
 #define USBH_OHCI_MAX_PIPES             4
 
 #endif /* USBH_OHCI_CONFIG_H_ */

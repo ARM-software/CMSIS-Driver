@@ -344,7 +344,7 @@ flashed with the firmware for UART communication. To enable SPI communication, f
 
 \subsection driver_WizFi360 WizFi360
 
-The documentation for the WIZnet WizFi360 can be found here: https://www.wiznet.io/product-item/wizfi360/
+The documentation for the WIZnet WizFi360 can be found here: https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360
 
 The latest firmware images are available on GitHub: https://github.com/wizfi/Release. Instructions on how to flash the
 firmware onto the device can be found on the WIZnet Documents page:
@@ -384,19 +384,19 @@ The \ref driver_pack_content contains implementations of <a href="https://arm-so
     \anchor driver_M29EW28F128
     <tr>
       <td>\b M29EW28F128</td>
-      <td>Flash interface for Parallel NOR Flash <a href="https://media-www.micron.com/-/media/client/global/documents/products/data-sheet/nor-flash/parallel/m29ew/m29ew_256mb_2gb.pdf" target="_blank"><b>M29EW28F128</b></a>.
+      <td>Flash interface for Parallel NOR Flash <b>M29EW28F128</b>.
       </td>
     </tr>
     \anchor driver_M29W640FB
     <tr>
       <td>\b M29W640FB</td>
-      <td>Flash interface for Parallel NOR Flash <a href="https://media-www.micron.com/-/media/client/global/documents/products/data-sheet/nor-flash/parallel/m29w/m29w640f.pdf?rev=0ef5ab29cdfc49fbad927ba7de63291f" target="_blank"><b>M29W640FB</b></a>.
+      <td>Flash interface for Parallel NOR Flash <b>M29W640FB</b>.
       </td>
     </tr>
     \anchor driver_N25Q032A
     <tr>
       <td>\b N25Q032A</td>
-      <td> Serial NOR Flash. <a href="https://media-www.micron.com/-/media/client/global/documents/products/data-sheet/nor-flash/serial-nor/n25q/n25q_32mb_1_8v_65nm.pdf" target="_blank"><b>Device info</b></a>.
+      <td>Flash interface for Serial NOR Flash <b>N25Q032A</b>.
       </td>
     </tr>
     \anchor driver_S29GL064Nx2

@@ -20,7 +20,6 @@
  * $Date:       27. May 2024
  * $Revision:   V1.0
  *
- * Driver:      Driver_USBH# (default: Driver_USBH0)
  * Project:     USB Host OHCI Controller Driver Configuration definitions
  *
  * -----------------------------------------------------------------------------

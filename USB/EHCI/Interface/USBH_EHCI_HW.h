@@ -1,6 +1,5 @@
-/* -----------------------------------------------------------------------------
- * Copyright (c) 2024 Arm Limited (or its affiliates).
- * All rights reserved.
+/*
+ * Copyright (c) 2024 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,22 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * -----------------------------------------------------------------------------
  *
- * $Date:        15. May 2024
- * $Revision:    V1.0
+ * $Date:       28. May 2024
+ * $Revision:   V1.0
  *
- * Project:      USB Host EHCI Controller Hardware-specific Driver header
- * -------------------------------------------------------------------------- */
+ * Project:     USB Host EHCI Controller Driver Hardware-specific header
+ *
+ * -----------------------------------------------------------------------------
+ */
 
 #ifndef USBH_EHCI_HW_H_
 #define USBH_EHCI_HW_H_
+
+#include <stdint.h>
 
 #ifdef  __cplusplus
 extern "C"
 {
 #endif
-
-#include <stdint.h>
 
 typedef void (*USBH_EHCI_Interrupt_t) (void);   ///< Pointer to EHCI Interrupt Handler Routine.
 

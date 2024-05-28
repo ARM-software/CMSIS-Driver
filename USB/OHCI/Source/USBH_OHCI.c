@@ -1,6 +1,5 @@
-/* -----------------------------------------------------------------------------
- * Copyright (c) 2024 Arm Limited (or its affiliates).
- * All rights reserved.
+/*
+ * Copyright (c) 2024 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,12 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * -----------------------------------------------------------------------------
  *
- * $Date:        16. May 2024
- * $Revision:    V1.0
+ * $Date:       28. May 2024
+ * $Revision:   V1.0
  *
- * Project:      USB Host OHCI Controller Driver
- * -------------------------------------------------------------------------- */
+ * Project:     USB Host OHCI Controller Driver
+ *
+ * -----------------------------------------------------------------------------
+ */
 
 /* History:
  *  Version 1.0

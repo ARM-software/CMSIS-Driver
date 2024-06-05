@@ -95,6 +95,6 @@ sed -e "s/{datetime}/${datetime}/" "${DIRNAME}/style_template/footer.js.in" \
 
 popd  > /dev/null
 
-[[ ${RUN_LINKCHECKER} != 0 ]] && check_links "${DIRNAME}/../html/index.html" "${DIRNAME}"
+[[ ${RUN_LINKCHECKER} != 0 ]] && check_links --timeout 120 "${DIRNAME}/../html/index.html" "${DIRNAME}"
 
 exit 0

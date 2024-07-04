@@ -89,14 +89,14 @@ static ARM_USBH_CAPABILITIES usbh_driver_capabilities[USBH_EHCI_TT_INSTANCES] = 
 
 #if    (USBH0_EHCI_COM_AREA_LOCATE == 1)
 #define USBH0_EHCI_COM_AREA_SECTION(x)  USBHn_EHCI_COM_AREA_SECTION_(x)
-#else 
+#else
 #define USBH0_EHCI_COM_AREA_SECTION(x)
 #endif
 
 #if    (USBH1_EHCI_ENABLED == 1)
 #if    (USBH1_EHCI_COM_AREA_LOCATE == 1)
 #define USBH1_EHCI_COM_AREA_SECTION(x)  USBHn_EHCI_COM_AREA_SECTION_(x)
-#else 
+#else
 #define USBH1_EHCI_COM_AREA_SECTION(x)
 #endif
 #endif
@@ -192,7 +192,7 @@ static const USBH_EHCI_t    usbh0_ehci = {          USBH0_EHCI_DRV_NUM,
                                                    &usbh0_ehci_com_area.sitd[0],
                                                     NULL,
                                                    &usbh0_transfer_info[0],
-                                                   &usbh0_pipe_evt_info, 
+                                                   &usbh0_pipe_evt_info,
                                                     Driver_USBH0_IRQ_Handler
                                                  };
 
@@ -292,26 +292,26 @@ static void USBH_EHCI_IOC (uint32_t *ptr_pfl_entry) {
   ptr_curr = (USBH_EHCI_COMMON *)(*ptr_pfl_entry & (~0x1FU));
 
   // Process all isochronous (siTDs) first
-  while ((ptr_curr->DW0.LinkPtr != 0U) && 
-         (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_siTD) && 
+  while ((ptr_curr->DW0.LinkPtr != 0U) &&
+         (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_siTD) &&
          (ptr_curr->DW0.T == 0U)) {
     ((USBH_EHCI_siTD *)ptr_curr)->DW3.IOC = 0U;         // Clear IOC (for current siTD)
     ptr_curr = (USBH_EHCI_COMMON *)(ptr_curr->DW0.LinkPtr << 5);
   }
 
-  if ((ptr_curr->DW0.LinkPtr != 0U) && 
-      (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_qH) && 
+  if ((ptr_curr->DW0.LinkPtr != 0U) &&
+      (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_qH) &&
       (ptr_curr->DW0.T == 0U)) {
     // Process all interrupt (qH)
     do {
       ptr_int_td = ptr_curr;
-      while ((ptr_int_td->DW0.LinkPtr != 0U) && 
+      while ((ptr_int_td->DW0.LinkPtr != 0U) &&
              (ptr_int_td->DW0.T == 0U)) {
         ((USBH_EHCI_qTD *)ptr_int_td)->DW2.IOC = 0U;      // Clear IOC (for current qTD)
         ptr_int_td = (USBH_EHCI_COMMON *)(ptr_int_td->DW0.LinkPtr << 5);
       }
-    } while ((ptr_curr->DW0.LinkPtr != 0U) && 
-             (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_qH) && 
+    } while ((ptr_curr->DW0.LinkPtr != 0U) &&
+             (ptr_curr->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_qH) &&
              (ptr_curr->DW0.T == 0U));
     ((USBH_EHCI_siTD *)ptr_int_td)->DW3.IOC = 1U;         // Set IOC (for last qTD)
   } else {
@@ -342,7 +342,7 @@ static bool USBH_EHCI_StartStop (uint8_t ctrl, uint8_t type, bool start) {
   } else {                                        // Periodic type
     msk = (1UL << 4);
   }
-                                                
+
   // Wait for status = command (max 1 second)
   for (tout = 10100U; ; tout-- ){
     usbcmd = usbh_ehci_reg_ptr[ctrl]->USBCMD;
@@ -519,7 +519,7 @@ static USBH_EHCI_qTD *USBH_EHCI_qTD_GetNext_qH (const USBH_EHCI_qH *ptr_qH) {
 */
 static bool USBH_EHCI_qTD_IsLinkedIn_qH (const USBH_EHCI_qH *ptr_qH, const USBH_EHCI_qTD *ptr_qTD) {
   USBH_EHCI_qTD *ptr_curr_qTD;
-  
+
   if (ptr_qH  == NULL) { return NULL; }
   if (ptr_qTD == NULL) { return NULL; }
 
@@ -772,14 +772,14 @@ static bool USBH_EHCI_IsoTransferActivate (uint8_t ctrl, USBH_TransferInfo_t *pt
       ptr_TI->iso_last_frame_index = pfl_index;
       ptr_TI->iso_frame_index[ti_index] = pfl_index;
 
-      // Insert siTD into PFL, if entry already exists append this new transfer to 
+      // Insert siTD into PFL, if entry already exists append this new transfer to
       // last existing isochronous transfer
       if (((*ptr_uint32_t & 0x1FU) == 4U) &&    // If T bit is 0 and Type is siTD, meaning it is valid entry
           ((*ptr_uint32_t & (~0x1FU)) != 0U)) { // and if NextLinkPointer is != 0
         // Find last iso entry and add new one behind it
         ptr_curr_siTD = (USBH_EHCI_siTD *)(*ptr_uint32_t & ~0x1FU);
-        while ((ptr_curr_siTD->DW0.NextLinkPtr != 0U) && 
-               (ptr_curr_siTD->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_siTD) && 
+        while ((ptr_curr_siTD->DW0.NextLinkPtr != 0U) &&
+               (ptr_curr_siTD->DW0.Typ == USBH_EHCI_ELEMENT_TYPE_siTD) &&
                (ptr_curr_siTD->DW0.T == 0U)) {
           ptr_curr_siTD = (USBH_EHCI_siTD *)(ptr_curr_siTD->DW0.NextLinkPtr << 5);
         }
@@ -2661,7 +2661,7 @@ static void USBH_HW_IRQ_Handler (uint8_t ctrl) {
           status      = ptr_qTD->DW2.Status;
           transferred = ptr_TI->num_to_transfer - ptr_qTD->DW2.TBT;
           ptr_TI->num_transferred_total += transferred;
-          if (((status & (1UL << 7)) == 0U) && 
+          if (((status & (1UL << 7)) == 0U) &&
               ((status & (1UL << 6)) == 0U)) {                  // No Error
             if (ptr_TI->num == ptr_TI->num_transferred_total) { // All data was transferred
               ep_event = ARM_USBH_EVENT_TRANSFER_COMPLETE;

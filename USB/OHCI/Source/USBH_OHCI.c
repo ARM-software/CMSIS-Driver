@@ -87,14 +87,14 @@ static ARM_USBH_CAPABILITIES usbh_driver_capabilities[USBH_OHCI_INSTANCES] = {
 
 #if    (USBH0_OHCI_HCCA_LOCATE == 1)
 #define USBH0_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
-#else 
+#else
 #define USBH0_OHCI_HCCA_SECTION(x)
 #endif
 
 #if    (USBH1_OHCI_ENABLED == 1)
 #if    (USBH1_OHCI_HCCA_LOCATE == 1)
 #define USBH1_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
-#else 
+#else
 #define USBH1_OHCI_HCCA_SECTION(x)
 #endif
 #endif
@@ -731,8 +731,8 @@ static USBH_OHCI_ED *USBH_OHCI_ED_GetLast (USBH_OHCI_ED *ptr_ED) {
                return pointer to beginning of the linked list Endpoint Descriptor
   \param[in]   ptr_first_ED  Pointer to first Endpoint Descriptor in linked list
   \param[in]   ptr_ED        Pointer to Endpoint Descriptor
-  \return                    Pointer to beginning ot the linked list, Endpoint Descriptor not found or function failed
-               value > 0:    pointer to beginning ot the linked list
+  \return                    Pointer to beginning of the linked list, Endpoint Descriptor not found or function failed
+               value > 0:    pointer to beginning of the linked list
                value = 0:    Endpoint Descriptor not found or function failed
 */
 static USBH_OHCI_ED *USBH_OHCI_ED_Unlink (USBH_OHCI_ED *ptr_first_ED, USBH_OHCI_ED *ptr_ED) {
@@ -1181,8 +1181,8 @@ static int32_t USBH_HW_PowerControl (uint8_t ctrl, ARM_POWER_STATE state) {
       usbh_ohci_reg_ptr[ctrl]->HcBulkHeadED    = 0;   // Initialize Bulk list head
 
       usbh_ohci_reg_ptr[ctrl]->HcCommandStatus = USBH_OHCI_HcCommandStatus_HCR;   // Host Ctrl Reset
-      usbh_ohci_reg_ptr[ctrl]->HcFmInterval    = USBH_OHCI_HcFmInterval_FSMPS(0x2778)|// Max Pckt Sz
-                               USBH_OHCI_HcFmInterval_FI(0x2EDF);                 // Frm Intrvl
+      usbh_ohci_reg_ptr[ctrl]->HcFmInterval    = USBH_OHCI_HcFmInterval_FSMPS(0x2778)|// Max Packet Size
+                               USBH_OHCI_HcFmInterval_FI(0x2EDF);                 // Frame Interval
       usbh_ohci_reg_ptr[ctrl]->HcPeriodicStart = 0x2A2F;  // 10% before end of HcFmInterval
 
       usbh_ohci_reg_ptr[ctrl]->HcHCCA          = (uint32_t)((usbh_ohci_ptr[ctrl])->ptr_HCCA);   // HCCA
@@ -1705,7 +1705,7 @@ static int32_t USBH1_HW_PipeTransfer (ARM_USBH_PIPE_HANDLE pipe_hndl, uint32_t p
   \brief       Get result of USB Pipe transfer.
   \param[in]   ctrl       Index of USB Host controller
   \param[in]   pipe_hndl  Pipe Handle
-  \return      number of successfully transfered data bytes
+  \return      number of successfully transferred data bytes
 */
 static uint32_t USBH_HW_PipeTransferGetResult (uint8_t ctrl, ARM_USBH_PIPE_HANDLE pipe_hndl) {
   const USBH_TransferInfo_t *ptr_TI;

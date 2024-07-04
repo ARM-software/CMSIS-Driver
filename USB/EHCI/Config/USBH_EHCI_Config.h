@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------------
  *
- * $Date:       27. May 2024
+ * $Date:       4. July 2024
  * $Revision:   V1.0
  *
  * Project:     USB Host EHCI Controller Driver Configuration definitions
@@ -40,13 +40,13 @@
 //     <i>Specifies the absolute address at which EHCI controller registers are located
 #define USBH0_EHCI_BASE_ADDR            0x402E0100
 
-//   <e>Relocate EHCI Communication Area
-//     <i>Specifies if the communication area is located at a specific address
+//   <e>Locate EHCI Communication Area
+//     <i>Specifies if the communication area is located in a specific memory
 //     <i>(via the linker script)
-#define USBH0_EHCI_COM_AREA_RELOC       0
+#define USBH0_EHCI_COM_AREA_LOCATE      0
 
 //     <s.64>Section name
-//       <i>Specifies the section name of the EHCI communication area
+//       <i>Specifies the section name for the EHCI communication area
 //       <i>(for positioning via the linker script)
 #define USBH0_EHCI_COM_AREA_SECTION_NAME ".driver.usbh0.ehci_com_area"
 //   </e>
@@ -65,13 +65,13 @@
 //     <i>Specifies the absolute address at which EHCI controller registers are located
 #define USBH1_EHCI_BASE_ADDR            0x402E0300
 
-//   <e>Relocate EHCI Communication Area
-//     <i>Specifies if the communication area is located at a specific address
+//   <e>Locate EHCI Communication Area
+//     <i>Specifies if the communication area is located in a specific memory
 //     <i>(via the linker script)
-#define USBH1_EHCI_COM_AREA_RELOC       0
+#define USBH1_EHCI_COM_AREA_LOCATE      0
 
 //     <s.64>Section name
-//       <i>Specifies the section name of the EHCI communication area
+//       <i>Specifies the section name for the EHCI communication area
 //       <i>(for positioning via the linker script)
 #define USBH1_EHCI_COM_AREA_SECTION_NAME ".driver.usbh1.ehci_com_area"
 //   </e>

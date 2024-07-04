@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------------
  *
- * $Date:       28. May 2024
+ * $Date:       4. July 2024
  * $Revision:   V1.0
  *
  * Project:     USB Host OHCI Controller Driver
@@ -85,14 +85,14 @@ static ARM_USBH_CAPABILITIES usbh_driver_capabilities[USBH_OHCI_INSTANCES] = {
 
 #define USBHn_OHCI_HCCA_SECTION_(x)     __attribute__((section(x)))
 
-#if    (USBH0_OHCI_HCCA_RELOC == 1)
+#if    (USBH0_OHCI_HCCA_LOCATE == 1)
 #define USBH0_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
 #else 
 #define USBH0_OHCI_HCCA_SECTION(x)
 #endif
 
 #if    (USBH1_OHCI_ENABLED == 1)
-#if    (USBH1_OHCI_HCCA_RELOC == 1)
+#if    (USBH1_OHCI_HCCA_LOCATE == 1)
 #define USBH1_OHCI_HCCA_SECTION(x)      USBHn_OHCI_HCCA_SECTION_(x)
 #else 
 #define USBH1_OHCI_HCCA_SECTION(x)

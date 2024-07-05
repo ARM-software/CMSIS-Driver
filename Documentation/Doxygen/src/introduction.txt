@@ -17,7 +17,7 @@ The <b>ARM::CMSIS-Driver</b> Pack contains the following items:
 File/Directory            | Content
 :-------------------------|:---------------------------------------------------------------------------------
 \b ARM.CMSIS-Driver.pdsc  | Package description file in CMSIS-Pack format.
-\b LICENSE.txt            | CMSIS license agreement (Apache 2.0)
+\b LICENSE                | CMSIS license agreement (Apache 2.0)
 \b Config/                | Configuration files for \ref driver_I2C, \ref driver_NAND, and \ref driver_SPI bus implementations
 \b Documentation/         | This documentation
 \b Ethernet/              | \ref driver_eth driver implementations

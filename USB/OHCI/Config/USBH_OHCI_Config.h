@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------------
  *
- * $Date:       27. May 2024
+ * $Date:       4. July 2024
  * $Revision:   V1.0
  *
  * Project:     USB Host OHCI Controller Driver Configuration definitions
@@ -40,13 +40,13 @@
 //     <i>Specifies the absolute address at which OHCI controller registers are located
 #define USBH0_OHCI_BASE_ADDR            0x5000C000
 
-//   <e>Relocate OHCI Communication Area (HCCA)
-//     <i>Specifies if the communication area is located at a specific address
+//   <e>Locate OHCI Communication Area (HCCA)
+//     <i>Specifies if the communication area is located in a specific memory
 //     <i>(via the linker script)
-#define USBH0_OHCI_HCCA_RELOC           0
+#define USBH0_OHCI_HCCA_LOCATE          0
 
 //     <s.64>Section name
-//       <i>Specifies the section name of the OHCI communication area
+//       <i>Specifies the section name for the OHCI communication area
 //       <i>(for positioning via the linker script)
 #define USBH0_OHCI_HCCA_SECTION_NAME    ".driver.usbh0.ohci_hcca"
 //   </e>
@@ -65,13 +65,13 @@
 //     <i>Specifies the absolute address at which OHCI controller registers are located
 #define USBH1_OHCI_BASE_ADDR            0x00000000
 
-//   <e>Relocate OHCI Communication Area (HCCA)
-//     <i>Specifies if the communication area is located at a specific address
+//   <e>Locate OHCI Communication Area (HCCA)
+//     <i>Specifies if the communication area is located in a specific memory
 //     <i>(via the linker script)
-#define USBH1_OHCI_HCCA_RELOC           0
+#define USBH1_OHCI_HCCA_LOCATE          0
 
 //     <s.64>Section name
-//       <i>Specifies the section name of the OHCI communication area
+//       <i>Specifies the section name for the OHCI communication area
 //       <i>(for positioning via the linker script)
 #define USBH1_OHCI_HCCA_SECTION_NAME    ".driver.usbh1.ohci_hcca"
 //   </e>

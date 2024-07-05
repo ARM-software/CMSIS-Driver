@@ -202,14 +202,14 @@ It is configured via define values in the <b>USBH_EHCI_Config.h</b> configuratio
  - <b>USB Host Controller 0</b>:
    - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
    - <b>EHCI Registers base address</b>: Specifies the absolute address at which EHCI controller registers are located.
-   - <b>Relocate EHCI Communication Area</b>: Specifies if the communication area is located at a specific address (via the linker script):
-     - <b>Section name</b>: Specifies the section name of the EHCI communication area (for positioning via the linker script).
+   - <b>Locate EHCI Communication Area</b>: Specifies if the communication area is located in a specific memory (via the linker script):
+     - <b>Section name</b>: Specifies the section name for the EHCI communication area (for positioning via the linker script).
 
  - <b>USB Host Controller 1</b> (can be enabled/disabled): 
    - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
    - <b>EHCI Registers base address</b>: Specifies the absolute address at which EHCI controller registers are located.
-   - <b>Relocate EHCI Communication Area</b>: Specifies if the communication area is located at a specific address (via the linker script):
-     - <b>Section name</b>: Specifies the section name of the EHCI communication area (for positioning via the linker script).
+   - <b>Locate EHCI Communication Area</b>: Specifies if the communication area is located in a specific memory (via the linker script):
+     - <b>Section name</b>: Specifies the section name for the EHCI communication area (for positioning via the linker script).
 
  - <b>Maximum number of Pipes (per controller)</b>: Specifies the maximum number of pipes that the driver will support (per controller).
 
@@ -228,14 +228,14 @@ It is configured via define values in the <b>USBH_OHCI_Config.h</b> configuratio
  - <b>USB Host Controller 0</b>:
    - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
    - <b>OHCI Registers base address</b>: Specifies the absolute address at which OHCI controller registers are located.
-   - <b>Relocate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script):
-     - <b>Section name</b>: Specifies the section name of the OHCI communication area (for positioning via the linker script).
+   - <b>Locate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located in a specific memory (via the linker script):
+     - <b>Section name</b>: Specifies the section name for the OHCI communication area (for positioning via the linker script).
 
  - <b>USB Host Controller 1</b> (can be enabled/disabled): 
    - <b>Export control block Driver_USBH#</b>: Specifies the exported driver control block number.
    - <b>OHCI Registers base address</b>: Specifies the absolute address at which OHCI controller registers are located.
-   - <b>Relocate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located at a specific address (via the linker script):
-     - <b>Section name</b>: Specifies the section name of the OHCI communication area (for positioning via the linker script).
+   - <b>Locate OHCI Communication Area (HCCA)</b>: Specifies if the communication area is located in a specific memory (via the linker script):
+     - <b>Section name</b>: Specifies the section name for the OHCI communication area (for positioning via the linker script).
 
  - <b>Maximum number of Pipes (per controller)</b>: Specifies the maximum number of pipes that the driver will support (per controller).
 */
@@ -289,7 +289,7 @@ The \ref driver_pack_content provides implementations of <a href="https://arm-so
 
 The documentation for the Renesas DA16200 can be found here: https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices
 
-DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer) is required. Firmware image and programing instructions "DA16200 DA16600 FreeRTOS Getting Started Guide" are also available on the above web site.
+DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer) is required. Firmware image and programming instructions "DA16200 DA16600 FreeRTOS Getting Started Guide" are also available on the above web site.
 
 \subsection driver_ESP32 ESP32
 
@@ -326,7 +326,7 @@ flashed with the firmware for UART communication. To enable SPI communication, f
 - In the es-WiFi Demo application, execute:
   - Go to <b>Setup - Serial Port - Configure/Open</b>:
     \image html ISM43362_set_COM_port_conf.png
-  - Check the follwoing settings (Serial Port being the one added just now):
+  - Check the following settings (Serial Port being the one added just now):
     \image html ISM43362_set_COM_port.png
   - Go to <b>Menu - Firmware - Update</b>:
     \image html ISM43362_update_firmware.png

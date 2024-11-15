@@ -36,6 +36,7 @@ PACK_DIRS="
   Flash
   I2C
   NAND
+  Shield
   SPI
   USB
   WiFi
@@ -64,12 +65,15 @@ PACK_DELETE_FILES="
 # Specify addition argument to packchk
 # Default: empty
 #
-PACKCHK_ARGS=(-x M353 -x M364 -x M324 -x M382 -x M363 -x M362 -x M336)
+PACKCHK_ARGS=()
 
 # Specify additional dependencies for packchk
 # Default: empty
 #
-# PACKCHK_DEPS=""
+PACKCHK_DEPS="
+  ARM.CMSIS.pdsc
+  ARM.CMSIS-RTX.pdsc
+"
 
 # Optional: restrict fallback modes for changelog generation
 # Default: full

@@ -12,10 +12,9 @@
   </licenseSets>
 
   <releases>
-    <release version="2.9.0-dev">
+    <release version="2.10.0">
       Active development ...
-      - Added USB Host EHCI (TT) driver
-      - Added USB Host OHCI driver
+      - Added WiFi Shield layers
     </release>
   </releases>
 
@@ -474,5 +473,12 @@
       </files>
     </component>
   </components>
+
+  <csolution>
+    <clayer type="Shield" path="Shield/WiFi/Sparkfun_ESP8266"       file="Shield.clayer.yml" copy-to="Shield/WiFi/Sparkfun_ESP8266"/>
+    <clayer type="Shield" path="Shield/WiFi/WizNet_WizFi360-EVB"    file="Shield.clayer.yml" copy-to="Shield/WiFi/WizNet_WizFi360-EVB"/>
+    <clayer type="Shield" path="Shield/WiFi/Inventek_ISMART43362-E" file="Shield.clayer.yml" copy-to="Shield/WiFi/Inventek_ISMART43362-E"/>
+    <clayer type="Shield" path="Shield/WiFi/Sparkfun_DA16200"       file="Shield.clayer.yml" copy-to="Shield/WiFi/Sparkfun_DA16200"/>
+  </csolution>
 
 </package>

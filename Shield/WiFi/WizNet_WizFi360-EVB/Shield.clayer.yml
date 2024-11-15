@@ -1,0 +1,26 @@
+layer:
+  type: Shield
+  description: WizFi360-EVB WiFi Shield
+
+  connections:
+    - connect: WizFi360-EVB WiFi
+      consumes:
+        - ARDUINO_UNO_UART
+        - CMSIS-RTOS2
+      provides:
+        - CMSIS_WiFi
+
+  packs:
+    - pack: ARM::CMSIS-Driver@^2.10.0-0
+
+  define:
+    - CMSIS_shield_header: "\"WizNet_WizFi360.h\""
+
+  components:
+    - component: CMSIS Driver:WiFi:WizFi360&UART
+
+  groups:
+    - group: Shield
+      files:
+        - file: ./WizNet_WizFi360.h
+        - file: ./WizNet_WizFi360.c

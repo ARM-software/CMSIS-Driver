@@ -1,0 +1,26 @@
+layer:
+  type: Shield
+  description: Sparkfun ESP8266 WiFi Shield
+
+  connections:
+    - connect: Sparkfun ESP8266 WiFi
+      consumes:
+        - ARDUINO_UNO_UART
+        - CMSIS-RTOS2
+      provides:
+        - CMSIS_WiFi
+
+  packs:
+    - pack: ARM::CMSIS-Driver@^2.10.0-0
+
+  define:
+    - CMSIS_shield_header: "\"Sparkfun_ESP8266.h\""
+
+  components:
+    - component: CMSIS Driver:WiFi:ESP8266&UART
+
+  groups:
+    - group: Shield
+      files:
+        - file: ./Sparkfun_ESP8266.h
+        - file: ./Sparkfun_ESP8266.c

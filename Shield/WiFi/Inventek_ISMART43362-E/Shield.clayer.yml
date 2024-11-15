@@ -1,0 +1,28 @@
+layer:
+  type: Shield
+  description: ISM43362-E WiFi Shield
+
+  connections:
+    - connect: ISM43362-E WiFi
+      consumes:
+        - ARDUINO_UNO_SPI
+        - ARDUINO_UNO_D9
+        - ARDUINO_UNO_D10
+        - CMSIS-RTOS2
+      provides:
+        - CMSIS_WiFi
+
+  packs:
+    - pack: ARM::CMSIS-Driver@^2.10.0-0
+
+  define:
+    - CMSIS_shield_header: "\"Inventek_ISMART43362.h\""
+
+  components:
+    - component: CMSIS Driver:WiFi:ISM43362&SPI
+
+  groups:
+    - group: Shield
+      files:
+        - file: ./Inventek_ISMART43362.h
+        - file: ./Inventek_ISMART43362.c

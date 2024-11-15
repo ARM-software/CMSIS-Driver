@@ -1,0 +1,28 @@
+layer:
+  type: Shield
+  description: Sparkfun DA16200 WiFi Shield
+
+  connections:
+    - connect: Sparkfun DA16200 WiFi
+      consumes:
+        - ARDUINO_UNO_UART
+        - ARDUINO_UNO_D4
+      # - ARDUINO_UNO_D5
+        - CMSIS-RTOS2
+      provides:
+        - CMSIS_WiFi
+
+  packs:
+    - pack: ARM::CMSIS-Driver@^2.10.0-0
+
+  define:
+    - CMSIS_shield_header: "\"Sparkfun_DA16200.h\""
+
+  components:
+    - component: CMSIS Driver:WiFi:DA16200&UART
+
+  groups:
+    - group: Shield
+      files:
+        - file: ./Sparkfun_DA16200.h
+        - file: ./Sparkfun_DA16200.c

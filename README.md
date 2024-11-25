@@ -45,5 +45,11 @@ All drivers refer the API Interface header file definitions published in the CMS
 - ESP8266
 - WizFi360
 
+## Shield layers for Arduino Uno WiFi shields
+- Inventek ISMART43362-E
+- Sparkfun DA16200
+- Sparkfun ESP8266
+- WizNet WizFi360-EVB
+
 ## License
 Licensed under Apache 2.0 License.

@@ -25,6 +25,7 @@ File/Directory            | Content
 \b Flash/                 | \ref driver_Flash memory driver implementations
 \b I2C/                   | \ref driver_I2C driver implementations
 \b NAND/                  | \ref driver_NAND driver implementations
+\b Shield/                | \ref shield_layer implementations
 \b SPI/                   | \ref driver_SPI driver implementations
 \b USB/                   | \ref driver_USB driver implementations
 \b WiFi/                  | \ref driver_WiFi driver implementations
@@ -282,8 +283,6 @@ The \ref driver_pack_content provides implementations of <a href="https://arm-so
        WiFi Driver for the WizNet WizFi360.</td>
     </tr>
 </table>
-
-
 
 \subsection driver_DA16200 DA16200
 
@@ -774,4 +773,104 @@ int main (void) {
   for (;;) {}
 }
 \endcode
+*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\page shield_layer Shield layer
+
+The **[Shield layer](https://github.com/Open-CMSIS-Pack/cmsis-toolbox/blob/main/docs/ReferenceApplications.md#shield-layer)**
+adds support for additional hardware via plugin shields.
+
+\section shield_WiFi WiFi Shields
+
+The \ref driver_pack_content provides implementations of **Shield layers** for the following Arduino Uno WiFi shields:
+<table class="cmtable" summary="Shield layers">
+    <tr>
+      <th>Shield layer</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>\ref shield_Inventek_ISMART43362-E</td>
+      <td>
+       Shield layer for Inventek ISMART43362-E WiFi Shield.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref shield_Sparkfun_DA16200</td>
+      <td>
+       Shield layer for Sparkfun DA16200WiFi Shield.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref shield_Sparkfun_ESP8266</td>
+      <td>
+       Shield layer for Sparkfun ESP8266 WiFi Shield.
+      </td>
+    </tr>
+    <tr>
+      <td>\ref shield_WizNet_WizFi360-EVB</td>
+      <td>
+       Shield layer for WizNet WizFi360-EVB WiFi Shield.
+      </td>
+    </tr>
+</table>
+
+\subsection shield_Inventek_ISMART43362-E Inventek ISMART43362-E
+
+Shield layer for [Inventek ISMART43362-E](https://www.inventeksys.com/ismart43362-arduino-shields-wi-fi) Arduino Uno WiFi Shield.
+The shield is connected via an Arduino header using an SPI interface.
+
+| Provided API Interface    | Description                    |
+|---------------------------|--------------------------------|
+| CMSIS_WIFI                | CMSIS-Driver WIFI (instance 0) |
+
+| Consumed API Interface    | Description                                                    |
+|---------------------------|----------------------------------------------------------------|
+| ARDUINO_UNO_SPI           | CMSIS-Driver SPI connected to Arduino SPI pins D11..D13        |
+| ARDUINO_UNO_D9,D10        | CMSIS-Driver GPIO connected to Arduino digital I/O pins D9,D10 |
+| CMSIS-RTOS2               | CMSIS-RTOS2 compliant RTOS                                     |
+
+\subsection shield_Sparkfun_DA16200 Sparkfun DA16200
+
+Shield layer for [Sparkfun DA16200](https://www.sparkfun.com/products/18567) Arduino Uno WiFi Shield.
+The shield is connected via an Arduino header using an UART interface.
+
+| Provided API Interface    | Description                    |
+|---------------------------|--------------------------------|
+| CMSIS_WIFI                | CMSIS-Driver WIFI (instance 0) |
+
+| Consumed API Interface    | Description                                                    |
+|---------------------------|----------------------------------------------------------------|
+| ARDUINO_UNO_UART          | CMSIS-Driver USART connected to Arduino UART pins D0..D1       |
+| CMSIS-RTOS2               | CMSIS-RTOS2 compliant RTOS                                     |
+
+\subsection shield_Sparkfun_ESP8266 Sparkfun ESP8266
+
+Shield layer for [Sparkfun ESP8266](https://www.sparkfun.com/products/13287) Arduino Uno WiFi Shield.
+The shield is connected via an Arduino header using an UART interface.
+
+| Provided API Interface    | Description                    |
+|---------------------------|--------------------------------|
+| CMSIS_WIFI                | CMSIS-Driver WIFI (instance 0) |
+
+| Consumed API Interface    | Description                                                    |
+|---------------------------|----------------------------------------------------------------|
+| ARDUINO_UNO_UART          | CMSIS-Driver USART connected to Arduino UART pins D0..D1       |
+| CMSIS-RTOS2               | CMSIS-RTOS2 compliant RTOS                                     |
+
+\subsection shield_WizNet_WizFi360-EVB WizNet WizFi360-EVB
+
+Shield layer for [WizNet WizFi360-EVB](https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/wizfi360_evb_shield) Arduino Uno WiFi Shield.
+The shield is connected via an Arduino header using an UART interface.
+
+| Provided API Interface    | Description                    |
+|---------------------------|--------------------------------|
+| CMSIS_WIFI                | CMSIS-Driver WIFI (instance 0) |
+
+| Consumed API Interface    | Description                                                    |
+|---------------------------|----------------------------------------------------------------|
+| ARDUINO_UNO_UART          | CMSIS-Driver USART connected to Arduino UART pins D0..D1       |
+| CMSIS-RTOS2               | CMSIS-RTOS2 compliant RTOS                                     |
+
 */

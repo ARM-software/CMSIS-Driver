@@ -107,7 +107,17 @@ $(document).ready(function(){initNavTree('driver_NAND.html',''); initResizable()
   <div class="headertitle"><div class="title">NAND </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p >This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus. </p>
+<div class="textblock"><p >This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus. It exports a NAND CMSIS-Driver with a maximum of four memory mapped NAND Flash devices.</p>
+<p >The driver is configured using the NAND_MemBus_Config.h configuration file, which contains the following options:</p><ul>
+<li><code>#define</code> <code>NAND_DRIVER</code> exports the NAND CMSIS-Driver instance, which can be used to access the memory mapped NAND Flash devices.</li>
+<li><code>#define</code> <code>NAND_DEVx</code> enables the memory mapped NAND Flash device.</li>
+<li><code>#define</code> <code>NAND_DEVx_ADDR_BASE</code> specifies the base address of the Flash device, which is used to control the data/address lines and nCE, nRE, nWE lines.</li>
+<li><code>#define</code> <code>NAND_DEVx_ADDR_ALE</code> specifies the ALE address of the Flash device, which is used to control the ALE line.</li>
+<li><code>#define</code> <code>NAND_DEVx_ADDR_CLE</code> specifies the CLE address of the Flash device, which is used to control the CLE line.</li>
+<li><code>#define</code> <code>NAND_DEVx_DATA_WIDTH</code> specifies the data bus width of the Flash device.</li>
+<li><code>#define</code> <code>NAND_DEVx_RB_PIN</code> specifies if Ready/Busy line of the Flash device is available (used for Ready/Busy monitoring).</li>
+<li><code>#define</code> <code>NAND_DEVx_RB_PIN_IRQ</code> specifies if Ready/Busy line of the Flash device can trigger an interrupt. </li>
+</ul>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

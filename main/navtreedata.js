@@ -53,7 +53,15 @@ var NAVTREE =
     ] ],
     [ "I2C", "driver_I2C.html", null ],
     [ "NAND", "driver_NAND.html", null ],
-    [ "SPI", "driver_SPI.html", null ]
+    [ "SPI", "driver_SPI.html", null ],
+    [ "Shield layer", "shield_layer.html", [
+      [ "WiFi Shields", "shield_layer.html#shield_WiFi", [
+        [ "Inventek ISMART43362-E", "shield_layer.html#shield_Inventek_ISMART43362-E", null ],
+        [ "Sparkfun DA16200", "shield_layer.html#shield_Sparkfun_DA16200", null ],
+        [ "Sparkfun ESP8266", "shield_layer.html#shield_Sparkfun_ESP8266", null ],
+        [ "WizNet WizFi360-EVB", "shield_layer.html#shield_WizNet_WizFi360-EVB", null ]
+      ] ]
+    ] ]
   ] ]
 ];
 

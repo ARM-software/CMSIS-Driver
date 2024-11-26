@@ -17,3 +17,4 @@ This pack contains:
 
 - [Documentation](https://arm-software.github.io/CMSIS-Driver/latest/index.html)
 - [Repository](https://github.com/ARM-software/CMSIS-Driver)
+- [Issues](https://github.com/ARM-software/CMSIS-Driver/issues)

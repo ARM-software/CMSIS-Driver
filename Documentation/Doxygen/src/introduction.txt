@@ -581,7 +581,8 @@ int main (void) {
 \page driver_NAND NAND
 
 This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus.
-It exports a NAND CMSIS-Driver with a maximum of four memory mapped NAND Flash devices.
+It implements a [CMSIS-Driver NAND Interface](https://arm-software.github.io/CMSIS_6/latest/Driver/group__nand__interface__gr.html)
+with up to four memory mapped NAND Flash devices.
 
 The driver is configured using the NAND_MemBus_Config.h configuration file, which contains the following options:
 - \c \#define \c NAND_DRIVER exports the NAND CMSIS-Driver instance, which can be used to access the memory mapped NAND Flash devices.

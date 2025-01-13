@@ -17,6 +17,7 @@ All drivers refer the API Interface header file definitions published in the CMS
 - PHY_LAN8710A
 - PHY_LAN8720
 - PHY_LAN8740A
+- PHY_LAN8741A
 - PHY_LAN8742A
 - PHY_ST802RT1
 

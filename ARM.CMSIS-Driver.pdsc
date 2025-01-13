@@ -12,9 +12,9 @@
   </licenseSets>
 
   <releases>
-    <release version="2.10.0">
+    <release version="2.11.0-dev">
       Active development ...
-      - Added WiFi Shield layers
+      - Added LAN8741A PHY driver
     </release>
   </releases>
 
@@ -187,6 +187,18 @@
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8740A"/>
         <file category="source" name="Ethernet_PHY/LAN8740A/PHY_LAN8740A.c"/>
+      </files>
+    </component>
+
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="LAN8741A" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
+      <description>Ethernet PHY LAN8741A Driver</description>
+      <RTE_Components_h>
+        <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_PHY_LAN8741A        /* Driver PHY LAN8741A */
+      </RTE_Components_h>
+      <files>
+        <file category="doc" name="https://www.microchip.com/LAN8741A"/>
+        <file category="source" name="Ethernet_PHY/LAN8741A/PHY_LAN8741A.c"/>
       </files>
     </component>
 

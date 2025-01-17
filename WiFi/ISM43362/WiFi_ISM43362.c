@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2023 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2025 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        18. December 2023
- * $Revision:    V1.15
+ * $Date:        15. January 2025
+ * $Revision:    V1.16
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -98,6 +98,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.16
+ *    - Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)
+ *    - Corrected opt_len parameter check in WiFi_SocketSetOpt function
+ *    - Enabled Event Recorder from CMSIS-View pack
  *  Version 1.15
  *    - Aligned with CMSIS v6
  *  Version 1.14
@@ -141,6 +145,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "RTE_Components.h"
@@ -156,7 +161,7 @@
 
 #include "Driver_SPI.h"
 
-#ifdef   RTE_Compiler_EventRecorder
+#if      (defined(RTE_Compiler_EventRecorder) || defined(RTE_CMSIS_View_EventRecorder))
 #include "EventRecorder.h"              // Keil.ARM Compiler::Compiler:Event Recorder
 #endif
 
@@ -167,7 +172,7 @@
 #ifndef  WIFI_ISM43362_DEBUG_EVR
 #define  WIFI_ISM43362_DEBUG_EVR    0
 #endif
-#if ((WIFI_ISM43362_DEBUG_EVR == 1) && !defined(RTE_Compiler_EventRecorder))
+#if      ((WIFI_ISM43362_DEBUG_EVR == 1) && (!defined(RTE_Compiler_EventRecorder) && !defined(RTE_CMSIS_View_EventRecorder)))
 #error For driver debugging enable RTE: Compiler: Event Recorder!
 #endif
 
@@ -205,7 +210,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,15)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,16)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -519,6 +524,180 @@ static const uint8_t *SkipCommas (const uint8_t *ptr, uint8_t num) {
 }
 
 /**
+  \fn            int32_t StrToInt32 (const uint8_t *ptr_str, int32_t *ptr_int)
+  \brief         Convert string to signed integer (32-bit).
+  \param[in]     ptr_str  Pointer to string
+  \param[out]    ptr_int  Pointer to signed integer (32-bit)
+  \return        function execution result
+                   - 0  : Conversion successful
+                   - -1 : Conversion failed
+*/
+static int32_t StrToInt32 (const char *ptr_str, int32_t *ptr_int) {
+  char   *ptr_str_next;
+  int32_t int_val;
+
+  if ((ptr_str == NULL) || (ptr_int == NULL)) {
+    return -1;
+  }
+
+  // Convert string to number (base 10)
+  int_val = strtol(ptr_str, &ptr_str_next, 10);
+
+  if (ptr_str_next <= ptr_str) {        // If the conversion failed
+    return -1;
+  }
+
+  *ptr_int = int_val;
+
+  return 0;
+}
+
+/**
+  \fn            uint32_t StrCopy (const uint8_t *ptr_str_src, int32_t *ptr_str_dest, uint8_t max_chars, char term_char)
+  \brief         Copy string until terminating character and terminate destination string with null character.
+  \param[in]     ptr_str_src    Pointer to source string
+  \param[out]    ptr_str_dest   Pointer to destination string
+  \param[in]     max_chars      Maximum number of characters to copy
+  \param[in]     term_char      Terminating character (null is always terminator)
+  \return        number of copied characters including terminating null character
+*/
+static uint32_t StrCopy (const char *ptr_str_src, char *ptr_str_dest, uint8_t max_chars, char term_char) {
+  uint32_t num;
+  char     c;
+
+  if ((ptr_str_src == NULL) || (ptr_str_dest == NULL) || (max_chars < 2U)) {
+    return 0U;
+  }
+
+  // Find number of characters in the source string until terminating term_char or null character
+  // (account for null termination of destination string)
+  for (num = 0U; num < (max_chars - 1U); num++) {
+    c = ptr_str_src[num];
+    if ((c == 0U) || (c == term_char)) {
+      break;
+    }
+  }
+
+  if (num == max_chars) {
+    // If string to copy cannot fit into destination with null terminating character, do not copy anything
+    return 0U;
+  }
+
+  if (num != 0U) {
+    memcpy(ptr_str_dest, ptr_str_src, num);     // Copy string (up to terminating character)
+  }
+  ptr_str_dest[num] = 0U;                       // null-terminate destination string
+
+  return (num + 1U);
+}
+
+/**
+  \fn            int32_t StrToVer (const uint8_t *ptr_str, uint8_t *ptr_ver)
+  \brief         Convert string to version (array of 4 bytes).
+  \detail        Example string "6.2.1.7" to array of 4 bytes [6][2][1][7].
+  \param[in]     ptr_str  Pointer to string
+  \param[out]    ptr_ver  Pointer to version (array of 4 bytes)
+  \return        function execution result
+                   - 0  : Conversion successful
+                   - -1 : Conversion failed
+*/
+static int32_t StrToVer (const char *ptr_str, uint8_t *ptr_ver) {
+  const char *ptr_str_curr;
+        char *ptr_str_next;
+
+  if ((ptr_str == NULL) || (ptr_ver == NULL)) {
+    return -1;
+  }
+
+  ptr_str_curr = ptr_str;
+
+  for (uint8_t i = 0U; i < 4U; i++) {
+    // Convert string to number (base 10)
+    ptr_ver[i] = (uint8_t)(strtoul(ptr_str_curr, &ptr_str_next, 10));
+
+    if (ptr_str_next <= ptr_str_curr) { // If the last conversion failed
+      return -1;
+    }
+
+    // Skip the character between numbers (usually '.')
+    ptr_str_curr = (const char *)ptr_str_next + 1U;
+  }
+
+  return 0;
+}
+
+/**
+  \fn            int32_t StrToIP4 (const uint8_t *ptr_str, uint8_t *ptr_ip4)
+  \brief         Convert string to IPv4 (array of 4 bytes).
+  \detail        Example string "192.168.0.100" to array of 4 bytes [192][168][0][100].
+  \param[in]     ptr_str  Pointer to string
+  \param[out]    ptr_ip4  Pointer to IPv4 (array of 4 bytes)
+  \return        function execution result
+                   - 0  : Conversion successful
+                   - -1 : Conversion failed
+*/
+static int32_t StrToIP4 (const char *ptr_str, uint8_t *ptr_ip4) {
+  const char *ptr_str_curr;
+        char *ptr_str_next;
+
+  if ((ptr_str == NULL) || (ptr_ip4 == NULL)) {
+    return -1;
+  }
+
+  ptr_str_curr = ptr_str;
+
+  for (uint8_t i = 0U; i < 4U; i++) {
+    // Convert string to number (base 10)
+    ptr_ip4[i] = (uint8_t)(strtoul(ptr_str_curr, &ptr_str_next, 10));
+
+    if (ptr_str_next <= ptr_str_curr) { // If the last conversion failed
+      return -1;
+    }
+
+    // Skip the character between numbers (usually '.')
+    ptr_str_curr = (const char *)ptr_str_next + 1U;
+  }
+
+  return 0;
+}
+
+/**
+  \fn            int32_t StrToMAC (const uint8_t *ptr_str, uint8_t *ptr_mac)
+  \brief         Convert string to MAC address (array of 6 bytes).
+  \detail        Example string "11:22:33:44:55:66" to array of 6 bytes [11][22][33][44][55][66].
+  \param[in]     ptr_str  Pointer to string
+  \param[out]    ptr_mac  Pointer to MAC address (array of 6 bytes)
+  \return        function execution result
+                   - 0  : Conversion successful
+                   - -1 : Conversion failed
+*/
+static int32_t StrToMAC (const char *ptr_str, uint8_t *ptr_mac) {
+  const char *ptr_str_curr;
+        char *ptr_str_next;
+
+  if ((ptr_str == NULL) || (ptr_mac == NULL)) {
+    return -1;
+  }
+
+  ptr_str_curr = ptr_str;
+
+  for (uint8_t i = 0U; i < 6U; i++) {
+    // Convert string to number (base 16)
+    ptr_mac[i] = (uint8_t)(strtoul(ptr_str_curr, &ptr_str_next, 16));
+
+    if (ptr_str_next <= ptr_str_curr) {
+      // If last conversion failed
+      return -1;
+    }
+
+    // Skip character between numbers (usually ':')
+    ptr_str_curr = (const char *)ptr_str_next + 1U;
+  }
+
+  return 0;
+}
+
+/**
   \fn            uint8_t SPI_WaitReady (uint32_t timeout)
   \brief         Wait for SPI ready (DATARDY pin active).
   \param[in]     timeout  Timeout in milliseconds (0 = no timeout)
@@ -740,7 +919,7 @@ static int32_t SPI_SendReceive (uint8_t *ptr_send, uint32_t send_len, uint8_t *p
         }
         if (i != (len_recv - 1U)) {
           // "\r\n" was found before end extract error code
-          if (sscanf((const char *)&ptr_recv[i], "%d", ptr_resp_code) != 1) {
+          if (StrToInt32((const char *)&ptr_recv[i], ptr_resp_code) != 0) {
             // Error but we did not extract error code we force value -2
             *ptr_resp_code = -2;                // Error
           }
@@ -811,7 +990,7 @@ static int32_t SPI_StartStopTransportServerClient (int32_t socket, uint8_t proto
   ret = 0;
 
   // Set communication socket number
-  snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+  snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", (int)socket); spi_recv_len = sizeof(spi_recv_buf);
   spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
   if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
     ret = ARM_SOCKET_ERROR;
@@ -914,11 +1093,11 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
         uint32_t ticks, time_in_ms;
         int32_t  spi_ret;
         int32_t  ret;
+        int32_t  int_val;
         uint8_t  u8_arr[6];
         uint8_t  poll_async, poll_recv, check_async, repeat, event_signal;
         uint8_t  poll_nb_con;
         uint8_t  async_prescaler;
-        uint16_t u16_val;
         uint8_t  i, hw_socket;
 
   (void)arg;
@@ -978,7 +1157,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                     // If message contains "Accepted " string, parse it and extract ip and port
                     ptr_resp_buf += 9U;
                     // Parse IP Address and port
-                    if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu:%hu", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3], &u16_val) == 5) {
+                    if (StrToIP4((const char *)ptr_resp_buf, u8_arr) == 0) {
                       // IP and port read from response correctly
                       // Find which socket is listening on accepted port
                       for (i = 0; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
@@ -1000,7 +1179,9 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                               // Skip protocol, client IP, local port and host IP (4 ',') from response
                               ptr_resp_buf = SkipCommas(spi_recv_buf, 4U);
                               if (ptr_resp_buf != NULL) {
-                                sscanf((const char *)ptr_resp_buf, "%hu", &socket_arr[i].remote_port);
+                                if (StrToInt32((const char *)ptr_resp_buf, &int_val) == 0) {
+                                  socket_arr[i].remote_port = (uint16_t)(int_val);
+                                }
                               }
                             }
                           }
@@ -1021,7 +1202,7 @@ __NO_RETURN static void WiFi_AsyncMsgProcessThread (void *arg) {
                       // If message contains "Assigned " string, parse it and extract MAC
                       ptr_resp_buf += 9U;
                       // Parse MAC Address
-                      if (sscanf((const char *)ptr_resp_buf, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3], &u8_arr[4], &u8_arr[5]) == 6) {
+                      if (StrToMAC((const char *)ptr_resp_buf, u8_arr) == 0) {
                         // Check if MAC already exists in mac_ip4 array, if it does ignore it, otherwise add it to array
                         for (i = 0; i < 8; i++) {
                           if (memcmp((const void *)&ap_mac[i][0], (const void *)u8_arr, 6) == 0) {
@@ -1329,7 +1510,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
       if (ret == ARM_DRIVER_OK) {
         ptr_str = strstr ((const char *)spi_recv_buf, ",C");
         if (ptr_str != NULL) {
-          if (sscanf(ptr_str + 2U, "%hhu.%hhu.%hhu.%hhu", &u8_arr[0], &u8_arr[1], &u8_arr[2], &u8_arr[3]) == 4) {
+          if (StrToVer((const char *)&ptr_str[2], u8_arr) == 0) {
             firmware_version = ((uint32_t)u8_arr[0] << 24) | 
                                ((uint32_t)u8_arr[1] << 16) | 
                                ((uint32_t)u8_arr[2] <<  8) | 
@@ -1480,7 +1661,7 @@ static int32_t WiFi_PowerControl (ARM_POWER_STATE state) {
 
       case ARM_POWER_LOW:
         if ((sta_lp_time != 0U) && (oper_mode == OPER_MODE_STATION)) {
-          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "ZP=6,%d\r", sta_lp_time);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "ZP=6,%d\r", (int)sta_lp_time);
         } else if (ap_beacon_interval != 0U) {
           snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "ZP=2,%d\r", ap_beacon_interval);
         } else {
@@ -1698,7 +1879,7 @@ static int32_t WiFi_SetOption (uint32_t interface, uint32_t option, const void *
         u32 = *((const uint32_t *)data);
         if ((u32 >= (30U * 60U)) &&         // If more then 30 minutes
             (u32 <= (254U * 60U * 60U))) {  // If less then 254 hours
-          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "AL=%d\r", u32/(60U*60U));
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "AL=%d\r", (int)(u32/(60U*60U)));
           // Store set value to local variable
           ap_dhcp_lease_time = (u32/(60U*60U))*60U*60U;
         } else {
@@ -1812,7 +1993,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       if (*len >= 6U) {
         // Extract MAC from response on "Z5" command
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)&spi_recv_buf[2], "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3], &ptr_u8_data[4], &ptr_u8_data[5]) == 6) {
+        if (StrToMAC((const char *)&spi_recv_buf[2], ptr_u8_data) == 0) {
           *len = 6U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1832,7 +2013,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       }
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
+        if (StrToIP4((const char *)ptr_resp_buf, ptr_u8_data) == 0) {
           *len = 4U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1847,7 +2028,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       ptr_resp_buf = SkipCommas(spi_recv_buf, 6U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
+        if (StrToIP4((const char *)ptr_resp_buf, ptr_u8_data) == 0) {
           *len = 4U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1862,7 +2043,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       ptr_resp_buf = SkipCommas(spi_recv_buf, 7U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
+        if (StrToIP4((const char *)ptr_resp_buf, ptr_u8_data) == 0) {
           *len = 4U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1878,7 +2059,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       ptr_resp_buf = SkipCommas(spi_recv_buf, 8U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
+        if (StrToIP4((const char *)ptr_resp_buf, ptr_u8_data) == 0) {
           *len = 4U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1894,7 +2075,7 @@ static int32_t WiFi_GetOption (uint32_t interface, uint32_t option, void *data, 
       ptr_resp_buf = SkipCommas(spi_recv_buf, 9U);
       if (ptr_resp_buf != NULL) {
         ptr_u8_data = (uint8_t *)data;
-        if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ptr_u8_data[0], &ptr_u8_data[1], &ptr_u8_data[2], &ptr_u8_data[3]) == 4) {
+        if (StrToIP4((const char *)ptr_resp_buf, ptr_u8_data) == 0) {
           *len = 4U;
         } else {
           ret = ARM_DRIVER_ERROR;
@@ -1980,7 +2161,7 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
     if (ret == ARM_DRIVER_OK) {
       ptr_resp_buf = &spi_recv_buf[2];
       while ((ret == ARM_DRIVER_OK) && (ptr_resp_buf != NULL)) {
-        if (sscanf((const char *)ptr_resp_buf, "#%d", &i) != 1) {
+        if (StrToInt32((const char *)&ptr_resp_buf[1], &i) != 0) {
           break;
         }
         if (i < 0) {
@@ -1999,7 +2180,7 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
         if (ptr_resp_buf != NULL) {
           ptr_resp_buf++;          // Skip '"'
           // Extract SSID
-          if (sscanf((const char *)ptr_resp_buf, "%32[^\"]", scan_info[i].ssid) != 1) {
+          if (StrCopy((const char *)ptr_resp_buf, scan_info[i].ssid, 32U, '\"') == 0U) {
             ret = ARM_DRIVER_ERROR;
           }
         } else {
@@ -2012,7 +2193,7 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
           ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
           if (ptr_resp_buf != NULL) {
             // Extract BSSID
-            if (sscanf((const char *)ptr_resp_buf, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &scan_info[i].bssid[0], &scan_info[i].bssid[1], &scan_info[i].bssid[2], &scan_info[i].bssid[3], &scan_info[i].bssid[4], &scan_info[i].bssid[5]) != 6) {
+            if (StrToMAC((const char *)ptr_resp_buf, scan_info[i].bssid) != 0) {
               ret = ARM_DRIVER_ERROR;
             }
           } else {
@@ -2026,7 +2207,7 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
           ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
           if (ptr_resp_buf != NULL) {
             // Extract RSSI
-            if (sscanf((const char *)ptr_resp_buf, "%d", &int_val) == 1) {
+            if (StrToInt32((const char *)ptr_resp_buf, &int_val) == 0) {
               scan_info[i].rssi = (uint8_t)(int_val + 255);
             } else {
               ret = ARM_DRIVER_ERROR;
@@ -2064,7 +2245,9 @@ static int32_t WiFi_Scan (ARM_WIFI_SCAN_INFO_t scan_info[], uint32_t max_num) {
           ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 2U);
           if (ptr_resp_buf != NULL) {
             // Extract channel
-            if (sscanf((const char *)ptr_resp_buf, "%hhu", &scan_info[i].ch) != 1) {
+            if (StrToInt32((const char *)ptr_resp_buf, &int_val) == 0) {
+              scan_info[i].ch = (uint8_t)(int_val);
+            } else {
               ret = ARM_DRIVER_ERROR;
             }
           } else {
@@ -2240,7 +2423,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
               ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
               if (ptr_resp_buf != NULL) {
                 // Extract IP Address
-                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) != 4) {
+                if (StrToIP4((const char *)ptr_resp_buf, sta_local_ip) != 0) {
                   ret = ARM_DRIVER_ERROR;
                 }
               } else {
@@ -2322,7 +2505,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
               ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 1U);
               if (ptr_resp_buf != NULL) {
                 // Extract IP Address
-                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &sta_local_ip[0], &sta_local_ip[1], &sta_local_ip[2], &sta_local_ip[3]) == 4) {
+                if (StrToIP4((const char *)ptr_resp_buf, sta_local_ip) == 0) {
                   if ((sta_local_ip[0] == 0) && (sta_local_ip[1] == 0) && (sta_local_ip[2] == 0) && (sta_local_ip[3] == 0)) {
                     ret = ARM_DRIVER_ERROR;
                   }
@@ -2432,7 +2615,7 @@ static int32_t WiFi_Activate (uint32_t interface, const ARM_WIFI_CONFIG_t *confi
               ptr_resp_buf = SkipCommas((uint8_t const *)ptr_resp_buf, 2U);
               if (ptr_resp_buf != NULL) {
                 // Extract IP Address
-                if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ap_local_ip[0], &ap_local_ip[1], &ap_local_ip[2], &ap_local_ip[3]) != 4) {
+                if (StrToIP4((const char *)ptr_resp_buf, ap_local_ip) != 0) {
                   ret = ARM_DRIVER_ERROR;
                 }
               } else {
@@ -2587,7 +2770,7 @@ static uint32_t WiFi_IsConnected (void) {
 static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
         int32_t  ret;
   const uint8_t *ptr_resp_buf;
-        int      int_val;
+        int32_t  int_val;
 
   if (net_info == NULL) {
     return ARM_DRIVER_ERROR_PARAMETER;
@@ -2611,7 +2794,7 @@ static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
 
           // Extract ssid
           if (ret == ARM_DRIVER_OK) {
-            if (sscanf((const char *)&spi_recv_buf[2], "%32[^,]s", net_info->ssid) != 1) {
+            if (StrCopy((const char *)&spi_recv_buf[2], net_info->ssid, 32U, ',') == 0U) {
               ret = ARM_DRIVER_ERROR;
             }
           }
@@ -2621,7 +2804,7 @@ static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
           if (ret == ARM_DRIVER_OK) {
             ptr_resp_buf = SkipCommas(spi_recv_buf, 1U);
             if (ptr_resp_buf != NULL) {
-              if (sscanf((const char *)ptr_resp_buf, "%64[^,]s", net_info->pass) != 1) {
+              if (StrCopy((const char *)ptr_resp_buf, net_info->pass, 64U, ',') == 0U) {
                 ret = ARM_DRIVER_ERROR;
               }
             } else {
@@ -2665,7 +2848,7 @@ static int32_t WiFi_GetNetInfo (ARM_WIFI_NET_INFO_t *net_info) {
             ret = SPI_SendReceive(spi_send_buf, 4U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
             if (ret == ARM_DRIVER_OK) {
               if (resp_code == 0) {
-                if (sscanf((const char *)&spi_recv_buf[2], "%d", &int_val) == 1) {
+                if (StrToInt32((const char *)&spi_recv_buf[2], &int_val) == 0) {
                   net_info->rssi = (uint8_t)(int_val + 256);
                 } else {
                   ret = ARM_DRIVER_ERROR;
@@ -3546,12 +3729,12 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
           ptr_buf += len_tot_sent;
 
           // Send data
-          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "S3=%04d\r", len_req); spi_recv_len = sizeof(spi_recv_buf);
+          snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "S3=%04d\r", (int)len_req); spi_recv_len = sizeof(spi_recv_buf);
           memcpy((void *)(&spi_send_buf[8]), (const void *)ptr_buf, len_req);
           spi_ret = SPI_SendReceive(spi_send_buf, len_req + 8U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
           if (spi_ret == ARM_DRIVER_OK) {
             if (resp_code == 0) {
-              if (sscanf((const char *)&spi_recv_buf[2], "%d", &len_sent) == 1) {
+              if (StrToInt32((const char *)&spi_recv_buf[2], &len_sent) == 0) {
                 if ((len_sent > 0) || ((len_sent == 0) && (len_to_send == 0U))) {
                   len_tot_sent += (uint32_t)len_sent;
                 } else if (len_sent == 0) {
@@ -3609,7 +3792,7 @@ static int32_t WiFi_SocketSendTo (int32_t socket, const void *buf, uint32_t len,
 static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
         int32_t  ret, spi_ret;
   const uint8_t *ptr_resp_buf;
-        uint16_t u16_val;
+        int32_t  int_val;
         uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
@@ -3650,7 +3833,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
     if (port != NULL) {
       if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
         // Set communication socket number
-        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+        snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", (int)socket); spi_recv_len = sizeof(spi_recv_buf);
         spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
         if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
           ret = ARM_SOCKET_ERROR;
@@ -3664,8 +3847,8 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
             // Skip protocol and client IP (2 ',') from response
             ptr_resp_buf = SkipCommas(spi_recv_buf, 2U);
             if (ptr_resp_buf != NULL) {
-              if (sscanf((const char *)ptr_resp_buf, "%hu", &u16_val) == 1) {
-                *port = u16_val;
+              if (StrToInt32((const char *)ptr_resp_buf, &int_val) == 0) {
+                *port = (uint16_t)int_val;
               } else {
                 ret = ARM_SOCKET_ERROR;
               }
@@ -3706,7 +3889,7 @@ static int32_t WiFi_SocketGetSockName (int32_t socket, uint8_t *ip, uint32_t *ip
 static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip_len, uint16_t *port) {
         int32_t  ret, spi_ret;
   const uint8_t *ptr_resp_buf;
-        uint16_t u16_val;
+        int32_t  int_val;
         uint8_t  hw_socket;
 
   if ((socket < 0) || (socket >= (2 * WIFI_ISM43362_SOCKETS_NUM))) {
@@ -3735,7 +3918,7 @@ static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip
 
     // Execute functionality on the module through SPI commands
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
-      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+      snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", (int)socket); spi_recv_len = sizeof(spi_recv_buf);
       spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
       if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
         ret = ARM_SOCKET_ERROR;
@@ -3750,7 +3933,7 @@ static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip
             // Skip protocol (1 ',') from response
             ptr_resp_buf = SkipCommas(spi_recv_buf, 3U);
             if (ptr_resp_buf != NULL) {
-              if (sscanf((const char *)ptr_resp_buf, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) == 4) {
+              if (StrToIP4((const char *)ptr_resp_buf, ip) == 0) {
                 *ip_len = 4U;
               } else {
                 ret = ARM_DRIVER_ERROR;
@@ -3763,9 +3946,9 @@ static int32_t WiFi_SocketGetPeerName (int32_t socket, uint8_t *ip, uint32_t *ip
           if (port != NULL) {
             ptr_resp_buf = SkipCommas(spi_recv_buf, 4U);
             if ((ptr_resp_buf != NULL) && (port != NULL)) {
-              if (sscanf((const char *)ptr_resp_buf, "%hu", &u16_val) == 1) {
+              if (StrToInt32((const char *)ptr_resp_buf, &int_val) == 0) {
                 if (port != NULL) {
-                  *port = u16_val;
+                  *port = (uint16_t)int_val;
                 }
               } else {
                 ret = ARM_DRIVER_ERROR;
@@ -3889,7 +4072,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
   if (socket_arr[socket].state == SOCKET_STATE_FREE) {
     return ARM_SOCKET_ESOCK;
   }
-  if ((opt_val == NULL) || (opt_len == NULL) || (opt_len != 4U)) {
+  if ((opt_val == NULL) || (opt_len == 0U) || (opt_len != 4U)) {
     return ARM_SOCKET_EINVAL;
   }
   if (driver_initialized == 0U) {
@@ -3920,7 +4103,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
             if (hw_socket >= WIFI_ISM43362_SOCKETS_NUM) {
               hw_socket -= WIFI_ISM43362_SOCKETS_NUM;
             }
-            snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", socket); spi_recv_len = sizeof(spi_recv_buf);
+            snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "P0=%d\r\n", (int)socket); spi_recv_len = sizeof(spi_recv_buf);
             spi_ret = SPI_SendReceive(spi_send_buf, 6U, spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
             if ((spi_ret != ARM_DRIVER_OK) || (resp_code != 0)) {
               ret = ARM_SOCKET_ERROR;
@@ -3929,7 +4112,7 @@ static int32_t WiFi_SocketSetOpt (int32_t socket, int32_t opt_id, const void *op
               if (u32 == 0U) {
                 memcpy((void *)spi_send_buf, (void *)"PK=0,0\r\n", 9);
               } else {
-                snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "PK=1,%d\r", u32);
+                snprintf((char *)spi_send_buf, sizeof(spi_send_buf), "PK=1,%d\r", (int)u32);
               }
               spi_recv_len = sizeof(spi_recv_buf);
               spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
@@ -4110,7 +4293,7 @@ static int32_t WiFi_SocketGetHostByName (const char *name, int32_t af, uint8_t *
     spi_ret = SPI_SendReceive(spi_send_buf, strlen((const char *)spi_send_buf), spi_recv_buf, &spi_recv_len, &resp_code, WIFI_ISM43362_CMD_TIMEOUT);
     if ((spi_ret == ARM_DRIVER_OK) && (resp_code == 0)) {
       // Parse IP Address
-      if (sscanf((const char *)&spi_recv_buf[2], "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) == 4) {
+      if (StrToIP4((const char *)&spi_recv_buf[2], ip) == 0) {
         if (ip_len != NULL) {
           *ip_len = 4U;
         }

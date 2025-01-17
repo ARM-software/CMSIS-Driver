@@ -6,8 +6,10 @@
  - Interface: **SPI at 16 MHz**
 
 ## Packs used for validation:
- - **ARM::CMSIS-Driver v2.7.0**
- - ARM::CMSIS-Driver_Validation v3.0.0
- - ARM::CMSIS v5.8.0
- - Keil::ARM_Compiler v1.6.3
- - NXP::LPC55S69_DFP v14.0.0
+ - **ARM::CMSIS-Driver v2.11.0**
+ - ARM::CMSIS-Driver_Validation v3.1.0
+ - ARM::CMSIS v6.1.0
+ - ARM::CMSIS-Compiler v2.1.0
+ - ARM::CMSIS-RTX v5.9.0
+ - ARM::CMSIS-View v1.2.0
+ - NXP::LPC55S69_DFP v16.1.0

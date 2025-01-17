@@ -1,7 +1,7 @@
-CMSIS-Driver_Validation v3.0.0 CMSIS-Driver WiFi Test Report   Apr  4 2022   14:30:13 
+CMSIS-Driver_Validation v3.1.0 CMSIS-Driver WiFi Test Report   Jan 15 2025   11:10:16 
 
 TEST 01: WIFI_GetVersion                  
-  DV_WIFI.c (305): [INFO] Driver API version 1.1, Driver version 1.13
+  DV_WIFI.c (305): [INFO] Driver API version 1.1, Driver version 1.16
                                           PASSED
 TEST 02: WIFI_GetCapabilities             PASSED
 TEST 03: WIFI_Initialize_Uninitialize     PASSED
@@ -48,10 +48,10 @@ TEST 34: WIFI_Recv_Fragmented             PASSED
 TEST 35: WIFI_Test_Speed                  PASSED
 TEST 36: WIFI_Concurrent_Socket           PASSED
 TEST 37: WIFI_Downstream_Rate             
-  DV_WIFI.c (9267): [INFO] Speed 259 KB/s
+  DV_WIFI.c (9267): [INFO] Speed 323 KB/s
                                           PASSED
 TEST 38: WIFI_Upstream_Rate               
-  DV_WIFI.c (9335): [INFO] Speed 377 KB/s
+  DV_WIFI.c (9335): [INFO] Speed 365 KB/s
                                           PASSED
 
 Test Summary: 38 Tests, 38 Passed, 0 Failed.

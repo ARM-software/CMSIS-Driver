@@ -19,6 +19,7 @@
         - Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)
         - Corrected opt_len parameter check in WiFi_SocketSetOpt function
         - Enabled Event Recorder from CMSIS-View pack
+      - Updated documentation for WiFi drivers and shields
     </release>
   </releases>
 

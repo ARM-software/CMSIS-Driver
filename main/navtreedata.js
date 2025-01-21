@@ -41,9 +41,7 @@ var NAVTREE =
         [ "DA16200", "driver_WiFi.html#driver_DA16200", null ],
         [ "ESP32", "driver_WiFi.html#driver_ESP32", null ],
         [ "ESP8266", "driver_WiFi.html#driver_ESP8266", null ],
-        [ "ISM43362", "driver_WiFi.html#driver_ISM43362", [
-          [ "Flashing a different firmware to ISMART43362-E Shield", "driver_WiFi.html#ismart43362_e_firmware_download", null ]
-        ] ],
+        [ "ISM43362", "driver_WiFi.html#driver_ISM43362", null ],
         [ "WizFi360", "driver_WiFi.html#driver_WizFi360", null ]
       ] ]
     ] ],
@@ -56,10 +54,16 @@ var NAVTREE =
     [ "SPI", "driver_SPI.html", null ],
     [ "Shield layer", "shield_layer.html", [
       [ "WiFi Shields", "shield_layer.html#shield_WiFi", [
-        [ "Inventek ISMART43362-E", "shield_layer.html#shield_Inventek_ISMART43362-E", null ],
+        [ "Inventek ISMART43362-E", "shield_layer.html#shield_Inventek_ISMART43362-E", [
+          [ "Firmware", "shield_layer.html#shield_Inventek_ISMART43362-E_fw", null ]
+        ] ],
         [ "Sparkfun DA16200", "shield_layer.html#shield_Sparkfun_DA16200", null ],
-        [ "Sparkfun ESP8266", "shield_layer.html#shield_Sparkfun_ESP8266", null ],
-        [ "WizNet WizFi360-EVB", "shield_layer.html#shield_WizNet_WizFi360-EVB", null ]
+        [ "Sparkfun ESP8266", "shield_layer.html#shield_Sparkfun_ESP8266", [
+          [ "Important considerations", "shield_layer.html#shield_Sparkfun_ESP8266_important", null ]
+        ] ],
+        [ "WizNet WizFi360-EVB", "shield_layer.html#shield_WizNet_WizFi360-EVB", [
+          [ "Firmware", "shield_layer.html#shield_WizNet_WizFi360-EVB_fw", null ]
+        ] ]
       ] ]
     ] ]
   ] ]

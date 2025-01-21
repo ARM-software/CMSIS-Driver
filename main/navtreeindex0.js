@@ -17,7 +17,6 @@ var NAVTREEINDEX0 =
 "driver_WiFi.html#driver_ISM43362":[3,0,3],
 "driver_WiFi.html#driver_WizFi360":[3,0,4],
 "driver_WiFi.html#driver_wifi_devices":[3,0],
-"driver_WiFi.html#ismart43362_e_firmware_download":[3,0,3,0],
 "driver_eth.html":[1],
 "driver_eth.html#driver_eth_devices":[1,0],
 "driver_eth.html#driver_eth_multiple":[1,1],
@@ -29,8 +28,11 @@ var NAVTREEINDEX0 =
 "rev_hist.html":[0,2],
 "shield_layer.html":[8],
 "shield_layer.html#shield_Inventek_ISMART43362-E":[8,0,0],
+"shield_layer.html#shield_Inventek_ISMART43362-E_fw":[8,0,0,0],
 "shield_layer.html#shield_Sparkfun_DA16200":[8,0,1],
 "shield_layer.html#shield_Sparkfun_ESP8266":[8,0,2],
+"shield_layer.html#shield_Sparkfun_ESP8266_important":[8,0,2,0],
 "shield_layer.html#shield_WiFi":[8,0],
-"shield_layer.html#shield_WizNet_WizFi360-EVB":[8,0,3]
+"shield_layer.html#shield_WizNet_WizFi360-EVB":[8,0,3],
+"shield_layer.html#shield_WizNet_WizFi360-EVB_fw":[8,0,3,0]
 };

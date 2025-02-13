@@ -6,7 +6,7 @@
 # Pre-requisites:
 # - bash shell (for Windows: install git for Windows)
 # - curl
-# - doxygen 1.9.2
+# - doxygen 1.9.6
 # - linkchecker (can be skipped with -s)
 
 set -o pipefail
@@ -14,11 +14,11 @@ set -o pipefail
 # Set version of gen pack library
 # For available versions see https://github.com/Open-CMSIS-Pack/gen-pack/tags.
 # Use the tag name without the prefix "v", e.g., 0.7.0
-REQUIRED_GEN_PACK_LIB="0.9.1"
+REQUIRED_GEN_PACK_LIB="0.11.1"
 
 DIRNAME=$(dirname "$(readlink -f "$0")")
 GENDIR=../html
-REQ_DXY_VERSION="1.9.2"
+REQ_DXY_VERSION="1.9.6"
 
 RUN_LINKCHECKER=1
 

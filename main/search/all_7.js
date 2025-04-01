@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['usb_0',['USB',['../driver_USB.html',1,'']]]
+  ['multiple_20driver_20instances_0',['Multiple Driver Instances',['../driver_eth.html#driver_eth_multiple',1,'Multiple Driver Instances'],['../driver_Flash.html#driver_Flash_multiple',1,'Multiple Driver Instances']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['wifi_0',['WiFi',['../driver_WiFi.html',1,'']]]
+  ['nand_0',['NAND',['../driver_NAND.html',1,'']]]
 ];

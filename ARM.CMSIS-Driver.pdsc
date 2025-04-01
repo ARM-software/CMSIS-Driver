@@ -130,7 +130,7 @@
         #define RTE_Drivers_PHY_DP83848C        /* Driver PHY DP83848C */
       </RTE_Components_h>
       <files>
-        <file category="doc" name="http://www.ti.com/product/DP83848C"/>
+        <file category="doc" name="https://www.ti.com/product/DP83848C"/>
         <file category="source" name="Ethernet_PHY/DP83848C/PHY_DP83848C.c"/>
       </files>
     </component>
@@ -226,7 +226,7 @@
         #define RTE_Drivers_PHY_ST802RT1        /* Driver PHY ST802RT1 */
       </RTE_Components_h>
       <files>
-        <file category="doc" name="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf"/>
+        <file category="doc" name="https://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf"/>
         <file category="source" name="Ethernet_PHY/ST802RT1/PHY_ST802RT1.c"/>
       </files>
     </component>
@@ -311,7 +311,7 @@
         #define RTE_Drivers_Flash_S29GL064Nx2   /* Driver Flash S29GL064Nx2 */
       </RTE_Components_h>
       <files>
-        <file category="doc" name="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash"/>
+        <file category="doc" name="https://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash"/>
         <file category="source" name="Flash/S29GL064Nx2/S29GL064Nx2.c"/>
       </files>
     </component>
@@ -337,7 +337,7 @@
         #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/html/driver_I2C.html"/>
+        <file category="doc"    name="Documentation/html/page_driver_i2c.html"/>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
       </files>
@@ -351,7 +351,7 @@
         #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/html/driver_SPI.html"/>
+        <file category="doc"    name="Documentation/html/page_driver_spi.html"/>
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>

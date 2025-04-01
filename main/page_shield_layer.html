@@ -88,7 +88,7 @@ $(function() { codefold.init(0); });
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('shield_layer.html',''); initResizable(true); });
+$(function(){initNavTree('page_shield_layer.html',''); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -117,22 +117,24 @@ $(function(){initNavTree('shield_layer.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">Shield layer</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>The <b><a href="https://github.com/Open-CMSIS-Pack/cmsis-toolbox/blob/main/docs/ReferenceApplications.md#shield-layer">Shield layer</a></b> adds support for additional hardware via plugin shields.</p>
-<h1><a class="anchor" id="shield_WiFi"></a>
+<div class="textblock"><p><a class="anchor" id="md_src_2shield__layer"></a></p>
+<p>The <b><a href="https://github.com/Open-CMSIS-Pack/cmsis-toolbox/blob/main/docs/ReferenceApplications.md#shield-layer">Shield layer</a></b> adds support for additional hardware via plugin shields.</p>
+<h1><a class="anchor" id="autotoc_md9"></a>
 WiFi Shields</h1>
-<p>The <a class="el" href="index.html#driver_pack_content">Pack Content</a> provides implementations of <b>Shield layers</b> for the following Arduino Uno WiFi shields: </p><table class="cmtable" summary="Shield layers">
-<tr>
-<th>Shield layer </th><th>Description  </th></tr>
-<tr>
-<td><a class="el" href="#shield_Inventek_ISMART43362-E">Inventek ISMART43362-E</a> </td><td>Shield layer for Inventek ISMART43362-E WiFi Shield.   </td></tr>
-<tr>
-<td><a class="el" href="#shield_Sparkfun_DA16200">Sparkfun DA16200</a> </td><td>Shield layer for Sparkfun DA16200WiFi Shield.   </td></tr>
-<tr>
-<td><a class="el" href="#shield_Sparkfun_ESP8266">Sparkfun ESP8266</a> </td><td>Shield layer for Sparkfun ESP8266 WiFi Shield.   </td></tr>
-<tr>
-<td><a class="el" href="#shield_WizNet_WizFi360-EVB">WizNet WizFi360-EVB</a> </td><td>Shield layer for WizNet WizFi360-EVB WiFi Shield.   </td></tr>
+<p>The <a class="el" href="index.html#pack_content">Pack Content</a> provides implementations of <b>Shield layers</b> for the following Arduino Uno WiFi shields:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Shield layer   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b><a class="el" href="#layer_ismart43362_e">Inventek_ISMART43362-E</a></b>   </td><td class="markdownTableBodyNone">Shield layer for Inventek ISMART43362-E WiFi Shield.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b><a class="el" href="#layer_da16200">Sparkfun_DA16200</a></b>   </td><td class="markdownTableBodyNone">Shield layer for Sparkfun DA16200WiFi Shield.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b><a class="el" href="#layer_esp8266">Sparkfun_ESP8266</a></b>   </td><td class="markdownTableBodyNone">Shield layer for Sparkfun ESP8266 WiFi Shield.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b><a class="el" href="#layer_wizfi360_evb">WizNet_WizFi360-EVB</a></b>   </td><td class="markdownTableBodyNone">Shield layer for WizNet WizFi360-EVB WiFi Shield.   </td></tr>
 </table>
-<h2><a class="anchor" id="shield_Inventek_ISMART43362-E"></a>
+<h2><a class="anchor" id="layer_ismart43362_e"></a>
 Inventek ISMART43362-E</h2>
 <p>Shield layer for <a href="https://www.inventeksys.com/ismart43362-arduino-shields-wi-fi">Inventek ISMART43362-E</a> Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an SPI interface.</p>
 <table class="markdownTable">
@@ -151,53 +153,53 @@ Inventek ISMART43362-E</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">CMSIS-RTOS2   </td><td class="markdownTableBodyNone">CMSIS-RTOS2 compliant RTOS   </td></tr>
 </table>
-<h3><a class="anchor" id="shield_Inventek_ISMART43362-E_fw"></a>
+<h3><a class="anchor" id="inventek_ismart43362-e_firmware"></a>
 Firmware</h3>
 <p>The ISMART43362-E Shield has two options to communicate with the underlying target hardware: UART and SPI. <br  />
  By default, the module is flashed with the firmware for UART communication. <br  />
  To enable SPI communication, follow these steps to flash the module:</p>
-<p><b>Prepare</b> <b>the</b> <b>hardware</b> </p><ul>
+<p><b>Prepare the hardware</b></p>
+<ul>
 <li>Set the power supply jumper on ISMART43362-E to connect 5V_USB and 5V_BOARD.</li>
 <li>Set the SW3 switch to position 1 (factory default position).</li>
 </ul>
-<p><b>Prepare</b> <b>the</b> <b>software</b> </p><ul>
+<p><b>Prepare the software</b></p>
+<ul>
 <li>Download <a href="https://www.inventeksys.com/iwin/wp-content/uploads/ISM43362_M3G_L44_SPI_C6.2.1.7.zip">ISM43362_M3G_L44_SPI_C6.2.1.7.zip</a> and extract it locally.</li>
 <li>Download <a href="https://www.inventeksys.com/iwin/wp-content/uploads/eS-WIFi_Demo.zip">eS-WIFi_Demo</a></li>
 <li>Unzip the file and install the application on your PC.</li>
-<li>Start es-WiFi Demo and select <b>Menu - Install Drivers</b> and install both, CYW9WCD1EVAL1 and BCM9WCD1EVAL1: <div class="image">
-<img src="ISM43362_install_drivers.png" alt=""/>
-</div>
-</li>
+<li>Start es-WiFi Demo and select <b>Menu - Install Drivers</b> and install both, CYW9WCD1EVAL1 and BCM9WCD1EVAL1: <img src="ISM43362_install_drivers.png" alt="" class="inline" title="Install Drivers"/>    </li>
+</ul>
+<ul>
 <li>Connect the ISMART43362-E to the PC using the Mini-USB connector. In Device Manager, you should see WICED USB Serial Port (COMx).</li>
 <li>If not already done, assign a low COM port number.</li>
-<li>In the es-WiFi Demo application, execute:<ul>
-<li>Go to <b>Setup - Serial Port - Configure/Open</b>: <div class="image">
-<img src="ISM43362_set_COM_port_conf.png" alt=""/>
-</div>
-</li>
-<li>Check the following settings (Serial Port being the one added just now): <div class="image">
-<img src="ISM43362_set_COM_port.png" alt=""/>
-</div>
-</li>
-<li>Go to <b>Menu - Firmware - Update</b>: <div class="image">
-<img src="ISM43362_update_firmware.png" alt=""/>
-</div>
-</li>
-<li>Select the binary image file extracted in the first step (ISM43362_M3G_L44_SPI_C6.2.1.7.bin). Make sure it is an SPI firmware variant: <div class="image">
-<img src="ISM43362_module_detected.png" alt=""/>
-</div>
-</li>
+<li><p class="startli">In the es-WiFi Demo application, execute:</p><ul>
+<li>Go to <b>Setup - Serial Port - Configure/Open</b>: <br  />
+ <img src="ISM43362_set_COM_port_conf.png" alt="" class="inline" title="Set COM Port"/>    </li>
+</ul>
+<ul>
+<li>Check the following settings (Serial Port being the one added just now): <br  />
+ <img src="ISM43362_set_COM_port.png" alt="" class="inline" title="Set COM Port"/>    </li>
+</ul>
+<ul>
+<li>Go to <b>Menu - Firmware - Update</b>: <br  />
+ <img src="ISM43362_update_firmware.png" alt="" class="inline" title="Update Firmware"/>    </li>
+</ul>
+<ul>
+<li>Select the binary image file extracted in the first step (ISM43362_M3G_L44_SPI_C6.2.1.7.bin). Make sure it is an SPI firmware variant: <br  />
+ <img src="ISM43362_module_detected.png" alt="" class="inline" title="Module Detected"/>    </li>
 </ul>
 </li>
-<li><p class="startli">After the firmware is updated, the console will show the message "Resetting...": </p><div class="image">
-<img src="ISM43362_update_firmware_resetting.png" alt=""/>
-</div>
-<p> You can now disconnect the module from the PC as it contains the new SPI firmware.</p>
+</ul>
+<ul>
+<li><p class="startli">After the firmware is updated, the console will show the message "Resetting...": <br  />
+ <img src="ISM43362_update_firmware_resetting.png" alt="" class="inline" title="Resetting"/>    </p>
+<p class="startli">You can now disconnect the module from the PC as it contains the new SPI firmware.</p>
 <p class="startli">If you want to flash a different firmware later, please visit <a href="https://www.inventeksys.com/iwin/firmware/">Inventek's Firmware page</a> for the latest binary files.</p>
 </li>
 </ul>
-<dl class="section note"><dt>Note</dt><dd>Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!</dd></dl>
-<h2><a class="anchor" id="shield_Sparkfun_DA16200"></a>
+<p><b>Note:</b> Firmware version ISM43362_M3G_L44_SPI_C6.2.1.8 is not supported!</p>
+<h2><a class="anchor" id="layer_da16200"></a>
 Sparkfun DA16200</h2>
 <p>Shield layer for <a href="https://www.sparkfun.com/products/18567">Sparkfun DA16200</a> Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an UART interface.</p>
 <table class="markdownTable">
@@ -214,7 +216,7 @@ Sparkfun DA16200</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">CMSIS-RTOS2   </td><td class="markdownTableBodyNone">CMSIS-RTOS2 compliant RTOS   </td></tr>
 </table>
-<h2><a class="anchor" id="shield_Sparkfun_ESP8266"></a>
+<h2><a class="anchor" id="layer_esp8266"></a>
 Sparkfun ESP8266</h2>
 <p>Shield layer for <a href="https://www.sparkfun.com/products/13287">Sparkfun ESP8266</a> Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an UART interface.</p>
 <table class="markdownTable">
@@ -231,7 +233,7 @@ Sparkfun ESP8266</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">CMSIS-RTOS2   </td><td class="markdownTableBodyNone">CMSIS-RTOS2 compliant RTOS   </td></tr>
 </table>
-<h3><a class="anchor" id="shield_Sparkfun_ESP8266_important"></a>
+<h3><a class="anchor" id="autotoc_md10"></a>
 Important considerations</h3>
 <p>For correct operation of the Sparkfun ESP8266 WiFi Shield using the <b>Arduino R3</b> header, make sure that the jumpers are fitted as described in the table below:</p>
 <table class="markdownTable">
@@ -249,7 +251,7 @@ Important considerations</h3>
 Connection on the Sparkfun ESP8266 WiFi Shield</div></div>
     <p>For stable operation, make sure that you are using an external <b>DC 5V</b> power supply (connected to <b>J2</b>). <br  />
  Also, fit a jumper <b>J1</b> to <b>1-2</b> closed and set the switch <b>SW1</b> to position <b>2-3</b>.</p>
-<h2><a class="anchor" id="shield_WizNet_WizFi360-EVB"></a>
+<h2><a class="anchor" id="layer_wizfi360_evb"></a>
 WizNet WizFi360-EVB</h2>
 <p>Shield layer for <a href="https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/wizfi360_evb_shield">WizNet WizFi360-EVB</a> Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an UART interface.</p>
 <table class="markdownTable">
@@ -266,7 +268,7 @@ WizNet WizFi360-EVB</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">CMSIS-RTOS2   </td><td class="markdownTableBodyNone">CMSIS-RTOS2 compliant RTOS   </td></tr>
 </table>
-<h3><a class="anchor" id="shield_WizNet_WizFi360-EVB_fw"></a>
+<h3><a class="anchor" id="autotoc_md11"></a>
 Firmware</h3>
 <p>The latest firmware images are available on the GitHub: <a href="https://github.com/wizfi/Release">https://github.com/wizfi/Release</a>.</p>
 <p>Instructions on how to flash the firmware onto the device can be found on the WIZnet Documents page: <a href="https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/documents#firmware-update-guide">https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/documents#firmware-update-guide</a>. </p>

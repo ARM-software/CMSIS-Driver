@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['i2c_0',['I2C',['../driver_I2C.html',1,'']]]
+  ['i2c_0',['I2C',['../page_driver_i2c.html',1,'']]]
 ];

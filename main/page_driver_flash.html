@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CMSIS-Driver Implementations: WiFi</title>
+<title>CMSIS-Driver Implementations: Flash</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -88,7 +88,7 @@ $(function() { codefold.init(0); });
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('driver_WiFi.html',''); initResizable(true); });
+$(function(){initNavTree('page_driver_flash.html',''); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -114,44 +114,51 @@ $(function(){initNavTree('driver_WiFi.html',''); initResizable(true); });
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">WiFi</div></div>
+  <div class="headertitle"><div class="title">Flash</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><h1><a class="anchor" id="driver_wifi_devices"></a>
+<div class="textblock"><p><a class="anchor" id="md_src_2flash"></a></p>
+<h1><a class="anchor" id="autotoc_md7"></a>
 Driver Implementations</h1>
-<p>The <a class="el" href="index.html#driver_pack_content">Pack Content</a> provides implementations of <a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__wifi__interface__gr.html" target="_blank"><b>CMSIS-WiFi drivers</b></a> for the following devices: </p><table class="cmtable" summary="WiFi Drivers">
-<tr>
-<th>Driver </th><th>Description  </th></tr>
-<tr>
-<td><a class="el" href="#driver_DA16200">DA16200</a>  </td><td>WiFi Driver for the Renesas DA16200.   </td></tr>
-<tr>
-<td><a class="el" href="#driver_ESP32">ESP32</a> </td><td>WiFi Driver for the Espressif ESP32.   </td></tr>
-<tr>
-<td><a class="el" href="#driver_ESP8266">ESP8266</a> </td><td>WiFi Driver for the Espressif ESP8266.   </td></tr>
-<tr>
-<td><a class="el" href="#driver_ISM43362">ISM43362</a> </td><td>WiFi Driver for the Inventek ISM43362.   </td></tr>
-<tr>
-<td><a class="el" href="#driver_WizFi360">WizFi360</a> </td><td>WiFi Driver for the WizNet WizFi360.  </td></tr>
+<p>The <a class="el" href="index.html#pack_content">Pack Content</a> contains implementations of <b><a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__flash__interface__gr.html">CMSIS-Flash drivers</a></b> for the following devices:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Driver   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>AM29x800BB</b>   </td><td class="markdownTableBodyNone">Flash interface for Parallel NOR Flash <b>AM29x800BB</b>. This product is discontinued.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>AT45DB641E</b>   </td><td class="markdownTableBodyNone">Flash interface for SPI Serial DataFlash <b><a href="https://www.renesas.com/br/en/document/dst/at45db641e-datasheet">AT45DB641E</a></b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>AT45DB642D</b>   </td><td class="markdownTableBodyNone">Flash interface for SPI Serial DataFlash <b>AT45DB642D</b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>M29EW28F128</b>   </td><td class="markdownTableBodyNone">Flash interface for Parallel NOR Flash <b>M29EW28F128</b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>M29W640FB</b>   </td><td class="markdownTableBodyNone">Flash interface for Parallel NOR Flash <b>M29W640FB</b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>N25Q032A</b>   </td><td class="markdownTableBodyNone">Flash interface for Serial NOR Flash <b>N25Q032A</b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>S29GL064Nx2</b>   </td><td class="markdownTableBodyNone">Flash interface for Parallel NOR Flash <b><a href="http://www.cypress.com/documentation/datasheets/s29gl064n-s29gl032n-64-mbit-32-mbit-3-v-page-mode-mirrorbit-flash">S29GL064N</a></b>.   </td></tr>
 </table>
-<h2><a class="anchor" id="driver_DA16200"></a>
-DA16200</h2>
-<p>The documentation for the Renesas DA16200 can be found here: <a href="https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices">https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices</a></p>
-<p><b>Required Firmware</b> : <b>DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer)</b></p>
-<p>Firmware image and programming instructions <b>DA16200 DA16600 FreeRTOS Getting Started Guide</b> are also available on the above web site.</p>
-<h2><a class="anchor" id="driver_ESP32"></a>
-ESP32</h2>
-<p>The documentation for the Espressif ESP32 can be found here: <a href="https://www.espressif.com/en/products/hardware/esp-wroom-32/overview">https://www.espressif.com/en/products/hardware/esp-wroom-32/overview</a></p>
-<h2><a class="anchor" id="driver_ESP8266"></a>
-ESP8266</h2>
-<p>The documentation for the Espressif ESP8266 can be found here: <a href="https://www.espressif.com/en/products/hardware/esp8266ex/overview/">https://www.espressif.com/en/products/hardware/esp8266ex/overview/</a></p>
-<h2><a class="anchor" id="driver_ISM43362"></a>
-ISM43362</h2>
-<p>The documentation for the Inventek ISM43362 can be found here: <a href="https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/">https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/</a></p>
-<p><b>Required Firmware</b> : <b>SPI v6.2.1.7</b></p>
-<p>For firmware update procedure see <a class="el" href="shield_layer.html#shield_Inventek_ISMART43362-E_fw">Inventek ISMART43362-E Shield Firmware</a> section.</p>
-<h2><a class="anchor" id="driver_WizFi360"></a>
-WizFi360</h2>
-<p>The documentation for the WIZnet WizFi360 can be found here: <a href="https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360">https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360</a> </p>
+<h1><a class="anchor" id="autotoc_md8"></a>
+Multiple Driver Instances</h1>
+<p>CMSIS-Driver API supports multiple driver instances. The Flash drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:</p>
+<ol type="1">
+<li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+<li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy <code>AT45DB641E.c</code> file as <code>AT45DB641E_2.c</code>.</li>
+<li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+<li>Specify the driver parameters for the second instance based on the hardware design. For example, in <code>AT45DB641E_2.c</code> the values for the flash driver number and SPI driver number need to be configured as shown below: <div class="fragment"><div class="line"><span class="preprocessor">#define DRIVER_FLASH_NUM        1</span></div>
+<div class="line"><span class="preprocessor">#define DRIVER_SPI_NUM          1</span></div>
+</div><!-- fragment --></li>
+<li>Now both Flash instances can be accessed from the application. For example: <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;Driver_Flash.h&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/* Flash driver instances */</span></div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_FLASH Driver_Flash0;</div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_FLASH Driver_Flash1;</div>
+<div class="line"> </div>
+<div class="line"><span class="preprocessor">#define flash0  (&amp;Driver_Flash0)</span></div>
+<div class="line"><span class="preprocessor">#define flash1  (&amp;Driver_Flash1)</span></div>
+</div><!-- fragment --> </li>
+</ol>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

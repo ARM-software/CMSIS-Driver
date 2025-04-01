@@ -117,47 +117,48 @@ $(function(){initNavTree('index.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">Overview </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>The <b><a href="http://arm-software.github.io/CMSIS_6/latest/Driver/index.html">CMSIS-Driver specification</a></b> defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.</p>
+<div class="textblock"><p><a class="anchor" id="mainpage"></a></p>
+<p>The <b><a href="http://arm-software.github.io/CMSIS_6/latest/Driver/index.html">CMSIS-Driver specification</a></b> defines a uniform software API for peripheral driver interfaces that can be used by middleware stacks and user applications.</p>
 <p>This documentation covers a set of reference CMSIS-Driver implementations for external peripheral devices.</p>
 <p>The implementations are maintained in a public <b><a href="https://github.com/arm-software/CMSIS-Driver">GitHub repository</a></b>. Their releases in <b><a href="https://www.open-cmsis-pack.org/">CMSIS Pack format</a></b> are also available on <b><a href="https://developer.arm.com/tools-and-software/embedded/cmsis/cmsis-packs">CMSIS Packs page</a></b> under <em>Arm</em> - <em>CMSIS Drivers for external devices</em> category and can be used in environments supporting the CMSIS-Pack concept.</p>
 <p>Interested parties are welcome to contribute their drivers to the referenced repository.</p>
-<h1><a class="anchor" id="driver_pack_content"></a>
+<h1><a class="anchor" id="pack_content"></a>
 Pack Content</h1>
 <p>The <b>ARM::CMSIS-Driver</b> Pack contains the following items:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
-<th class="markdownTableHeadLeft">File/Directory   </th><th class="markdownTableHeadLeft">Content    </th></tr>
+<th class="markdownTableHeadNone">File/Directory   </th><th class="markdownTableHeadNone">Content    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>ARM.CMSIS-Driver.pdsc</b>   </td><td class="markdownTableBodyLeft">Package description file in CMSIS-Pack format.    </td></tr>
+<td class="markdownTableBodyNone">📄 <b>ARM.CMSIS-Driver.pdsc</b>   </td><td class="markdownTableBodyNone">Package description file in CMSIS-Pack format.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>LICENSE</b>   </td><td class="markdownTableBodyLeft">CMSIS license agreement (Apache 2.0)    </td></tr>
+<td class="markdownTableBodyNone">📄 <b>LICENSE</b>   </td><td class="markdownTableBodyNone">CMSIS license agreement (Apache 2.0).    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>Config/</b>   </td><td class="markdownTableBodyLeft">Configuration files for <a class="el" href="driver_I2C.html">I2C</a>, <a class="el" href="driver_NAND.html">NAND</a>, and <a class="el" href="driver_SPI.html">SPI</a> bus implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Config/</b>   </td><td class="markdownTableBodyNone">Configuration files for I2C, NAND, and SPI bus implementations.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>Documentation/</b>   </td><td class="markdownTableBodyLeft">This documentation    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Documentation/</b>   </td><td class="markdownTableBodyNone">This documentation.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>Ethernet/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_eth.html">Ethernet</a> driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Ethernet/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_eth.html">Ethernet</a> driver implementations.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>Ethernet_PHY/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_eth.html">Ethernet</a> PHY driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Ethernet_PHY/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_eth.html">Ethernet</a> PHY driver implementations.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>Flash/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_Flash.html">Flash</a> memory driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Flash/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_flash.html">Flash</a> memory driver implementations.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>I2C/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_I2C.html">I2C</a> driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>I2C/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_i2c.html">I2C</a> driver implementations.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>NAND/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_NAND.html">NAND</a> driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>NAND/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_nand.html">NAND</a> driver implementations.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>Shield/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="shield_layer.html">Shield layer</a> implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>Shield/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_shield_layer.html">Shield layer</a> implementations.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>SPI/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_SPI.html">SPI</a> driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>SPI/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_spi.html">SPI</a> driver implementations.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><b>USB/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_USB.html">USB</a> driver implementations    </td></tr>
+<td class="markdownTableBodyNone">📂 <b>USB/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_usb.html">USB</a> driver implementations.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><b>WiFi/</b>   </td><td class="markdownTableBodyLeft"><a class="el" href="driver_WiFi.html">WiFi</a> driver implementations   </td></tr>
+<td class="markdownTableBodyNone">📂 <b>WiFi/</b>   </td><td class="markdownTableBodyNone"><a class="el" href="page_driver_wifi.html">WiFi</a> driver implementations.   </td></tr>
 </table>
-<h1><a class="anchor" id="License"></a>
+<h1><a class="anchor" id="autotoc_md0"></a>
 License</h1>
-<p>The CMSIS Driver example implementations are provided free of charge under Apache 2.0 license. See the <a href="LICENSE">Apache 2.0 License</a>.</p>
-<p><a class="el" href="rev_hist.html">Revision History</a> </p>
+<p>The CMSIS Driver example implementations are provided free of charge under the Apache 2.0 license. <br  />
+ See the <a href="https://raw.githubusercontent.com/ARM-software/CMSIS-Driver/main/LICENSE">Apache 2.0 License</a> </p>
 </div></div><!-- PageDoc -->
 <a href="doxygen_crawl.html"></a>
 </div><!-- contents -->

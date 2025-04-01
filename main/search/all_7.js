@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['multiple_20driver_20instances_0',['Multiple Driver Instances',['../driver_eth.html#driver_eth_multiple',1,'Multiple Driver Instances'],['../driver_Flash.html#driver_Flash_multiple',1,'Multiple Driver Instances']]]
+  ['multiple_20driver_20instances_0',['Multiple Driver Instances',['../page_driver_eth.html#autotoc_md2',1,'Multiple Driver Instances'],['../page_driver_flash.html#autotoc_md8',1,'Multiple Driver Instances']]]
 ];

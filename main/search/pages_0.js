@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ethernet_0',['Ethernet',['../driver_eth.html',1,'']]]
+  ['ethernet_0',['Ethernet',['../page_driver_eth.html',1,'']]]
 ];

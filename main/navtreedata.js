@@ -26,43 +26,44 @@ var NAVTREE =
 [
   [ "CMSIS-Driver Implementations", "index.html", [
     [ "Overview", "index.html", "index" ],
-    [ "Ethernet", "driver_eth.html", [
-      [ "Driver Implementations", "driver_eth.html#driver_eth_devices", null ],
-      [ "Multiple Driver Instances", "driver_eth.html#driver_eth_multiple", null ]
+    [ "Revision History", "rev_hist.html", null ],
+    [ "Ethernet", "page_driver_eth.html", [
+      [ "Driver Implementations", "page_driver_eth.html#autotoc_md1", null ],
+      [ "Multiple Driver Instances", "page_driver_eth.html#autotoc_md2", null ]
     ] ],
-    [ "USB", "driver_USB.html", [
-      [ "Driver Implementations", "driver_USB.html#driver_usb", [
-        [ "EHCI", "driver_USB.html#driver_EHCI", null ],
-        [ "OHCI", "driver_USB.html#driver_OHCI", null ]
+    [ "USB", "page_driver_usb.html", [
+      [ "Driver Implementations", "page_driver_usb.html#autotoc_md3", [
+        [ "EHCI", "page_driver_usb.html#autotoc_md4", null ],
+        [ "OHCI", "page_driver_usb.html#autotoc_md5", null ]
       ] ]
     ] ],
-    [ "WiFi", "driver_WiFi.html", [
-      [ "Driver Implementations", "driver_WiFi.html#driver_wifi_devices", [
-        [ "DA16200", "driver_WiFi.html#driver_DA16200", null ],
-        [ "ESP32", "driver_WiFi.html#driver_ESP32", null ],
-        [ "ESP8266", "driver_WiFi.html#driver_ESP8266", null ],
-        [ "ISM43362", "driver_WiFi.html#driver_ISM43362", null ],
-        [ "WizFi360", "driver_WiFi.html#driver_WizFi360", null ]
+    [ "WiFi", "page_driver_wifi.html", [
+      [ "Driver Implementations", "page_driver_wifi.html#autotoc_md6", [
+        [ "DA16200", "page_driver_wifi.html#wifi_da16200", null ],
+        [ "ESP32", "page_driver_wifi.html#wifi_esp32", null ],
+        [ "ESP8266", "page_driver_wifi.html#wifi_esp8266", null ],
+        [ "ISM43362", "page_driver_wifi.html#wifi_ism43362", null ],
+        [ "WizFi360", "page_driver_wifi.html#wifi_wizfi360", null ]
       ] ]
     ] ],
-    [ "Flash", "driver_Flash.html", [
-      [ "Driver Implementations", "driver_Flash.html#driver_Flash_devices", null ],
-      [ "Multiple Driver Instances", "driver_Flash.html#driver_Flash_multiple", null ]
+    [ "Flash", "page_driver_flash.html", [
+      [ "Driver Implementations", "page_driver_flash.html#autotoc_md7", null ],
+      [ "Multiple Driver Instances", "page_driver_flash.html#autotoc_md8", null ]
     ] ],
-    [ "I2C", "driver_I2C.html", null ],
-    [ "NAND", "driver_NAND.html", null ],
-    [ "SPI", "driver_SPI.html", null ],
-    [ "Shield layer", "shield_layer.html", [
-      [ "WiFi Shields", "shield_layer.html#shield_WiFi", [
-        [ "Inventek ISMART43362-E", "shield_layer.html#shield_Inventek_ISMART43362-E", [
-          [ "Firmware", "shield_layer.html#shield_Inventek_ISMART43362-E_fw", null ]
+    [ "I2C", "page_driver_i2c.html", null ],
+    [ "NAND", "page_driver_nand.html", null ],
+    [ "SPI", "page_driver_spi.html", null ],
+    [ "Shield layer", "page_shield_layer.html", [
+      [ "WiFi Shields", "page_shield_layer.html#autotoc_md9", [
+        [ "Inventek ISMART43362-E", "page_shield_layer.html#layer_ismart43362_e", [
+          [ "Firmware", "page_shield_layer.html#inventek_ismart43362-e_firmware", null ]
         ] ],
-        [ "Sparkfun DA16200", "shield_layer.html#shield_Sparkfun_DA16200", null ],
-        [ "Sparkfun ESP8266", "shield_layer.html#shield_Sparkfun_ESP8266", [
-          [ "Important considerations", "shield_layer.html#shield_Sparkfun_ESP8266_important", null ]
+        [ "Sparkfun DA16200", "page_shield_layer.html#layer_da16200", null ],
+        [ "Sparkfun ESP8266", "page_shield_layer.html#layer_esp8266", [
+          [ "Important considerations", "page_shield_layer.html#autotoc_md10", null ]
         ] ],
-        [ "WizNet WizFi360-EVB", "shield_layer.html#shield_WizNet_WizFi360-EVB", [
-          [ "Firmware", "shield_layer.html#shield_WizNet_WizFi360-EVB_fw", null ]
+        [ "WizNet WizFi360-EVB", "page_shield_layer.html#layer_wizfi360_evb", [
+          [ "Firmware", "page_shield_layer.html#autotoc_md11", null ]
         ] ]
       ] ]
     ] ]
@@ -71,7 +72,7 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"driver_Flash.html"
+"index.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

@@ -1,7 +1,7 @@
 function writeHeader() {
-    document.write('Version 2.10.1-dev6');
+    document.write('Version 2.10.1-dev7');
 };
 
 function writeFooter()  {
-    document.write('Generated on Tue Apr  1 2025 12:27:21 for CMSIS-Driver Implementations 2.10.1-dev6+gdafc4d3. Copyright &copy; 2025 Arm Limited (or its affiliates). All rights reserved.');
+    document.write('Generated on Thu Apr  3 2025 07:14:56 for CMSIS-Driver Implementations 2.10.1-dev7+gd5a7783. Copyright &copy; 2025 Arm Limited (or its affiliates). All rights reserved.');
 };

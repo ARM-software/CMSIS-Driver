@@ -154,7 +154,6 @@
 
 #nav-tree a:hover {
   color: var(--arm_orange);
-  background : var(--nav-background-color);
 }
 
 @media print

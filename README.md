@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/License-Apache--2.0-green?label=License)](https://github.com/Arm-Software/CMSIS-Driver/blob/main/LICENSE)
+[![Build pack](https://img.shields.io/github/actions/workflow/status/Arm-Software/CMSIS-Driver/pack.yaml?logo=arm&logoColor=0091bd&label=Build%20pack)](./.github/workflows/pack.yaml)
+
 # CMSIS-Driver
 
 This repository contains MCU independent device driver implementations and template files. 

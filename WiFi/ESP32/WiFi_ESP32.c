@@ -376,13 +376,17 @@ void AT_Notify (uint32_t event, void *arg) {
     /* Station connects to the local AP */
     ex = AT_Resp_StaMac (mac);
 
-    pCtrl->cb_event (ARM_WIFI_EVENT_AP_CONNECT, mac);
+    if (pCtrl->cb_event != NULL) {
+      pCtrl->cb_event (ARM_WIFI_EVENT_AP_CONNECT, mac);
+    }
   }
   else if (event == AT_NOTIFY_STATION_DISCONNECTED) {
     /* Station disconnects from the local AP */
     ex = AT_Resp_StaMac (mac);
 
-    pCtrl->cb_event (ARM_WIFI_EVENT_AP_DISCONNECT, mac);
+    if (pCtrl->cb_event != NULL) {
+      pCtrl->cb_event (ARM_WIFI_EVENT_AP_DISCONNECT, mac);
+    }
   }
   else if (event == AT_NOTIFY_CONNECTED) {
     /* Local station connected to an AP */

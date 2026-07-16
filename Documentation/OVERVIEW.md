@@ -3,7 +3,7 @@
 This pack contains:
 
 - Driver implementations that work across many different microcontroller.
-  - [Ethernet drivers](https://arm-software.github.io/CMSIS-Driver/latest/driver_eth.html): KSZ8851, LAN9220, DP83848C, KSZ8061RNB, KSZ8081RNA, LAN8710A, LAN8720, LAN8740A, LAN8742A, ST802RT1
+  - [Ethernet drivers](https://arm-software.github.io/CMSIS-Driver/latest/driver_eth.html): KSZ8851, LAN9220, DP83848C, KSZ8061RNB, KSZ8081RNA, LAN8710A, LAN8720, LAN8740A, LAN8742A, RTL8211F, ST802RT1
   - [USB drivers](https://arm-software.github.io/CMSIS-Driver/latest/driver_USB.html): EHCI and OHCI
   - [WiFi drivers](https://arm-software.github.io/CMSIS-Driver/latest/driver_WiFi.html#driver_wifi_devices): DA16200, ESP32, ESP8266, ISM43362, WizFi360
   - [Flash drivers](https://arm-software.github.io/CMSIS-Driver/latest/driver_WiFi.html#driver_wifi_devices): AM29x800BB, AT45DB641E, AT45DB642D, M29EW28F128, M29W640FB, N25Q032A, S29GL064Nx2

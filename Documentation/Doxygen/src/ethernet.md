@@ -15,6 +15,7 @@ The \ref pack_content provides implementations of **[CMSIS-Ethernet drivers](htt
 | **LAN8720**    | Ethernet PHY interface for the Microchip **[LAN8720A](https://www.microchip.com/LAN8720A)**.        |
 | **LAN8740A**   | Ethernet PHY interface for the Microchip **[LAN8740A](https://www.microchip.com/LAN8740A)**.        |
 | **LAN8742A**   | Ethernet PHY interface for the Microchip **[LAN8742A](https://www.microchip.com/LAN8742A)**.        |
+| **RTL8211F**   | Ethernet PHY interface for the Realtek **[RTL8211F](https://www.realtek.com/Product/Index?id=3975&amp;cate_id=786)**. |
 | **ST802RT1**   | Ethernet PHY interface for the STMicroelectronics **[ST802RT1](http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf)**. |
 
 ## Multiple Driver Instances

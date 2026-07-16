@@ -14,6 +14,7 @@
   <releases>
     <release version="2.11.0-dev">
       Active development ...
+      - Added RTL8211F PHY driver
       - Added LAN8741A PHY driver
       - Updated Inventek ISM43362 WiFi driver (version 1.16.0):
         - Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)
@@ -216,6 +217,17 @@
       <files>
         <file category="doc" name="https://www.microchip.com/LAN8742A"/>
         <file category="source" name="Ethernet_PHY/LAN8742A/PHY_LAN8742A.c"/>
+      </files>
+    </component>
+
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="RTL8211F" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
+      <description>Ethernet PHY RTL8211F Driver</description>
+      <RTE_Components_h>
+        #define RTE_Drivers_PHY_RTL8211F        /* Driver PHY RTL8211F */
+      </RTE_Components_h>
+      <files>
+        <file category="doc" name="https://www.realtek.com/Product/Index?id=3975&amp;cate_id=786"/>
+        <file category="source" name="Ethernet_PHY/RTL8211F/PHY_RTL8211F.c"/>
       </files>
     </component>
 

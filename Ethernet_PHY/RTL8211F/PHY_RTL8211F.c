@@ -17,7 +17,7 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        29. June 2026
+ * $Date:        14. September 2026
  * $Revision:    V1.0
  *
  * Driver:       Driver_ETH_PHYn (default: Driver_ETH_PHY0)
@@ -460,12 +460,15 @@ static int32_t SetInterface (uint32_t interface) {
     return ARM_DRIVER_ERROR;
   }
 
+  /* RTL8211F transfers 10/100/1000BASE-T data to the MAC through RGMII. */
   switch (interface) {
-    case ARM_ETH_INTERFACE_MII:
     case ARM_ETH_INTERFACE_RGMII:
       return ARM_DRIVER_OK;
+    case ARM_ETH_INTERFACE_MII:
     case ARM_ETH_INTERFACE_RMII:
     case ARM_ETH_INTERFACE_SMII:
+    case ARM_ETH_INTERFACE_GMII:
+    case ARM_ETH_INTERFACE_SGMII:
     default:
       return ARM_DRIVER_ERROR_UNSUPPORTED;
   }

@@ -26,7 +26,7 @@
 
   <requirements>
     <packages>
-      <package vendor="ARM" name="CMSIS" version="5.9.0-0"/>
+      <package vendor="ARM" name="CMSIS" version="6.4.0-0"/>
     </packages>
   </requirements>
 
@@ -220,7 +220,7 @@
       </files>
     </component>
 
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="RTL8211F" Capiversion="2.2.0" Cversion="1.0.0" condition="Device CMSIS_Core">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="Ethernet PHY" Csub="RTL8211F" Capiversion="2.3.0" Cversion="1.0.0" condition="Device CMSIS_Core">
       <description>Ethernet PHY RTL8211F Driver</description>
       <RTE_Components_h>
         #define RTE_Drivers_PHY_RTL8211F        /* Driver PHY RTL8211F */

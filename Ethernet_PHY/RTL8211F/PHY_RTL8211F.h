@@ -17,21 +17,17 @@
  *
  * -----------------------------------------------------------------------
  *
- * $Date:        29. June 2026
+ * $Date:        14. September 2026
  * $Revision:    V1.0
  *
  * Project:      Ethernet Physical Layer Transceiver (PHY)
- *               Definitions for TL8211F-CG
+ *               Definitions for RTL8211F-CG
  * -------------------------------------------------------------------- */
 
 #ifndef __PHY_RTL8211F_H
 #define __PHY_RTL8211F_H
 
 #include "Driver_ETH_PHY.h"
-
-#ifndef ARM_ETH_INTERFACE_RGMII
-#define ARM_ETH_INTERFACE_RGMII 3U      /* CMSIS-Driver 2.x has no RGMII ID  */
-#endif
 
 /* ---------------------------------------------------------------------------
  * Build-time configuration. These mirror the switches used by the ST

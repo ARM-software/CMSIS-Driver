@@ -121,6 +121,6 @@ Shield layer for [WizNet WizFi360-EVB](https://docs.wiznet.io/Product/Modules/Wi
 
 #### Firmware
 
-The latest firmware images are available on the GitHub: https://github.com/wizfi/Release.
+The latest firmware images are available in the [WIZfi360 Release repository](https://github.com/wizfi/Release).
 
-Instructions on how to flash the firmware onto the device can be found on the WIZnet Documents page: https://docs.wiznet.io/img/products/wizfi360/wizfi360ds/wizfi360fug_v124e.pdf.
+Instructions on how to flash the firmware onto the device can be found in the [WIZfi360 Firmware Update Guide](https://docs.wiznet.io/img/products/wizfi360/wizfi360ds/wizfi360fug_v124e.pdf).

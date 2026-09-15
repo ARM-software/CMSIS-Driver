@@ -48,4 +48,4 @@ For firmware update procedure see [Inventek ISMART43362-E Shield Firmware](#inve
 
 The documentation for the WIZnet WizFi360 can be found here:
 
-- https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360
+- https://docs.wiznet.io/Product/Modules/Wi-Fi-Module/WizFi360

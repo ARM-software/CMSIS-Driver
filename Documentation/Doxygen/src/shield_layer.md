@@ -108,7 +108,7 @@ Also, fit a jumper **J1** to **1-2** closed and set the switch **SW1** to positi
 
 ### WizNet WizFi360-EVB {#layer_wizfi360_evb}
 
-Shield layer for [WizNet WizFi360-EVB](https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/wizfi360_evb_shield) Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an UART interface.
+Shield layer for [WizNet WizFi360-EVB](https://docs.wiznet.io/Product/Modules/Wi-Fi-Module/WizFi360/wizfi360_evb_shield) Arduino Uno WiFi Shield. The shield is connected via an Arduino header using an UART interface.
 
 | Provided API Interface    | Description                    |
 |---------------------------|--------------------------------|
@@ -123,4 +123,4 @@ Shield layer for [WizNet WizFi360-EVB](https://docs.wiznet.io/Product/Wi-Fi-Modu
 
 The latest firmware images are available on the GitHub: https://github.com/wizfi/Release.
 
-Instructions on how to flash the firmware onto the device can be found on the WIZnet Documents page: https://docs.wiznet.io/Product/Wi-Fi-Module/WizFi360/documents#firmware-update-guide.
+Instructions on how to flash the firmware onto the device can be found on the WIZnet Documents page: https://docs.wiznet.io/img/products/wizfi360/wizfi360ds/wizfi360fug_v124e.pdf.

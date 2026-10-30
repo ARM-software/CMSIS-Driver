@@ -22,6 +22,7 @@ All drivers refer the API Interface header file definitions published in the CMS
 - PHY_LAN8740A
 - PHY_LAN8741A
 - PHY_LAN8742A
+- PHY_RTL8211F
 - PHY_ST802RT1
 
 ## Flash - Flash device drivers

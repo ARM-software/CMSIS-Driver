@@ -1644,6 +1644,7 @@ static int32_t WiFi_Uninitialize (void) {
 
     signal_event_fn = NULL;             // Clear pointer to callback function
     ResetVariables();
+    module_initialized = 0U;            // Reset the module on next Initialize
     driver_initialized = 0U;
   }
 

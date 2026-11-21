@@ -403,6 +403,59 @@ static int32_t WiFi_SocketClose    (int32_t socket);
 // Helper Functions
 
 /**
+  \fn            int32_t ReleaseResources (void)
+  \brief         Release thread, event flags and mutexes created by WiFi_Initialize.
+  \return        execution status
+                   - ARM_DRIVER_OK                : Operation successful
+                   - ARM_DRIVER_ERROR             : Operation failed
+*/
+static int32_t ReleaseResources (void) {
+  int32_t ret;
+  uint8_t i;
+
+  ret = ARM_DRIVER_OK;
+
+  if (thread_id_async_poll != NULL) {
+    if (osThreadTerminate(thread_id_async_poll) == osOK) {
+      thread_id_async_poll = NULL;
+    }
+  }
+  for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
+    if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
+      event_flags_sockets_id[i] = NULL;
+    } else {
+      ret = ARM_DRIVER_ERROR;
+      break;
+    }
+  }
+  if (event_flags_id != NULL) {
+    if (osEventFlagsDelete(event_flags_id) == osOK) {
+      event_flags_id = NULL;
+    }
+  }
+  if (mutex_id_sockets != NULL) {
+    if (osMutexDelete(mutex_id_sockets) == osOK) {
+      mutex_id_sockets = NULL;
+    }
+  }
+  if (mutex_id_spi != NULL) {
+    if (osMutexDelete(mutex_id_spi) == osOK) {
+      mutex_id_spi = NULL;
+    }
+  }
+
+  if ((ret == ARM_DRIVER_OK)           &&
+     ((thread_id_async_poll   != NULL) ||
+      (event_flags_id         != NULL) ||
+      (mutex_id_sockets       != NULL) ||
+      (mutex_id_spi           != NULL))){
+    ret = ARM_DRIVER_ERROR;
+  }
+
+  return ret;
+}
+
+/**
   \fn            void ResetVariables (void)
   \brief         Function that resets to all local variables to default values.
 */
@@ -1543,7 +1596,7 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
   if (ret == ARM_DRIVER_OK) {           // If initialization succeeded
     driver_initialized = 1U;
   } else {                              // Else if initialization failed -> cleanup
-    WiFi_Uninitialize();
+    ReleaseResources();
   }
 
   return ret;
@@ -1581,40 +1634,7 @@ static int32_t WiFi_Uninitialize (void) {
   }
 
   // Release all resources
-  if (thread_id_async_poll != NULL) {
-    if (osThreadTerminate(thread_id_async_poll) == osOK) {
-      thread_id_async_poll = NULL;
-    }
-  }
-  for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-    if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
-      event_flags_sockets_id[i] = NULL;
-    } else {
-      ret = ARM_DRIVER_ERROR;
-      break;
-    }
-  }
-  if (event_flags_id != NULL) {
-    if (osEventFlagsDelete(event_flags_id) == osOK) {
-      event_flags_id = NULL;
-    }
-  }
-  if (mutex_id_sockets != NULL) {
-    if (osMutexDelete(mutex_id_sockets) == osOK) {
-      mutex_id_sockets = NULL;
-    }
-  }
-  if (mutex_id_spi != NULL) {
-    if (osMutexDelete(mutex_id_spi) == osOK) {
-      mutex_id_spi = NULL;
-    }
-  }
-
-  if ((ret == ARM_DRIVER_OK)           &&
-     ((thread_id_async_poll   != NULL) ||
-      (event_flags_id         != NULL) ||
-      (mutex_id_sockets       != NULL) ||
-      (mutex_id_spi           != NULL))){
+  if (ReleaseResources() != ARM_DRIVER_OK) {
     ret = ARM_DRIVER_ERROR;
   }
 
@@ -1624,6 +1644,7 @@ static int32_t WiFi_Uninitialize (void) {
 
     signal_event_fn = NULL;             // Clear pointer to callback function
     ResetVariables();
+    module_initialized = 0U;            // Reset the module on next Initialize
     driver_initialized = 0U;
   }
 

@@ -1378,13 +1378,14 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         uint32_t  timeout, flags;
         uint8_t   i, u8_arr[4];
 
-  signal_event_fn = cb_event;           // Update pointer to callback function
-
   if (driver_initialized != 0U) {       // If driver is already initialized
+    signal_event_fn = cb_event;         // Update pointer to callback function
     return ARM_DRIVER_OK;
   }
 
   ResetVariables();
+
+  signal_event_fn = cb_event;           // Update pointer to callback function
 
   ret = ARM_DRIVER_OK;
 

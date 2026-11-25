@@ -1607,11 +1607,13 @@ static int32_t WiFi_Uninitialize (void) {
     }
   }
   for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-    if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
-      event_flags_sockets_id[i] = NULL;
-    } else {
-      ret = ARM_DRIVER_ERROR;
-      break;
+    if (event_flags_sockets_id[i] != NULL) {
+      if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
+        event_flags_sockets_id[i] = NULL;
+      } else {
+        ret = ARM_DRIVER_ERROR;
+        break;
+      }
     }
   }
   if (event_flags_id != NULL) {

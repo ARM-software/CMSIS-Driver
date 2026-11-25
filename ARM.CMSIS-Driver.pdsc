@@ -12,15 +12,11 @@
   </licenseSets>
 
   <releases>
-    <release version="2.11.0-dev">
+    <release version="2.11.1-dev">
       Active development ...
-      - Added RTL8211F PHY driver
-      - Added LAN8741A PHY driver
-      - Updated Inventek ISM43362 WiFi driver (version 1.16.0):
-        - Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)
-        - Corrected opt_len parameter check in WiFi_SocketSetOpt function
-        - Enabled Event Recorder from CMSIS-View pack
-      - Updated documentation for WiFi drivers and shields
+      - Updated Inventek ISM43362 WiFi driver (version 1.17.0):
+        - Fixed an issue where the Initialize function failed to release resources on failure
+        - Added support for repeated hardware resets when supported by the WiFi_ISM43362_Pin_RSTN function
     </release>
   </releases>
 
@@ -427,7 +423,7 @@
     </component>
 
     <!-- Inventek ISM43362 -->    
-    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.16.0" condition="Device CMSIS_Core CMSIS_RTOS2 SPI_Driver">
+    <component Cvendor="Keil" Cclass="CMSIS Driver" Cgroup="WiFi" Csub="ISM43362" Capiversion="1.1.0" Cvariant="SPI" Cversion="1.17.0" condition="Device CMSIS_Core CMSIS_RTOS2 SPI_Driver">
       <description>WiFi Inventek ISM43362/ISM43340 Driver (SPI)</description>
       <RTE_Components_h>
         <!-- the following content goes into file 'RTE_Components.h' -->

@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2019-2025 Arm Limited (or its affiliates). All rights reserved.
+ * Copyright (c) 2019-2026 Arm Limited (or its affiliates). All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  *
- * $Date:        15. January 2025
- * $Revision:    V1.16
+ * $Date:        24. November 2026
+ * $Revision:    V1.17
  *
  * Driver:       Driver_WiFin (n = WIFI_ISM43362_DRV_NUM value)
  * Project:      WiFi Driver for 
@@ -46,6 +46,9 @@
  *   - void    WiFi_ISM43362_Pin_RSTN         (uint8_t rstn)
  *   - void    WiFi_ISM43362_Pin_SSN          (uint8_t ssn)
  *   - uint8_t WiFi_ISM43362_Pin_DATARDY      (void)
+ *
+ * If function WiFi_ISM43362_Pin_RSTN performs a hardware reset of the ISM43362 module
+ * set WIFI_ISM43362_HW_RESET to 1
  *
  * For better performance of the driver DATARDY pin state change should be 
  * interrupt driven and following function should be called when line state 
@@ -98,6 +101,9 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.17
+ *    - Fixed an issue where the Initialize function failed to release resources on failure
+ *    - Added support for repeated hardware resets when supported by the WiFi_ISM43362_Pin_RSTN function
  *  Version 1.16
  *    - Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)
  *    - Corrected opt_len parameter check in WiFi_SocketSetOpt function
@@ -176,6 +182,11 @@
 #error For driver debugging enable RTE: Compiler: Event Recorder!
 #endif
 
+// Set WIFI_ISM43362_HW_RESET to 1 if the WiFi_ISM43362_Pin_RSTN function performs a hardware reset of the ISM43362 module
+#ifndef  WIFI_ISM43362_HW_RESET
+#define  WIFI_ISM43362_HW_RESET     0
+#endif
+
 // Legacy compatibility defines
 #ifndef WIFI_ISM43362_SPI_BUS_SPEED
 #define WIFI_ISM43362_SPI_BUS_SPEED    (20000000)
@@ -210,7 +221,7 @@ void WiFi_ISM43362_Pin_DATARDY_IRQ (void);
 
 // WiFi Driver *****************************************************************
 
-#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,16)       // Driver version
+#define ARM_WIFI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,17)       // Driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION driver_version = { ARM_WIFI_API_VERSION, ARM_WIFI_DRV_VERSION };
@@ -306,7 +317,9 @@ extern ARM_DRIVER_SPI                   SPI_Driver(WIFI_ISM43362_SPI_DRV_NUM);
 #define TRANSPORT_CLIENT               (0U)
 
 // Local variables and structures
+#if (WIFI_ISM43362_HW_RESET == 0U)
 static uint8_t                          module_initialized = 0U;
+#endif
 static uint8_t                          driver_initialized = 0U;
 static uint8_t                          firmware_stm       = 0U;
 static uint32_t                         firmware_version   = 0U;
@@ -1398,13 +1411,21 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
     // If any of mutex creation has failed
     ret = ARM_DRIVER_ERROR;
   }
-  for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-    event_flags_sockets_id[i] = osEventFlagsNew(NULL);
-    if (event_flags_sockets_id[i] == NULL) {
-      // If flag creation has failed
-      ret = ARM_DRIVER_ERROR;
-      break;
+  if (ret == ARM_DRIVER_OK) {
+    for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
+      event_flags_sockets_id[i] = osEventFlagsNew(NULL);
+      if (event_flags_sockets_id[i] == NULL) {
+        // If flag creation has failed
+        ret = ARM_DRIVER_ERROR;
+        break;
+      }
     }
+  }
+
+  // If resources creation failed -> cleanup -> exit
+  if (ret != ARM_DRIVER_OK) {
+    WiFi_Uninitialize();
+    return ret;
   }
 
   // Initialize additional pins (Reset, Slave Select, Data Ready)
@@ -1427,8 +1448,9 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
   if (ret == ARM_DRIVER_OK) {
     if (osMutexAcquire(mutex_id_spi, WIFI_ISM43362_SPI_TIMEOUT) == osOK) {
 
+#if (WIFI_ISM43362_HW_RESET == 0U)
       if (module_initialized == 0U) {
-
+#endif
         // Reset WiFi Module
         WiFi_ISM43362_Pin_RSTN(true);
         osDelay(50U);
@@ -1456,8 +1478,10 @@ static int32_t WiFi_Initialize (ARM_WIFI_SignalEvent_t cb_event) {
         }
         Wait_us(4U);
 
+#if (WIFI_ISM43362_HW_RESET == 0U)
         module_initialized = 1U;
       }
+#endif
 
       // Do a dummy SPI communication so we can determine if event is used for DATARDY state change
       memcpy((void *)spi_send_buf, (void *)"I?\r\n", 4);
@@ -1560,10 +1584,6 @@ static int32_t WiFi_Uninitialize (void) {
   int32_t ret, ret_sc;
   uint8_t i;
 
-  if (driver_initialized == 0U) {       // If driver is already uninitialized
-    return ARM_DRIVER_OK;
-  }
-
   ret = ARM_DRIVER_OK;
 
   // Close all open sockets
@@ -1587,11 +1607,13 @@ static int32_t WiFi_Uninitialize (void) {
     }
   }
   for (i = 0U; i < WIFI_ISM43362_SOCKETS_NUM; i++) {
-    if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
-      event_flags_sockets_id[i] = NULL;
-    } else {
-      ret = ARM_DRIVER_ERROR;
-      break;
+    if (event_flags_sockets_id[i] != NULL) {
+      if (osEventFlagsDelete(event_flags_sockets_id[i]) == osOK) {
+        event_flags_sockets_id[i] = NULL;
+      } else {
+        ret = ARM_DRIVER_ERROR;
+        break;
+      }
     }
   }
   if (event_flags_id != NULL) {

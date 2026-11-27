@@ -136,6 +136,19 @@ $(function(){initNavTree('rev_hist.html',''); initResizable(true); });
 <tr>
 <th>Version </th><th>Description  </th></tr>
 <tr>
+<td>v2.11.0 </td><td><ul>
+<li>Added RTL8211F PHY driver</li>
+<li>Added LAN8741A PHY driver</li>
+<li>Updated Inventek ISM43362 WiFi driver (version 1.16.0):<ul>
+<li>Eliminated usage of sscanf (to enable driver to work with GCC newlib-nano)</li>
+<li>Corrected opt_len parameter check in WiFi_SocketSetOpt function</li>
+<li>Enabled Event Recorder from CMSIS-View pack</li>
+</ul>
+</li>
+<li>Updated documentation for WiFi drivers and shields </li>
+</ul>
+</td></tr>
+<tr>
 <td>v2.10.0 </td><td><ul>
 <li>Added WiFi Shield layers </li>
 </ul>

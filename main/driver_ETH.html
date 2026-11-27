@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CMSIS-Driver Implementations: WiFi</title>
+<title>CMSIS-Driver Implementations: Ethernet</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -100,7 +100,7 @@ $(function() { codefold.init(0); });
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('page_driver_wifi.html',''); initResizable(true); });
+$(function(){initNavTree('driver_ETH.html',''); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -126,61 +126,68 @@ $(function(){initNavTree('page_driver_wifi.html',''); initResizable(true); });
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">WiFi</div></div>
+  <div class="headertitle"><div class="title">Ethernet</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="md_src_2wifi"></a></p>
-<h1><a class="anchor" id="autotoc_md6"></a>
+<div class="textblock"><p><a class="anchor" id="md_src_2ethernet"></a></p>
+<h1><a class="anchor" id="autotoc_md1"></a>
 Driver Implementations</h1>
-<p>The <a class="el" href="index.html#pack_content">Pack Content</a> provides implementations of <b><a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__wifi__interface__gr.html">CMSIS-WiFi drivers</a></b> for the following devices:</p>
+<p>The <a class="el" href="index.html#pack_content">Pack Content</a> provides implementations of <b><a href="https://arm-software.github.io/CMSIS_6/latest/Driver/group__eth__interface__gr.html">CMSIS-Ethernet drivers</a></b> for the following devices:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Driver   </th><th class="markdownTableHeadNone">Description    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b><a class="el" href="#wifi_da16200">DA16200</a></b>   </td><td class="markdownTableBodyNone">WiFi Driver for the Renesas DA16200.    </td></tr>
+<td class="markdownTableBodyNone"><b>KSZ8851SNL</b>   </td><td class="markdownTableBodyNone">Ethernet PHY and MAC interfaces for the Microchip <b><a href="https://www.microchip.com/KSZ8851">KSZ8851</a></b>.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><b><a class="el" href="#wifi_esp32">ESP32</a></b>   </td><td class="markdownTableBodyNone">WiFi Driver for the Espressif ESP32.    </td></tr>
+<td class="markdownTableBodyNone"><b>LAN9220</b>   </td><td class="markdownTableBodyNone">Ethernet PHY and MAC interfaces for the Microchip <b><a href="https://www.microchip.com/LAN9220">LAN9220</a></b>.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b><a class="el" href="#wifi_esp8266">ESP8266</a></b>   </td><td class="markdownTableBodyNone">WiFi Driver for the Espressif ESP8266.    </td></tr>
+<td class="markdownTableBodyNone"><b>DP83848C</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Texas Instruments <b><a href="http://www.ti.com/product/DP83848C">DP83848C</a></b>.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><b><a class="el" href="#wifi_ism43362">ISM43362</a></b>   </td><td class="markdownTableBodyNone">WiFi Driver for the Inventek ISM43362.    </td></tr>
+<td class="markdownTableBodyNone"><b>KSZ8061RNB</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/KSZ8061">KSZ8061</a></b>.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b><a class="el" href="#wifi_wizfi360">WizFi360</a></b>   </td><td class="markdownTableBodyNone">WiFi Driver for the WizNet WizFi360.   </td></tr>
+<td class="markdownTableBodyNone"><b>KSZ8081RNA</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/KSZ8081">KSZ8081</a></b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>LAN8710A</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/LAN8710A">LAN8710A</a></b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>LAN8720</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/LAN8720A">LAN8720A</a></b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>LAN8740A</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/LAN8740A">LAN8740A</a></b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>LAN8741A</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/LAN8741A">LAN8741A</a></b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>LAN8742A</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Microchip <b><a href="https://www.microchip.com/LAN8742A">LAN8742A</a></b>.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>RTL8211F</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the Realtek <b><a href="https://www.realtek.com/Product/Index?id=3975&amp;cate_id=786">RTL8211F</a></b>.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>ST802RT1</b>   </td><td class="markdownTableBodyNone">Ethernet PHY interface for the STMicroelectronics <b><a href="http://www.st.com/content/ccc/resource/technical/document/data_brief/37/8e/14/c7/84/39/4d/61/CD00263138.pdf/files/CD00263138.pdf/jcr:content/translations/en.CD00263138.pdf">ST802RT1</a></b>.   </td></tr>
 </table>
-<h2><a class="anchor" id="wifi_da16200"></a>
-DA16200</h2>
-<p>The documentation for the Renesas DA16200 can be found here:</p>
-<ul>
-<li><a href="https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices">https://www.renesas.com/eu/en/products/interface-connectivity/wireless-communications/wi-fi/da16200-ultra-low-power-wi-fi-soc-battery-powered-iot-devices</a></li>
-</ul>
-<p><b>Required Firmware</b> : <b>DA16200 FreeRTOS SDK Firmware Image v3.2.3.0 (or newer)</b></p>
-<p>Firmware image and programming instructions <b>DA16200 DA16600 FreeRTOS Getting Started Guide</b> are also available on the above web site.</p>
-<h2><a class="anchor" id="wifi_esp32"></a>
-ESP32</h2>
-<p>The documentation for the Espressif ESP32 can be found here:</p>
-<ul>
-<li><a href="https://www.espressif.com/en/products/hardware/esp-wroom-32/overview">https://www.espressif.com/en/products/hardware/esp-wroom-32/overview</a></li>
-</ul>
-<h2><a class="anchor" id="wifi_esp8266"></a>
-ESP8266</h2>
-<p>The documentation for the Espressif ESP8266 can be found here:</p>
-<ul>
-<li><a href="https://www.espressif.com/en/products/hardware/esp8266ex/overview/">https://www.espressif.com/en/products/hardware/esp8266ex/overview/</a></li>
-</ul>
-<h2><a class="anchor" id="wifi_ism43362"></a>
-ISM43362</h2>
-<p>The documentation for the Inventek ISM43362 can be found here:</p>
-<ul>
-<li><a href="https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/">https://www.inventeksys.com/ism4336-m3g-l44-e-embedded-serial-to-wifi-module/</a></li>
-</ul>
-<p><b>Required Firmware</b> : <b>SPI v6.2.1.7</b></p>
-<p>For firmware update procedure see <a class="el" href="page_shield_layer.html#inventek_ismart43362-e_firmware">Inventek ISMART43362-E Shield Firmware</a> section.</p>
-<h2><a class="anchor" id="wifi_wizfi360"></a>
-WizFi360</h2>
-<p>The documentation for the WIZnet WizFi360 can be found here:</p>
-<ul>
-<li><a href="https://docs.wiznet.io/Product/Modules/Wi-Fi-Module/WizFi360">https://docs.wiznet.io/Product/Modules/Wi-Fi-Module/WizFi360</a> </li>
-</ul>
+<h1><a class="anchor" id="autotoc_md2"></a>
+Multiple Driver Instances</h1>
+<p>CMSIS-Driver API supports multiple driver instances. The Ethernet drivers are implemented within a single C module and several driver instances of the same type can be used in a project as follows:</p>
+<ol type="1">
+<li>Add the first driver instance to the project. In IDEs with CMSIS-pack management support this can be done from the Run-Time Environment (RTE).</li>
+<li>Create a copy of the driver's .c file with a different file name and add it to the project. This will be the second driver instance. For example, copy <code>ETH_LAN9220.c</code> file as <code>ETH2_LAN9220.c</code>.</li>
+<li>Copy the driver's .h file to the project or add the driver's folder to the compiler include search path.</li>
+<li>Specify the driver parameters for the second instance. For example, in <code>ETH2_LAN9220.c</code> new values to the following parameters are needed instead of default ones: <div class="fragment"><div class="line"><span class="preprocessor">#define ETH_MAC_NUM             1</span></div>
+<div class="line"><span class="preprocessor">#define ETH_PHY_NUM             1</span></div>
+<div class="line"><span class="preprocessor">#define LAN9220_BASE            (0x53000000UL)</span></div>
+</div><!-- fragment --></li>
+<li>Now both Ethernet instances can be accessed from the application. For example: <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;Driver_ETH_MAC.h&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;Driver_ETH_PHY.h&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_ETH_MAC Driver_ETH_MAC0;</div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_ETH_MAC Driver_ETH_MAC1;</div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_ETH_PHY Driver_ETH_PHY0;</div>
+<div class="line"><span class="keyword">extern</span> ARM_DRIVER_ETH_PHY Driver_ETH_PHY1;</div>
+<div class="line"> </div>
+<div class="line"><span class="preprocessor">#define eth0    (&amp;Driver_ETH_MAC0)</span></div>
+<div class="line"><span class="preprocessor">#define eth1    (&amp;Driver_ETH_MAC1)</span></div>
+<div class="line"> </div>
+<div class="line"><span class="preprocessor">#define phy0    (&amp;Driver_ETH_PHY0)</span></div>
+<div class="line"><span class="preprocessor">#define phy1    (&amp;Driver_ETH_PHY1)</span></div>
+</div><!-- fragment --> </li>
+</ol>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

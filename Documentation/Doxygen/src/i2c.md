@@ -1,4 +1,4 @@
-# I2C {#page_driver_i2c}
+# I2C {#driver_I2C}
 
 The I2C MultiSlave wrapper [I2C_MultiSlave.c](https://github.com/ARM-software/CMSIS-Driver/blob/main/I2C/I2C_MultiSlave.c) resides on top of an arbitrary I2C CMSIS-Driver and exports maximum of eight I2C CMSIS-Drivers (with I2C Master functionality only). Slave functionalities are disabled and calling slave functions will return with an error. An I2C slave device connects to one of the exported driver and uses it as any other CMSIS I2C driver (in master mode only). The wrapper provides multi-thread protection.
 

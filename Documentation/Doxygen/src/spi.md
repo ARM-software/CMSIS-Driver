@@ -1,4 +1,4 @@
-# SPI {#page_driver_spi}
+# SPI {#driver_SPI}
 
 The SPI MultiSlave wrapper [SPI_MultiSlave.c](https://github.com/ARM-software/CMSIS-Driver/blob/main/SPI/SPI_MultiSlave.c) resides on top of an arbitrary SPI CMSIS-Driver and exports a maximum of four SPI CMSIS-Drivers with SPI Master functionality only. Slave functionalities are disabled and calling the slave functions will return with an error. An SPI slave device connects to one of the exported drivers and uses it as any other SPI CMSIS-Driver (in master mode only). The wrapper provides multi thread protection.
 

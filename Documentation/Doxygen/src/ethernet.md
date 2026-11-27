@@ -1,4 +1,4 @@
-# Ethernet {#page_driver_eth}
+# Ethernet {#driver_ETH}
 
 ## Driver Implementations
 

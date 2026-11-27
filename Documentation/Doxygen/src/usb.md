@@ -1,4 +1,4 @@
-# USB {#page_driver_usb}
+# USB {#driver_USB}
 
 ## Driver Implementations
 

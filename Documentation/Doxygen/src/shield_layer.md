@@ -1,4 +1,4 @@
-# Shield layer {#page_shield_layer}
+# Shield layer {#shield_layer}
 
 The **[Shield layer](https://github.com/Open-CMSIS-Pack/cmsis-toolbox/blob/main/docs/ReferenceApplications.md#shield-layer)** adds support for additional hardware via plugin shields.
 

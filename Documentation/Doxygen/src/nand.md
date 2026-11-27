@@ -1,4 +1,4 @@
-# NAND {#page_driver_nand}
+# NAND {#driver_NAND}
 
 This is a CMSIS compliant driver for NAND Flash devices that are connected to the microcontroller's memory bus. It implements a [CMSIS-Driver NAND Interface](https://arm-software.github.io/CMSIS_6/latest/Driver/group__nand__interface__gr.html) with up to four memory mapped NAND Flash devices.
 

@@ -1,4 +1,4 @@
-# WiFi {#page_driver_wifi}
+# WiFi {#driver_WiFi}
 
 ## Driver Implementations
 

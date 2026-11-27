@@ -1,4 +1,4 @@
-# Flash {#page_driver_flash}
+# Flash {#driver_Flash}
 
 ## Driver Implementations
 

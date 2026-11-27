@@ -349,7 +349,7 @@
         #define RTE_Drivers_I2C_MultiSlave      /* Driver I2C Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/html/page_driver_i2c.html"/>
+        <file category="doc"    name="Documentation/html/driver_I2C.html"/>
         <file category="header" name="Config/I2C_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="source" name="I2C/I2C_MultiSlave.c"/>
       </files>
@@ -363,7 +363,7 @@
         #define RTE_Drivers_SPI_MultiSlave      /* Driver SPI Multi-Slave */
       </RTE_Components_h>
       <files>
-        <file category="doc"    name="Documentation/html/page_driver_spi.html"/>
+        <file category="doc"    name="Documentation/html/driver_SPI.html"/>
         <file category="header" name="Config/SPI_MultiSlave_Config.h" attr="config" version="1.0.0"/>
         <file category="header" name="SPI/SPI_MultiSlave.h"/>
         <file category="source" name="SPI/SPI_MultiSlave.c"/>
